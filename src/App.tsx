@@ -465,7 +465,6 @@ function App() {
 
         {tab === "dashboard" && (
           <section className="dashboard-layout">
-            <FiltersBar filters={filters} setFilters={setFilters} />
             <div className="kpi-grid">
               <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
               <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
@@ -474,6 +473,7 @@ function App() {
               <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
               <Kpi label="Logs" value={formatNumber(visibleLogs.length)} tone="neutral" />
             </div>
+            <FiltersBar filters={filters} setFilters={setFilters} />
             <div className="analytics-grid">
               <DowntimeChart items={downtime} />
               <MachineRanking logs={visibleLogs} />
