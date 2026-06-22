@@ -11,6 +11,8 @@ import {
   Save,
   Search,
   TableProperties,
+  Trash2,
+  UserPlus,
   UserRound,
   Wifi,
   WifiOff,
@@ -18,7 +20,18 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
 import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
-import { canAccessTab, clearSession, loadSession, signIn, type AppSession } from "./lib/auth";
+import {
+  canAccessTab,
+  clearSession,
+  createUser,
+  deleteUser,
+  listUsers,
+  loadSession,
+  signIn,
+  type AppRole,
+  type AppSession,
+  type AppUserSummary,
+} from "./lib/auth";
 import {
   downtimeFields,
   formatNumber,
@@ -30,7 +43,7 @@ import {
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
 
-type TabId = "entry" | "dashboard" | "history" | "master";
+type TabId = "entry" | "dashboard" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -250,6 +263,11 @@ function App() {
               <Database size={18} /> Master
             </button>
           )}
+          {canAccessTab(session, "users") && (
+            <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")} type="button">
+              <UserPlus size={18} /> Users
+            </button>
+          )}
         </nav>
         <div className="user-panel">
           <UserRound size={17} />
@@ -270,12 +288,14 @@ function App() {
             <p className="eyebrow">Production quantity entry</p>
             <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel</h1>
           </div>
-          <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
-            <Download size={17} /> CSV
-          </button>
-          <button className="ghost-button" onClick={signOut} type="button">
-            <LogOut size={17} /> Logout
-          </button>
+          <div className="topbar-actions">
+            <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
+              <Download size={17} /> CSV
+            </button>
+            <button className="ghost-button" onClick={signOut} type="button">
+              <LogOut size={17} /> Logout
+            </button>
+          </div>
         </header>
 
         {tab === "entry" && (
@@ -490,8 +510,155 @@ function App() {
             <MasterTable />
           </section>
         )}
+
+        {tab === "users" && <UsersAdmin currentUsername={session.username} />}
       </main>
     </div>
+  );
+}
+
+const emptyUserForm = {
+  username: "",
+  displayName: "",
+  password: "",
+  role: "production" as AppRole,
+};
+
+function UsersAdmin({ currentUsername }: { currentUsername: string }) {
+  const [users, setUsers] = useState<AppUserSummary[]>(() => listUsers());
+  const [form, setForm] = useState(emptyUserForm);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [savingUser, setSavingUser] = useState(false);
+
+  const submitUser = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+    setSavingUser(true);
+    try {
+      const nextUsers = await createUser(form);
+      setUsers(nextUsers);
+      setMessage(`สร้างผู้ใช้ ${form.username.trim().toLowerCase()} แล้ว`);
+      setForm(emptyUserForm);
+    } catch (userError) {
+      setError(userError instanceof Error ? userError.message : "สร้างผู้ใช้ไม่สำเร็จ");
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const removeUser = (username: string) => {
+    setMessage("");
+    setError("");
+    try {
+      setUsers(deleteUser(username));
+      setMessage(`ลบผู้ใช้ ${username} แล้ว`);
+    } catch (userError) {
+      setError(userError instanceof Error ? userError.message : "ลบผู้ใช้ไม่สำเร็จ");
+    }
+  };
+
+  return (
+    <section className="users-layout">
+      <form className="user-form" onSubmit={submitUser}>
+        <div className="section-title">
+          <UserPlus size={20} />
+          <h2>สร้างผู้ใช้งาน</h2>
+        </div>
+        <div className="form-grid">
+          <label>
+            Username
+            <input
+              autoComplete="off"
+              onChange={(event) => setForm({ ...form, username: event.target.value })}
+              placeholder="เช่น operator01"
+              type="text"
+              value={form.username}
+            />
+          </label>
+          <label>
+            ชื่อแสดงผล
+            <input
+              autoComplete="off"
+              onChange={(event) => setForm({ ...form, displayName: event.target.value })}
+              placeholder="เช่น Line A"
+              type="text"
+              value={form.displayName}
+            />
+          </label>
+          <label>
+            Role
+            <select
+              onChange={(event) => setForm({ ...form, role: event.target.value as AppRole })}
+              value={form.role}
+            >
+              <option value="production">Production</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <label>
+            Password
+            <input
+              autoComplete="new-password"
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              placeholder="อย่างน้อย 6 ตัว"
+              type="password"
+              value={form.password}
+            />
+          </label>
+        </div>
+        <div className="form-actions">
+          <button className="primary-button" disabled={savingUser} type="submit">
+            <Save size={18} /> {savingUser ? "กำลังสร้าง" : "สร้างผู้ใช้"}
+          </button>
+        </div>
+        {message && <p className="form-message success">{message}</p>}
+        {error && <p className="form-message error">{error}</p>}
+      </form>
+
+      <div className="data-table-wrap users-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Display name</th>
+              <th>Role</th>
+              <th>Type</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => {
+              const locked = user.builtIn || user.username === currentUsername;
+              return (
+                <tr key={user.username}>
+                  <td>{user.username}</td>
+                  <td>{user.displayName}</td>
+                  <td>
+                    <span className={`role-pill ${user.role}`}>{user.role}</span>
+                  </td>
+                  <td>{user.builtIn ? "Default" : "Custom"}</td>
+                  <td>{user.createdAt ? new Date(user.createdAt).toLocaleString("th-TH") : "-"}</td>
+                  <td>
+                    <button
+                      className="icon-danger-button"
+                      disabled={locked}
+                      onClick={() => removeUser(user.username)}
+                      title={locked ? "บัญชีนี้ลบไม่ได้" : "ลบผู้ใช้"}
+                      type="button"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

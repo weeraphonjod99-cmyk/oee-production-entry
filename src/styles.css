@@ -247,6 +247,13 @@ button {
   margin-bottom: 18px;
 }
 
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .eyebrow {
   color: #667085;
   font-size: 13px;
@@ -290,6 +297,7 @@ h3 {
 .data-table-wrap,
 .filters-bar,
 .table-toolbar,
+.user-form,
 .kpi {
   background: #ffffff;
   border: 1px solid #dfe5dd;
@@ -300,6 +308,16 @@ h3 {
 .entry-form {
   display: grid;
   gap: 18px;
+  padding: 20px;
+}
+
+.users-layout,
+.user-form {
+  display: grid;
+  gap: 16px;
+}
+
+.user-form {
   padding: 20px;
 }
 
@@ -453,6 +471,45 @@ textarea:focus {
 }
 
 .ghost-button.danger {
+  color: #b42318;
+}
+
+.icon-danger-button {
+  align-items: center;
+  background: #fff3f0;
+  border: 1px solid #ffd5cc;
+  border-radius: 8px;
+  color: #b42318;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 38px;
+}
+
+.icon-danger-button:disabled {
+  background: #f4f7f4;
+  border-color: #dfe5dd;
+  color: #9aa4b2;
+  cursor: not-allowed;
+}
+
+.form-message {
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.form-message.success {
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  color: #067647;
+}
+
+.form-message.error {
+  background: #fff3f0;
+  border: 1px solid #ffd5cc;
   color: #b42318;
 }
 
@@ -663,6 +720,30 @@ textarea:focus {
   overflow: auto;
 }
 
+.users-table table {
+  min-width: 760px;
+}
+
+.role-pill {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 88px;
+  padding: 5px 10px;
+  text-transform: uppercase;
+}
+
+.role-pill.admin {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.role-pill.production {
+  background: #e7f5ec;
+  color: #177245;
+}
+
 table {
   border-collapse: collapse;
   min-width: 980px;
@@ -736,6 +817,14 @@ td:nth-child(9) {
   .table-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    justify-content: stretch;
+  }
+
+  .topbar-actions .ghost-button {
+    justify-content: center;
   }
 
   h1 {
