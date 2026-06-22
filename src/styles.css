@@ -650,6 +650,135 @@ textarea:focus {
   margin-bottom: 14px;
 }
 
+.oee-summary-chart {
+  display: grid;
+  gap: 16px;
+}
+
+.oee-summary-chart .section-title h2 {
+  margin-bottom: 0;
+}
+
+.oee-summary-layout {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 220px minmax(260px, 1fr) minmax(220px, 0.55fr);
+}
+
+.oee-gauge-wrap {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  min-height: 208px;
+  position: relative;
+}
+
+.oee-gauge {
+  height: 190px;
+  transform: rotate(-90deg);
+  width: 190px;
+}
+
+.oee-gauge-bg,
+.oee-gauge-value {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 16px;
+}
+
+.oee-gauge-bg {
+  stroke: #eef1ee;
+}
+
+.oee-gauge-value {
+  stroke: #16a34a;
+  transition: stroke-dashoffset 0.2s ease;
+}
+
+.oee-gauge-label {
+  display: grid;
+  gap: 4px;
+  left: 50%;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.oee-gauge-label span,
+.oee-factor span,
+.oee-volume-summary span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.oee-gauge-label strong {
+  color: #061635;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.oee-factor-list {
+  display: grid;
+  gap: 14px;
+}
+
+.oee-factor {
+  display: grid;
+  gap: 8px;
+}
+
+.oee-factor > div:first-child {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.oee-factor strong,
+.oee-volume-summary strong {
+  color: #061635;
+  font-size: 18px;
+}
+
+.oee-factor-track {
+  background: #eef1ee;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.oee-factor-track div {
+  height: 100%;
+}
+
+.oee-factor.green .oee-factor-track div {
+  background: #16a34a;
+}
+
+.oee-factor.blue .oee-factor-track div {
+  background: #2563eb;
+}
+
+.oee-factor.amber .oee-factor-track div {
+  background: #d97706;
+}
+
+.oee-volume-summary {
+  border-left: 1px solid #e8ece7;
+  display: grid;
+  gap: 14px;
+  padding-left: 18px;
+}
+
+.oee-volume-summary div {
+  display: grid;
+  gap: 4px;
+}
+
 .oee-headings-panel {
   display: grid;
   gap: 16px;
@@ -965,8 +1094,16 @@ td:nth-child(9) {
   }
 
   .entry-layout,
-  .analytics-grid {
+  .analytics-grid,
+  .oee-summary-layout {
     grid-template-columns: 1fr;
+  }
+
+  .oee-volume-summary {
+    border-left: 0;
+    border-top: 1px solid #e8ece7;
+    padding-left: 0;
+    padding-top: 14px;
   }
 }
 
