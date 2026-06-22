@@ -944,6 +944,21 @@ function Trend({ logs }: { logs: ProductionLog[] }) {
   );
 }
 
+const oeeCalculationHeadings = [
+  { label: "总生产数", detail: "Total quantity", tone: "yellow" },
+  { label: "理论冲次", detail: "Theoretical impulse", tone: "yellow" },
+  { label: "模腔数", detail: "Quantity of cavities", tone: "yellow" },
+  { label: "理论有效生产时间", detail: "Theoretical effective production time", tone: "yellow" },
+  { label: "总生产时间", detail: "Total production time", tone: "yellow" },
+  { label: "设备稼动率", detail: "Equipment utilization rate", tone: "neutral" },
+  { label: "合格率", detail: "Pass rate", tone: "neutral" },
+  { label: "时间利用率", detail: "Time utilization", tone: "neutral" },
+  { label: "理论冲次设备", detail: "OEE", tone: "green" },
+  { label: "模具维修次数", detail: "Quantity of repair mold", tone: "green" },
+  { label: "模具MTTR(分钟)", detail: "MTTR", tone: "green" },
+  { label: "模具MTBF（分钟）", detail: "MTBF", tone: "green" },
+];
+
 function OeeHeadingsPanel() {
   return (
     <div className="analysis-panel oee-headings-panel">
@@ -957,6 +972,15 @@ function OeeHeadingsPanel() {
           <span>{formatNumber(oeeWorkbookHeadings.uniqueHeadingCount)} headings</span>
           <span>{oeeWorkbookHeadings.timeCodes.join(" / ")}</span>
         </div>
+      </div>
+
+      <div className="calculation-heading-strip">
+        {oeeCalculationHeadings.map((heading) => (
+          <div className={`calculation-heading ${heading.tone}`} key={`${heading.label}-${heading.detail}`}>
+            <strong>{heading.label}</strong>
+            <span>{heading.detail}</span>
+          </div>
+        ))}
       </div>
 
       <div className="heading-chip-grid">

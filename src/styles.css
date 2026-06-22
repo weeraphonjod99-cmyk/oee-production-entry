@@ -670,6 +670,50 @@ textarea:focus {
   padding: 6px 10px;
 }
 
+.calculation-heading-strip {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.calculation-heading {
+  border: 1px solid #d8e0d8;
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  min-height: 76px;
+  padding: 10px;
+}
+
+.calculation-heading strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.calculation-heading span {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.calculation-heading.yellow {
+  background: #ffd21f;
+  border-color: #dca800;
+  color: #172033;
+}
+
+.calculation-heading.neutral {
+  background: #ffffff;
+  border-color: #cfd8cf;
+  color: #172033;
+}
+
+.calculation-heading.green {
+  background: #22c55e;
+  border-color: #16a34a;
+  color: #062b15;
+}
+
 .heading-chip-grid,
 .sheet-heading-body {
   display: flex;
@@ -942,7 +986,8 @@ td:nth-child(9) {
   .filters-bar,
   .runtime-panel,
   .kpi-grid,
-  .master-stats {
+  .master-stats,
+  .calculation-heading-strip {
     grid-template-columns: 1fr;
   }
 
