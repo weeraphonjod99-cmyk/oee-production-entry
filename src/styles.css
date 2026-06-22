@@ -70,6 +70,16 @@ button {
   color: #177245;
 }
 
+.login-logo {
+  background: #ffffff;
+  border: 1px solid #e2e8e2;
+  border-radius: 8px;
+  height: 56px;
+  object-fit: contain;
+  padding: 4px;
+  width: 56px;
+}
+
 .login-brand strong,
 .login-brand span {
   display: block;
@@ -134,6 +144,15 @@ button {
 
 .brand-mark svg {
   color: #8ee0aa;
+}
+
+.brand-logo {
+  background: #ffffff;
+  border-radius: 8px;
+  height: 44px;
+  object-fit: contain;
+  padding: 4px;
+  width: 44px;
 }
 
 .brand-mark strong,

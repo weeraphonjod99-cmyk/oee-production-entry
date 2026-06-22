@@ -3,7 +3,6 @@ import {
   ClipboardList,
   Database,
   Download,
-  Factory,
   Gauge,
   History,
   LockKeyhole,
@@ -56,6 +55,7 @@ const today = new Date().toISOString().slice(0, 10);
 const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
 const orderedShiftOptions = Array.from(new Set(["白", "夜", ...shiftOptions]));
+const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 
 function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
   return {
@@ -240,7 +240,7 @@ function App() {
     <div className="app-shell">
       <aside className="side-nav">
         <div className="brand-mark">
-          <Factory size={28} />
+          <img alt="JR logo" className="brand-logo" src={brandLogoSrc} />
           <div>
             <strong>OEE Entry</strong>
             <span>Production</span>
@@ -686,7 +686,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
     <main className="login-screen">
       <form className="login-card" onSubmit={submitLogin}>
         <div className="login-brand">
-          <Factory size={34} />
+          <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
             <strong>OEE Entry</strong>
             <span>Production access</span>
