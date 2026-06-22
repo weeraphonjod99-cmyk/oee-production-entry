@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
+import { oeeWorkbookHeadings } from "./data/oeeWorkbookHeadings.generated";
 import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
 import {
   canAccessTab,
@@ -478,6 +479,7 @@ function App() {
               <MachineRanking logs={visibleLogs} />
             </div>
             <Trend logs={visibleLogs} />
+            <OeeHeadingsPanel />
           </section>
         )}
 
@@ -936,6 +938,52 @@ function Trend({ logs }: { logs: ProductionLog[] }) {
       <div className="trend-labels">
         {points.map((point) => (
           <span key={point.date}>{point.date.slice(5)}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OeeHeadingsPanel() {
+  return (
+    <div className="analysis-panel oee-headings-panel">
+      <div className="headings-panel-header">
+        <div>
+          <p className="eyebrow">OEE workbook structure</p>
+          <h2>หัวข้อทั้งหมดจากไฟล์ {oeeWorkbookHeadings.sourceFile}</h2>
+        </div>
+        <div className="headings-summary">
+          <span>{formatNumber(oeeWorkbookHeadings.sheetCount)} sheets</span>
+          <span>{formatNumber(oeeWorkbookHeadings.uniqueHeadingCount)} headings</span>
+          <span>{oeeWorkbookHeadings.timeCodes.join(" / ")}</span>
+        </div>
+      </div>
+
+      <div className="heading-chip-grid">
+        {oeeWorkbookHeadings.uniqueHeadings.map((heading) => (
+          <span className="heading-chip" key={heading}>
+            {heading}
+          </span>
+        ))}
+      </div>
+
+      <div className="sheet-heading-list">
+        {oeeWorkbookHeadings.sheets.map((sheet) => (
+          <details className="sheet-heading-item" key={sheet.sheetName}>
+            <summary>
+              <strong>{sheet.sheetName}</strong>
+              <span>{formatNumber(sheet.rowCount)} rows</span>
+              <span>{formatNumber(sheet.columnCount)} columns</span>
+              {sheet.hasStep && <em>Step</em>}
+            </summary>
+            <div className="sheet-heading-body">
+              {sheet.headings.map((heading, index) => (
+                <span className="heading-chip compact" key={`${sheet.sheetName}-${heading}-${index}`}>
+                  {heading}
+                </span>
+              ))}
+            </div>
+          </details>
         ))}
       </div>
     </div>
