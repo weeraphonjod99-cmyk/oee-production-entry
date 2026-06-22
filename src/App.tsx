@@ -6,15 +6,19 @@ import {
   Factory,
   Gauge,
   History,
+  LockKeyhole,
+  LogOut,
   Save,
   Search,
   TableProperties,
+  UserRound,
   Wifi,
   WifiOff,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
 import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
+import { canAccessTab, clearSession, loadSession, signIn, type AppSession } from "./lib/auth";
 import {
   downtimeFields,
   formatNumber,
@@ -79,6 +83,7 @@ function uniqueLogs(logs: ProductionLog[]) {
 
 function App() {
   const [tab, setTab] = useState<TabId>("entry");
+  const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
   const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
@@ -98,6 +103,10 @@ function App() {
       })
       .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"));
   }, []);
+
+  useEffect(() => {
+    if (session && !canAccessTab(session, tab)) setTab("entry");
+  }, [session, tab]);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const machineProducts = useMemo(
@@ -206,6 +215,14 @@ function App() {
     setStatus("ล้างรายการทดลองในเครื่องแล้ว");
   };
 
+  const signOut = () => {
+    clearSession();
+    setSession(null);
+    setTab("entry");
+  };
+
+  if (!session) return <LoginScreen onSignedIn={setSession} />;
+
   return (
     <div className="app-shell">
       <aside className="side-nav">
@@ -220,16 +237,27 @@ function App() {
           <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
             <ClipboardList size={18} /> กรอกยอด
           </button>
-          <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
-            <BarChart3 size={18} /> Dashboard
-          </button>
+          {canAccessTab(session, "dashboard") && (
+            <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
+              <BarChart3 size={18} /> Dashboard
+            </button>
+          )}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ
           </button>
-          <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
-            <Database size={18} /> Master
-          </button>
+          {canAccessTab(session, "master") && (
+            <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
+              <Database size={18} /> Master
+            </button>
+          )}
         </nav>
+        <div className="user-panel">
+          <UserRound size={17} />
+          <div>
+            <strong>{session.displayName}</strong>
+            <span>{session.role}</span>
+          </div>
+        </div>
         <div className={`connection ${remoteEnabled ? "online" : "offline"}`}>
           {remoteEnabled ? <Wifi size={16} /> : <WifiOff size={16} />}
           <span>{status}</span>
@@ -244,6 +272,9 @@ function App() {
           </div>
           <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
             <Download size={17} /> CSV
+          </button>
+          <button className="ghost-button" onClick={signOut} type="button">
+            <LogOut size={17} /> Logout
           </button>
         </header>
 
@@ -461,6 +492,73 @@ function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submitLogin = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const nextSession = await signIn(username, password);
+      onSignedIn(nextSession);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "เข้าสู่ระบบไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="login-screen">
+      <form className="login-card" onSubmit={submitLogin}>
+        <div className="login-brand">
+          <Factory size={34} />
+          <div>
+            <strong>OEE Entry</strong>
+            <span>Production access</span>
+          </div>
+        </div>
+        <div className="login-heading">
+          <LockKeyhole size={22} />
+          <h1>เข้าสู่ระบบ</h1>
+        </div>
+        <label>
+          Username
+          <input
+            autoComplete="username"
+            autoFocus
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="admin หรือ production"
+            type="text"
+            value={username}
+          />
+        </label>
+        <label>
+          Password
+          <input
+            autoComplete="current-password"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="รหัสผ่าน"
+            type="password"
+            value={password}
+          />
+        </label>
+        {error && <p className="login-error">{error}</p>}
+        <button className="primary-button login-button" disabled={loading} type="submit">
+          {loading ? "กำลังตรวจสอบ" : "เข้าใช้งาน"}
+        </button>
+        <p className="login-note">
+          ใช้สำหรับกันหน้าจอเบื้องต้นบน GitHub Pages หากต้องการความปลอดภัยจริงควรต่อ backend authentication
+        </p>
+      </form>
+    </main>
   );
 }
 
