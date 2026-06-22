@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
-import { oeeWorkbookHeadings } from "./data/oeeWorkbookHeadings.generated";
 import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
 import {
   canAccessTab,
@@ -480,7 +479,6 @@ function App() {
               <MachineRanking logs={visibleLogs} />
             </div>
             <Trend logs={visibleLogs} />
-            <OeeHeadingsPanel />
           </section>
         )}
 
@@ -1007,76 +1005,6 @@ function Trend({ logs }: { logs: ProductionLog[] }) {
       <div className="trend-labels">
         {points.map((point) => (
           <span key={point.date}>{point.date.slice(5)}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const oeeCalculationHeadings = [
-  { label: "总生产数", detail: "Total quantity", tone: "yellow" },
-  { label: "理论冲次", detail: "Theoretical impulse", tone: "yellow" },
-  { label: "模腔数", detail: "Quantity of cavities", tone: "yellow" },
-  { label: "理论有效生产时间", detail: "Theoretical effective production time", tone: "yellow" },
-  { label: "总生产时间", detail: "Total production time", tone: "yellow" },
-  { label: "设备稼动率", detail: "Equipment utilization rate", tone: "neutral" },
-  { label: "合格率", detail: "Pass rate", tone: "neutral" },
-  { label: "时间利用率", detail: "Time utilization", tone: "neutral" },
-  { label: "理论冲次设备", detail: "OEE", tone: "green" },
-  { label: "模具维修次数", detail: "Quantity of repair mold", tone: "green" },
-  { label: "模具MTTR(分钟)", detail: "MTTR", tone: "green" },
-  { label: "模具MTBF（分钟）", detail: "MTBF", tone: "green" },
-];
-
-function OeeHeadingsPanel() {
-  return (
-    <div className="analysis-panel oee-headings-panel">
-      <div className="headings-panel-header">
-        <div>
-          <p className="eyebrow">OEE workbook structure</p>
-          <h2>หัวข้อทั้งหมดจากไฟล์ {oeeWorkbookHeadings.sourceFile}</h2>
-        </div>
-        <div className="headings-summary">
-          <span>{formatNumber(oeeWorkbookHeadings.sheetCount)} sheets</span>
-          <span>{formatNumber(oeeWorkbookHeadings.uniqueHeadingCount)} headings</span>
-          <span>{oeeWorkbookHeadings.timeCodes.join(" / ")}</span>
-        </div>
-      </div>
-
-      <div className="calculation-heading-strip">
-        {oeeCalculationHeadings.map((heading) => (
-          <div className={`calculation-heading ${heading.tone}`} key={`${heading.label}-${heading.detail}`}>
-            <strong>{heading.label}</strong>
-            <span>{heading.detail}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="heading-chip-grid">
-        {oeeWorkbookHeadings.uniqueHeadings.map((heading) => (
-          <span className="heading-chip" key={heading}>
-            {heading}
-          </span>
-        ))}
-      </div>
-
-      <div className="sheet-heading-list">
-        {oeeWorkbookHeadings.sheets.map((sheet) => (
-          <details className="sheet-heading-item" key={sheet.sheetName}>
-            <summary>
-              <strong>{sheet.sheetName}</strong>
-              <span>{formatNumber(sheet.rowCount)} rows</span>
-              <span>{formatNumber(sheet.columnCount)} columns</span>
-              {sheet.hasStep && <em>Step</em>}
-            </summary>
-            <div className="sheet-heading-body">
-              {sheet.headings.map((heading, index) => (
-                <span className="heading-chip compact" key={`${sheet.sheetName}-${heading}-${index}`}>
-                  {heading}
-                </span>
-              ))}
-            </div>
-          </details>
         ))}
       </div>
     </div>
