@@ -13,6 +13,7 @@ export type AppUserSummary = {
   role: AppRole;
   builtIn: boolean;
   createdAt?: string;
+  passwordChangedAt?: string;
 };
 
 type AppUser = {
@@ -22,10 +23,12 @@ type AppUser = {
   passwordHash: string;
   builtIn?: boolean;
   createdAt?: string;
+  passwordChangedAt?: string;
 };
 
 const SESSION_KEY = "oee-production-session-v1";
 const CUSTOM_USERS_KEY = "oee-production-users-v1";
+const PASSWORD_OVERRIDES_KEY = "oee-production-password-overrides-v1";
 
 const builtInUsers: AppUser[] = [
   {
@@ -70,8 +73,33 @@ function saveCustomUsers(users: AppUser[]) {
   window.localStorage.setItem(CUSTOM_USERS_KEY, JSON.stringify(users));
 }
 
+function loadPasswordOverrides(): Record<string, { passwordHash: string; changedAt: string }> {
+  try {
+    const raw = window.localStorage.getItem(PASSWORD_OVERRIDES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, { passwordHash: string; changedAt: string }>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePasswordOverrides(overrides: Record<string, { passwordHash: string; changedAt: string }>) {
+  window.localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
 function getUsers() {
-  return [...builtInUsers, ...loadCustomUsers()];
+  const overrides = loadPasswordOverrides();
+  const mergedBuiltInUsers = builtInUsers.map((user) => {
+    const override = overrides[user.username];
+    if (!override) return user;
+    return {
+      ...user,
+      passwordHash: override.passwordHash,
+      passwordChangedAt: override.changedAt,
+    };
+  });
+  return [...mergedBuiltInUsers, ...loadCustomUsers()];
 }
 
 function toSummary(user: AppUser): AppUserSummary {
@@ -81,6 +109,7 @@ function toSummary(user: AppUser): AppUserSummary {
     role: user.role,
     builtIn: Boolean(user.builtIn),
     createdAt: user.createdAt,
+    passwordChangedAt: user.passwordChangedAt,
   };
 }
 
@@ -165,6 +194,40 @@ export function deleteUser(username: string) {
     throw new Error("ไม่สามารถลบบัญชีเริ่มต้นได้");
   }
   saveCustomUsers(loadCustomUsers().filter((user) => user.username !== normalized));
+  return listUsers();
+}
+
+export async function changePassword(username: string, password: string) {
+  const normalized = normalizeUsername(username);
+  const nextPassword = password.trim();
+  if (nextPassword.length < 6) {
+    throw new Error("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+  }
+
+  const customUsers = loadCustomUsers();
+  const customUserIndex = customUsers.findIndex((user) => user.username === normalized);
+  const builtInUser = builtInUsers.find((user) => user.username === normalized);
+
+  if (customUserIndex < 0 && !builtInUser) {
+    throw new Error("ไม่พบบัญชีผู้ใช้");
+  }
+
+  const passwordHash = await sha256(nextPassword);
+  const changedAt = new Date().toISOString();
+
+  if (customUserIndex >= 0) {
+    customUsers[customUserIndex] = {
+      ...customUsers[customUserIndex],
+      passwordHash,
+      passwordChangedAt: changedAt,
+    };
+    saveCustomUsers(customUsers);
+    return listUsers();
+  }
+
+  const overrides = loadPasswordOverrides();
+  overrides[normalized] = { passwordHash, changedAt };
+  savePasswordOverrides(overrides);
   return listUsers();
 }
 

@@ -5,6 +5,7 @@ import {
   Download,
   Gauge,
   History,
+  KeyRound,
   LockKeyhole,
   LogOut,
   Save,
@@ -21,6 +22,7 @@ import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData
 import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
 import {
   canAccessTab,
+  changePassword,
   clearSession,
   createUser,
   deleteUser,
@@ -524,12 +526,20 @@ const emptyUserForm = {
   role: "production" as AppRole,
 };
 
+const createEmptyPasswordForm = (username: string) => ({
+  username,
+  password: "",
+  confirmPassword: "",
+});
+
 function UsersAdmin({ currentUsername }: { currentUsername: string }) {
   const [users, setUsers] = useState<AppUserSummary[]>(() => listUsers());
   const [form, setForm] = useState(emptyUserForm);
+  const [passwordForm, setPasswordForm] = useState(() => createEmptyPasswordForm(currentUsername));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [savingUser, setSavingUser] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const submitUser = async (event: FormEvent) => {
     event.preventDefault();
@@ -556,6 +566,27 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       setMessage(`ลบผู้ใช้ ${username} แล้ว`);
     } catch (userError) {
       setError(userError instanceof Error ? userError.message : "ลบผู้ใช้ไม่สำเร็จ");
+    }
+  };
+
+  const submitPassword = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      setError("รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const nextUsers = await changePassword(passwordForm.username, passwordForm.password);
+      setUsers(nextUsers);
+      setMessage(`เปลี่ยนรหัสผ่าน ${passwordForm.username} แล้ว`);
+      setPasswordForm(createEmptyPasswordForm(passwordForm.username));
+    } catch (passwordError) {
+      setError(passwordError instanceof Error ? passwordError.message : "เปลี่ยนรหัสผ่านไม่สำเร็จ");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -615,6 +646,53 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         </div>
         {message && <p className="form-message success">{message}</p>}
         {error && <p className="form-message error">{error}</p>}
+      </form>
+
+      <form className="user-form" onSubmit={submitPassword}>
+        <div className="section-title">
+          <KeyRound size={20} />
+          <h2>เปลี่ยนรหัสผ่าน</h2>
+        </div>
+        <div className="form-grid three">
+          <label>
+            บัญชี
+            <select
+              onChange={(event) => setPasswordForm(createEmptyPasswordForm(event.target.value))}
+              value={passwordForm.username}
+            >
+              {users.map((user) => (
+                <option key={user.username} value={user.username}>
+                  {user.username} - {user.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            รหัสผ่านใหม่
+            <input
+              autoComplete="new-password"
+              onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })}
+              placeholder="อย่างน้อย 6 ตัว"
+              type="password"
+              value={passwordForm.password}
+            />
+          </label>
+          <label>
+            ยืนยันรหัสผ่าน
+            <input
+              autoComplete="new-password"
+              onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
+              placeholder="พิมพ์ซ้ำอีกครั้ง"
+              type="password"
+              value={passwordForm.confirmPassword}
+            />
+          </label>
+        </div>
+        <div className="form-actions">
+          <button className="primary-button" disabled={changingPassword} type="submit">
+            <Save size={18} /> {changingPassword ? "กำลังบันทึก" : "บันทึกรหัสผ่าน"}
+          </button>
+        </div>
       </form>
 
       <div className="data-table-wrap users-table">
