@@ -1,0 +1,53 @@
+export type ShiftCode = "白" | "夜" | "A" | "B" | string;
+
+export type Machine = {
+  id: string;
+  name: string;
+  capacityUnits: number;
+  capacityMinutes: number;
+  hasStep: boolean;
+  rowCount: number;
+};
+
+export type ProductMaster = {
+  id: string;
+  machineId: string;
+  machineName: string;
+  productName: string;
+  partNo: string;
+  step: string;
+  sampleGoodQty: number;
+  sampleNgQty: number;
+  sampleTestQty: number;
+};
+
+export type ProductionLog = {
+  id: string;
+  date: string;
+  shift: ShiftCode;
+  machineId: string;
+  machineName: string;
+  productName: string;
+  partNo: string;
+  step: string;
+  normalMinutes: number;
+  changeoverMinutes: number;
+  inspectionMinutes: number;
+  equipmentRepairMinutes: number;
+  moldRepairMinutes: number;
+  materialChangeMinutes: number;
+  emergencyStopMinutes: number;
+  meetingMinutes: number;
+  plannedStopMinutes: number;
+  goodQty: number;
+  ngQty: number;
+  testQty: number;
+  note: string;
+  createdAt: string;
+  source: "excel-seed" | "local" | "google-sheet";
+};
+
+export type EntryDraft = Omit<
+  ProductionLog,
+  "id" | "createdAt" | "source" | "normalMinutes" | "machineName"
+>;

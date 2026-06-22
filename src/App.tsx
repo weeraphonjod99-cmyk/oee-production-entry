@@ -1,0 +1,687 @@
+import {
+  BarChart3,
+  ClipboardList,
+  Database,
+  Download,
+  Factory,
+  Gauge,
+  History,
+  Save,
+  Search,
+  TableProperties,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
+import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
+import {
+  downtimeFields,
+  formatNumber,
+  formatPercent,
+  groupDowntime,
+  summarize,
+  totalDowntime,
+} from "./lib/metrics";
+import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs } from "./lib/storage";
+import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
+
+type TabId = "entry" | "dashboard" | "history" | "master";
+
+type Filters = {
+  machineId: string;
+  shift: string;
+  from: string;
+  to: string;
+};
+
+const today = new Date().toISOString().slice(0, 10);
+const defaultMachine = machines[0];
+const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
+const orderedShiftOptions = Array.from(new Set(["白", "夜", ...shiftOptions]));
+
+function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
+  return {
+    date: today,
+    shift: orderedShiftOptions[0] ?? "白",
+    machineId: machine.id,
+    productName: product.productName,
+    partNo: product.partNo,
+    step: product.step,
+    changeoverMinutes: 0,
+    inspectionMinutes: 0,
+    equipmentRepairMinutes: 0,
+    moldRepairMinutes: 0,
+    materialChangeMinutes: 0,
+    emergencyStopMinutes: 0,
+    meetingMinutes: 0,
+    plannedStopMinutes: 0,
+    goodQty: 0,
+    ngQty: 0,
+    testQty: 0,
+    note: "",
+  };
+}
+
+const shiftLabel = (shift: string) => {
+  if (shift === "白") return "白 / Day";
+  if (shift === "夜") return "夜 / Night";
+  return shift;
+};
+
+const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+function uniqueLogs(logs: ProductionLog[]) {
+  const map = new Map<string, ProductionLog>();
+  for (const log of logs) map.set(log.id, log);
+  return [...map.values()].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`));
+}
+
+function App() {
+  const [tab, setTab] = useState<TabId>("entry");
+  const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
+  const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
+  const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
+  const [saving, setSaving] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const [filters, setFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
+
+  useEffect(() => {
+    setLocalLogs(loadLocalLogs());
+    if (!remoteEnabled) return;
+    fetchRemoteLogs()
+      .then((logs) => {
+        setRemoteLogs(logs);
+        setStatus(`เชื่อมต่อ Google Sheet แล้ว (${logs.length} records)`);
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"));
+  }, []);
+
+  const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
+  const machineProducts = useMemo(
+    () => products.filter((product) => product.machineId === draft.machineId),
+    [draft.machineId],
+  );
+  const filteredProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    if (!query) return machineProducts;
+    return machineProducts.filter((product) =>
+      `${product.productName} ${product.partNo} ${product.step}`.toLowerCase().includes(query),
+    );
+  }, [machineProducts, productSearch]);
+
+  const allLogs = useMemo(
+    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
+    [localLogs, remoteLogs],
+  );
+  const visibleLogs = useMemo(() => {
+    return allLogs.filter((log) => {
+      if (filters.machineId && log.machineId !== filters.machineId) return false;
+      if (filters.shift && log.shift !== filters.shift) return false;
+      if (filters.from && log.date < filters.from) return false;
+      if (filters.to && log.date > filters.to) return false;
+      return true;
+    });
+  }, [allLogs, filters]);
+
+  const searchedHistory = useMemo(() => {
+    const query = historySearch.trim().toLowerCase();
+    if (!query) return visibleLogs.slice(0, 120);
+    return visibleLogs
+      .filter((log) => `${log.machineName} ${log.productName} ${log.partNo} ${log.step}`.toLowerCase().includes(query))
+      .slice(0, 120);
+  }, [visibleLogs, historySearch]);
+
+  const summary = useMemo(() => summarize(visibleLogs), [visibleLogs]);
+  const downtime = useMemo(() => groupDowntime(visibleLogs), [visibleLogs]);
+  const totalDraftDowntime = totalDowntime(draft);
+  const computedNormalMinutes = Math.max(currentMachine.capacityMinutes - totalDraftDowntime, 0);
+
+  const selectMachine = (machineId: string) => {
+    const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
+    const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
+    setProductSearch("");
+    setDraft((prev) => ({
+      ...prev,
+      machineId: machine.id,
+      productName: nextProduct.productName,
+      partNo: nextProduct.partNo,
+      step: nextProduct.step,
+    }));
+  };
+
+  const selectProduct = (productId: string) => {
+    const product = products.find((item) => item.id === productId);
+    if (!product) return;
+    setDraft((prev) => ({
+      ...prev,
+      productName: product.productName,
+      partNo: product.partNo,
+      step: product.step,
+    }));
+  };
+
+  const handleNumber = (key: keyof EntryDraft, value: string) => {
+    setDraft((prev) => ({ ...prev, [key]: Math.max(Number(value) || 0, 0) }));
+  };
+
+  const resetDraft = () => {
+    const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
+    setDraft(createEmptyDraft(currentMachine, product));
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
+    const log: ProductionLog = {
+      ...draft,
+      id: makeLogId(),
+      machineName: machine.name,
+      normalMinutes: computedNormalMinutes,
+      createdAt: new Date().toISOString(),
+      source: remoteEnabled ? "google-sheet" : "local",
+    };
+
+    setSaving(true);
+    try {
+      const saved = remoteEnabled ? await appendRemoteLog(log) : log;
+      const next = appendLocalLog(saved);
+      setLocalLogs(next);
+      setStatus(remoteEnabled ? "บันทึกลง Google Sheet แล้ว" : "บันทึกในเครื่องแล้ว");
+      resetDraft();
+    } catch (error) {
+      const next = appendLocalLog({ ...log, source: "local" });
+      setLocalLogs(next);
+      setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearLocal = () => {
+    saveLocalLogs([]);
+    setLocalLogs([]);
+    setStatus("ล้างรายการทดลองในเครื่องแล้ว");
+  };
+
+  return (
+    <div className="app-shell">
+      <aside className="side-nav">
+        <div className="brand-mark">
+          <Factory size={28} />
+          <div>
+            <strong>OEE Entry</strong>
+            <span>Production</span>
+          </div>
+        </div>
+        <nav>
+          <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
+            <ClipboardList size={18} /> กรอกยอด
+          </button>
+          <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
+            <BarChart3 size={18} /> Dashboard
+          </button>
+          <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
+            <History size={18} /> ประวัติ
+          </button>
+          <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
+            <Database size={18} /> Master
+          </button>
+        </nav>
+        <div className={`connection ${remoteEnabled ? "online" : "offline"}`}>
+          {remoteEnabled ? <Wifi size={16} /> : <WifiOff size={16} />}
+          <span>{status}</span>
+        </div>
+      </aside>
+
+      <main className="workspace">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Production quantity entry</p>
+            <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel</h1>
+          </div>
+          <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
+            <Download size={17} /> CSV
+          </button>
+        </header>
+
+        {tab === "entry" && (
+          <section className="entry-layout">
+            <form className="entry-form" onSubmit={submit}>
+              <div className="section-title">
+                <Gauge size={20} />
+                <h2>กรอกยอดผลิต</h2>
+              </div>
+
+              <div className="form-grid">
+                <label>
+                  วันที่
+                  <input value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} type="date" />
+                </label>
+                <label>
+                  กะ
+                  <select value={draft.shift} onChange={(event) => setDraft({ ...draft, shift: event.target.value })}>
+                    {orderedShiftOptions.map((shift) => (
+                      <option key={shift} value={shift}>
+                        {shiftLabel(shift)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  เครื่อง / ไลน์
+                  <select value={draft.machineId} onChange={(event) => selectMachine(event.target.value)}>
+                    {machines.map((machine) => (
+                      <option key={machine.id} value={machine.id}>
+                        {machine.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  ค้นหารุ่น
+                  <div className="input-with-icon">
+                    <Search size={16} />
+                    <input
+                      value={productSearch}
+                      onChange={(event) => setProductSearch(event.target.value)}
+                      placeholder="Product / Part No."
+                      type="search"
+                    />
+                  </div>
+                </label>
+                <label className="wide-field">
+                  รุ่น / Part No. / Step
+                  <select
+                    value={
+                      products.find(
+                        (product) =>
+                          product.machineId === draft.machineId &&
+                          product.productName === draft.productName &&
+                          product.partNo === draft.partNo &&
+                          product.step === draft.step,
+                      )?.id ?? ""
+                    }
+                    onChange={(event) => selectProduct(event.target.value)}
+                  >
+                    {filteredProducts.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.productName} | {product.partNo || "-"} | Step {product.step || "-"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="runtime-panel">
+                <div>
+                  <span>เวลาตามกะ</span>
+                  <strong>{formatNumber(currentMachine.capacityMinutes)} นาที</strong>
+                </div>
+                <div>
+                  <span>Downtime</span>
+                  <strong>{formatNumber(totalDraftDowntime)} นาที</strong>
+                </div>
+                <div>
+                  <span>Normal production</span>
+                  <strong>{formatNumber(computedNormalMinutes)} นาที</strong>
+                </div>
+              </div>
+
+              <div className="section-title compact">
+                <TableProperties size={19} />
+                <h2>ยอดผลิต</h2>
+              </div>
+              <div className="form-grid three">
+                <label>
+                  Good quantity
+                  <input value={draft.goodQty} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
+                </label>
+                <label>
+                  NG quantity
+                  <input value={draft.ngQty} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
+                </label>
+                <label>
+                  Test
+                  <input value={draft.testQty} onChange={(event) => handleNumber("testQty", event.target.value)} min="0" type="number" />
+                </label>
+              </div>
+
+              <div className="section-title compact">
+                <History size={19} />
+                <h2>เวลาหยุด</h2>
+              </div>
+              <div className="downtime-grid">
+                {downtimeFields.map((field) => (
+                  <label key={field.key}>
+                    {field.label}
+                    <input
+                      value={draft[field.key]}
+                      onChange={(event) => handleNumber(field.key, event.target.value)}
+                      min="0"
+                      type="number"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <label>
+                หมายเหตุ
+                <textarea value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} rows={3} />
+              </label>
+
+              <div className="form-actions">
+                <button className="primary-button" disabled={saving} type="submit">
+                  <Save size={18} /> {saving ? "กำลังบันทึก" : "บันทึกยอด"}
+                </button>
+                <button className="ghost-button" onClick={resetDraft} type="button">
+                  ล้างฟอร์ม
+                </button>
+              </div>
+            </form>
+
+            <aside className="entry-summary">
+              <div className="summary-block">
+                <span>เครื่องที่เลือก</span>
+                <strong>{currentMachine.name}</strong>
+                <p>{currentMachine.hasStep ? "มี Step ใน Excel" : "ไม่มี Step ใน Excel"}</p>
+              </div>
+              <div className="summary-block">
+                <span>รุ่นในเครื่องนี้</span>
+                <strong>{formatNumber(machineProducts.length)}</strong>
+                <p>อิงจาก OEE-2026.xlsx</p>
+              </div>
+              <div className="recent-list">
+                <h3>รายการล่าสุด</h3>
+                {localLogs.slice(0, 6).map((log) => (
+                  <div className="recent-item" key={log.id}>
+                    <b>{log.machineName}</b>
+                    <span>
+                      {log.date} · {log.productName} · Good {formatNumber(log.goodQty)}
+                    </span>
+                  </div>
+                ))}
+                {localLogs.length === 0 && <p className="empty-text">ยังไม่มีรายการทดลองในเครื่อง</p>}
+              </div>
+            </aside>
+          </section>
+        )}
+
+        {tab === "dashboard" && (
+          <section className="dashboard-layout">
+            <FiltersBar filters={filters} setFilters={setFilters} />
+            <div className="kpi-grid">
+              <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
+              <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
+              <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
+              <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
+              <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
+              <Kpi label="Logs" value={formatNumber(visibleLogs.length)} tone="neutral" />
+            </div>
+            <div className="analytics-grid">
+              <DowntimeChart items={downtime} />
+              <MachineRanking logs={visibleLogs} />
+            </div>
+            <Trend logs={visibleLogs} />
+          </section>
+        )}
+
+        {tab === "history" && (
+          <section className="table-view">
+            <FiltersBar filters={filters} setFilters={setFilters} />
+            <div className="table-toolbar">
+              <div className="input-with-icon search-box">
+                <Search size={16} />
+                <input
+                  value={historySearch}
+                  onChange={(event) => setHistorySearch(event.target.value)}
+                  placeholder="ค้นหาเครื่อง รุ่น หรือ Part No."
+                  type="search"
+                />
+              </div>
+              <button className="ghost-button danger" onClick={clearLocal} type="button">
+                ล้าง local
+              </button>
+            </div>
+            <LogsTable logs={searchedHistory} />
+          </section>
+        )}
+
+        {tab === "master" && (
+          <section className="table-view">
+            <div className="master-stats">
+              <Kpi label="Machines" value={formatNumber(machines.length)} tone="green" />
+              <Kpi label="Products" value={formatNumber(products.length)} tone="blue" />
+              <Kpi label="Seed logs" value={formatNumber(seedLogs.length)} tone="amber" />
+            </div>
+            <MasterTable />
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function FiltersBar({ filters, setFilters }: { filters: Filters; setFilters: (filters: Filters) => void }) {
+  return (
+    <div className="filters-bar">
+      <label>
+        จาก
+        <input value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} type="date" />
+      </label>
+      <label>
+        ถึง
+        <input value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} type="date" />
+      </label>
+      <label>
+        เครื่อง
+        <select value={filters.machineId} onChange={(event) => setFilters({ ...filters, machineId: event.target.value })}>
+          <option value="">ทั้งหมด</option>
+          {machines.map((machine) => (
+            <option key={machine.id} value={machine.id}>
+              {machine.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        กะ
+        <select value={filters.shift} onChange={(event) => setFilters({ ...filters, shift: event.target.value })}>
+          <option value="">ทั้งหมด</option>
+          {orderedShiftOptions.map((shift) => (
+            <option key={shift} value={shift}>
+              {shiftLabel(shift)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function Kpi({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className={`kpi ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function DowntimeChart({ items }: { items: ReturnType<typeof groupDowntime> }) {
+  const max = Math.max(...items.map((item) => item.minutes), 1);
+  return (
+    <div className="analysis-panel">
+      <h2>Downtime Pareto</h2>
+      <div className="bar-list">
+        {items.map((item) => (
+          <div className="bar-row" key={item.key}>
+            <span>{item.label}</span>
+            <div className="bar-track">
+              <div style={{ width: `${(item.minutes / max) * 100}%` }} />
+            </div>
+            <b>{formatNumber(item.minutes)}</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MachineRanking({ logs }: { logs: ProductionLog[] }) {
+  const rows = machines
+    .map((machine) => {
+      const machineLogs = logs.filter((log) => log.machineId === machine.id);
+      const summary = summarize(machineLogs);
+      return { machine, ...summary, count: machineLogs.length };
+    })
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.good - a.good)
+    .slice(0, 10);
+
+  return (
+    <div className="analysis-panel">
+      <h2>Machine ranking</h2>
+      <div className="ranking-list">
+        {rows.map((row, index) => (
+          <div className="ranking-row" key={row.machine.id}>
+            <span>{index + 1}</span>
+            <strong>{row.machine.name}</strong>
+            <b>{formatNumber(row.good)}</b>
+            <em>{formatPercent(row.quality)}</em>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Trend({ logs }: { logs: ProductionLog[] }) {
+  const points = [...logs]
+    .reduce<Array<{ date: string; good: number }>>((acc, log) => {
+      const current = acc.find((item) => item.date === log.date);
+      if (current) current.good += log.goodQty;
+      else acc.push({ date: log.date, good: log.goodQty });
+      return acc;
+    }, [])
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-18);
+  const max = Math.max(...points.map((point) => point.good), 1);
+  const width = 900;
+  const height = 220;
+  const path = points
+    .map((point, index) => {
+      const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
+      const y = height - (point.good / max) * (height - 28) - 14;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="analysis-panel trend-panel">
+      <h2>Good quantity trend</h2>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img">
+        <path d={path} fill="none" stroke="#2563eb" strokeLinecap="round" strokeWidth="4" />
+        {points.map((point, index) => {
+          const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
+          const y = height - (point.good / max) * (height - 28) - 14;
+          return <circle cx={x} cy={y} fill="#16a34a" key={point.date} r="5" />;
+        })}
+      </svg>
+      <div className="trend-labels">
+        {points.map((point) => (
+          <span key={point.date}>{point.date.slice(5)}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LogsTable({ logs }: { logs: ProductionLog[] }) {
+  return (
+    <div className="data-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Shift</th>
+            <th>Machine</th>
+            <th>Product</th>
+            <th>Part No.</th>
+            <th>Step</th>
+            <th>Good</th>
+            <th>NG</th>
+            <th>Downtime</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs.map((log) => (
+            <tr key={log.id}>
+              <td>{log.date}</td>
+              <td>{shiftLabel(log.shift)}</td>
+              <td>{log.machineName}</td>
+              <td>{log.productName}</td>
+              <td>{log.partNo}</td>
+              <td>{log.step}</td>
+              <td>{formatNumber(log.goodQty)}</td>
+              <td>{formatNumber(log.ngQty)}</td>
+              <td>{formatNumber(totalDowntime(log))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MasterTable() {
+  const [query, setQuery] = useState("");
+  const rows = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    if (!search) return products.slice(0, 200);
+    return products
+      .filter((product) =>
+        `${product.machineName} ${product.productName} ${product.partNo} ${product.step}`.toLowerCase().includes(search),
+      )
+      .slice(0, 200);
+  }, [query]);
+
+  return (
+    <>
+      <div className="table-toolbar">
+        <div className="input-with-icon search-box">
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา master data" type="search" />
+        </div>
+      </div>
+      <div className="data-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>Product</th>
+              <th>Part No.</th>
+              <th>Step</th>
+              <th>Sample Good</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((product) => (
+              <tr key={product.id}>
+                <td>{product.machineName}</td>
+                <td>{product.productName}</td>
+                <td>{product.partNo}</td>
+                <td>{product.step}</td>
+                <td>{formatNumber(product.sampleGoodQty)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+export default App;
