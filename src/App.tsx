@@ -37,6 +37,7 @@ import {
   downtimeFields,
   formatNumber,
   formatPercent,
+  formatRate,
   groupDowntime,
   summarize,
   totalDowntime,
@@ -67,6 +68,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     productName: product.productName,
     partNo: product.partNo,
     step: product.step,
+    machineSpeed: 0,
     workMinutes: machine.capacityMinutes,
     changeoverMinutes: 0,
     inspectionMinutes: 0,
@@ -174,6 +176,7 @@ function App() {
       productName: nextProduct.productName,
       partNo: nextProduct.partNo,
       step: nextProduct.step,
+      machineSpeed: 0,
       workMinutes: machine.capacityMinutes,
     }));
   };
@@ -384,6 +387,19 @@ function App() {
                     <b>นาที</b>
                   </div>
                 </label>
+                <label className="runtime-input-block">
+                  <span>ความเร็วเครื่องจักร</span>
+                  <div className="runtime-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => handleNumber("machineSpeed", event.target.value)}
+                      step="0.01"
+                      type="number"
+                      value={draft.machineSpeed}
+                    />
+                    <b>ชิ้น/นาที</b>
+                  </div>
+                </label>
                 <div>
                   <span>Downtime</span>
                   <strong>{formatNumber(totalDraftDowntime)} นาที</strong>
@@ -463,7 +479,7 @@ function App() {
                   <div className="recent-item" key={log.id}>
                     <b>{log.machineName}</b>
                     <span>
-                      {log.date} · {log.productName} · Good {formatNumber(log.goodQty)}
+                      {log.date} · {log.productName} · Good {formatNumber(log.goodQty)} · Speed {formatRate(log.machineSpeed ?? 0)}
                     </span>
                   </div>
                 ))}
@@ -1034,6 +1050,7 @@ function LogsTable({ logs }: { logs: ProductionLog[] }) {
             <th>Product</th>
             <th>Part No.</th>
             <th>Step</th>
+            <th>Speed</th>
             <th>Good</th>
             <th>NG</th>
             <th>Downtime</th>
@@ -1048,6 +1065,7 @@ function LogsTable({ logs }: { logs: ProductionLog[] }) {
               <td>{log.productName}</td>
               <td>{log.partNo}</td>
               <td>{log.step}</td>
+              <td>{formatRate(log.machineSpeed ?? 0)}</td>
               <td>{formatNumber(log.goodQty)}</td>
               <td>{formatNumber(log.ngQty)}</td>
               <td>{formatNumber(totalDowntime(log))}</td>

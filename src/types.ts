@@ -30,6 +30,7 @@ export type ProductionLog = {
   productName: string;
   partNo: string;
   step: string;
+  machineSpeed?: number;
   normalMinutes: number;
   changeoverMinutes: number;
   inspectionMinutes: number;
@@ -52,4 +53,5 @@ export type EntryDraft = Omit<
   "id" | "createdAt" | "source" | "normalMinutes" | "machineName"
 > & {
   workMinutes: number;
+  machineSpeed: number;
 };

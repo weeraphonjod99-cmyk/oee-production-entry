@@ -31,6 +31,7 @@ export function exportLogsCsv(logs: ProductionLog[]) {
     "productName",
     "partNo",
     "step",
+    "machineSpeed",
     "normalMinutes",
     "changeoverMinutes",
     "inspectionMinutes",

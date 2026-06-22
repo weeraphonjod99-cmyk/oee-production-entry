@@ -72,6 +72,10 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(value);
 }
 
+export function formatRate(value: number) {
+  return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(value);
+}
+
 export function formatPercent(value: number) {
   return new Intl.NumberFormat("th-TH", {
     style: "percent",
