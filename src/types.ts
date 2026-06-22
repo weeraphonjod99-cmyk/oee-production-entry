@@ -50,4 +50,6 @@ export type ProductionLog = {
 export type EntryDraft = Omit<
   ProductionLog,
   "id" | "createdAt" | "source" | "normalMinutes" | "machineName"
->;
+> & {
+  workMinutes: number;
+};

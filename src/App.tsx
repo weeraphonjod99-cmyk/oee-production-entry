@@ -67,6 +67,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     productName: product.productName,
     partNo: product.partNo,
     step: product.step,
+    workMinutes: machine.capacityMinutes,
     changeoverMinutes: 0,
     inspectionMinutes: 0,
     equipmentRepairMinutes: 0,
@@ -161,7 +162,7 @@ function App() {
   const summary = useMemo(() => summarize(visibleLogs), [visibleLogs]);
   const downtime = useMemo(() => groupDowntime(visibleLogs), [visibleLogs]);
   const totalDraftDowntime = totalDowntime(draft);
-  const computedNormalMinutes = Math.max(currentMachine.capacityMinutes - totalDraftDowntime, 0);
+  const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
 
   const selectMachine = (machineId: string) => {
     const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
@@ -173,6 +174,7 @@ function App() {
       productName: nextProduct.productName,
       partNo: nextProduct.partNo,
       step: nextProduct.step,
+      workMinutes: machine.capacityMinutes,
     }));
   };
 
@@ -199,8 +201,9 @@ function App() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
+    const { workMinutes: _workMinutes, ...logDraft } = draft;
     const log: ProductionLog = {
-      ...draft,
+      ...logDraft,
       id: makeLogId(),
       machineName: machine.name,
       normalMinutes: computedNormalMinutes,
@@ -369,10 +372,18 @@ function App() {
               </div>
 
               <div className="runtime-panel">
-                <div>
+                <label className="runtime-input-block">
                   <span>เวลาตามกะ</span>
-                  <strong>{formatNumber(currentMachine.capacityMinutes)} นาที</strong>
-                </div>
+                  <div className="runtime-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => handleNumber("workMinutes", event.target.value)}
+                      type="number"
+                      value={draft.workMinutes}
+                    />
+                    <b>นาที</b>
+                  </div>
+                </label>
                 <div>
                   <span>Downtime</span>
                   <strong>{formatNumber(totalDraftDowntime)} นาที</strong>

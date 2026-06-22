@@ -434,6 +434,7 @@ textarea:focus {
 }
 
 .runtime-panel div,
+.runtime-panel label,
 .summary-block {
   display: grid;
   gap: 4px;
@@ -451,6 +452,31 @@ textarea:focus {
 .runtime-panel strong,
 .summary-block strong {
   font-size: 22px;
+}
+
+.runtime-input-block {
+  margin: 0;
+}
+
+.runtime-input-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.runtime-input-row input {
+  background: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+  min-height: 42px;
+  max-width: 150px;
+  padding: 6px 10px;
+}
+
+.runtime-input-row b {
+  color: #061635;
+  font-size: 20px;
+  white-space: nowrap;
 }
 
 .downtime-grid {
