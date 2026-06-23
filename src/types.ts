@@ -53,5 +53,7 @@ export type EntryDraft = Omit<
   "id" | "createdAt" | "source" | "normalMinutes" | "machineName"
 > & {
   workMinutes: number;
+  timeSlots: number;
+  minutesPerSlot: number;
   machineSpeed: number;
 };

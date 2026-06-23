@@ -61,8 +61,16 @@ const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
 const orderedShiftOptions = Array.from(new Set(["白", "夜", ...shiftOptions]));
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
+const defaultMinutesPerSlot = 5;
+
+const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
+const roundNumber = (value: number) => Number(value.toFixed(2));
+
+const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
+  minutesPerSlot > 0 ? roundNumber(workMinutes / minutesPerSlot) : 0;
 
 function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
+  const minutesPerSlot = defaultMinutesPerSlot;
   return {
     date: today,
     shift: orderedShiftOptions[0] ?? "白",
@@ -72,6 +80,8 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     step: product.step,
     machineSpeed: 0,
     workMinutes: machine.capacityMinutes,
+    timeSlots: slotsFromMinutes(machine.capacityMinutes, minutesPerSlot),
+    minutesPerSlot,
     changeoverMinutes: 0,
     inspectionMinutes: 0,
     equipmentRepairMinutes: 0,
@@ -192,6 +202,7 @@ function App() {
       step: nextProduct.step,
       machineSpeed: 0,
       workMinutes: machine.capacityMinutes,
+      timeSlots: slotsFromMinutes(machine.capacityMinutes, prev.minutesPerSlot),
     }));
   };
 
@@ -221,6 +232,33 @@ function App() {
     setDraft((prev) => ({ ...prev, [key]: Math.max(Number(value) || 0, 0) }));
   };
 
+  const updateWorkMinutes = (value: string) => {
+    const workMinutes = toPositiveNumber(value);
+    setDraft((prev) => ({
+      ...prev,
+      workMinutes,
+      timeSlots: prev.minutesPerSlot > 0 ? slotsFromMinutes(workMinutes, prev.minutesPerSlot) : prev.timeSlots,
+    }));
+  };
+
+  const updateTimeSlots = (value: string) => {
+    const timeSlots = toPositiveNumber(value);
+    setDraft((prev) => ({
+      ...prev,
+      timeSlots,
+      workMinutes: roundNumber(timeSlots * prev.minutesPerSlot),
+    }));
+  };
+
+  const updateMinutesPerSlot = (value: string) => {
+    const minutesPerSlot = toPositiveNumber(value);
+    setDraft((prev) => ({
+      ...prev,
+      minutesPerSlot,
+      workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
+    }));
+  };
+
   const resetDraft = () => {
     const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
     setDraft(createEmptyDraft(currentMachine, product));
@@ -229,7 +267,7 @@ function App() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
-    const { workMinutes: _workMinutes, ...logDraft } = draft;
+    const { workMinutes: _workMinutes, timeSlots: _timeSlots, minutesPerSlot: _minutesPerSlot, ...logDraft } = draft;
     const log: ProductionLog = {
       ...logDraft,
       id: makeLogId(),
@@ -427,9 +465,35 @@ function App() {
                   <div className="runtime-input-row">
                     <input
                       min="0"
-                      onChange={(event) => handleNumber("workMinutes", event.target.value)}
+                      onChange={(event) => updateWorkMinutes(event.target.value)}
                       type="number"
                       value={draft.workMinutes}
+                    />
+                    <b>นาที</b>
+                  </div>
+                </label>
+                <label className="runtime-input-block">
+                  <span>จำนวนช่องเวลา</span>
+                  <div className="runtime-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => updateTimeSlots(event.target.value)}
+                      step="0.01"
+                      type="number"
+                      value={draft.timeSlots}
+                    />
+                    <b>ช่อง</b>
+                  </div>
+                </label>
+                <label className="runtime-input-block">
+                  <span>นาที/ช่อง</span>
+                  <div className="runtime-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => updateMinutesPerSlot(event.target.value)}
+                      step="0.01"
+                      type="number"
+                      value={draft.minutesPerSlot}
                     />
                     <b>นาที</b>
                   </div>
