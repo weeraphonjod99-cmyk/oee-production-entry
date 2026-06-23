@@ -10,6 +10,10 @@ const LOG_HEADERS = [
   "productName",
   "partNo",
   "step",
+  "workMinutes",
+  "timeSlots",
+  "minutesPerSlot",
+  "machineSpeed",
   "normalMinutes",
   "changeoverMinutes",
   "inspectionMinutes",
@@ -92,13 +96,29 @@ function ensureSheet(name, headers) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
   } else {
-    const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-    const missingHeader = headers.some((header, index) => current[index] !== header);
-    if (missingHeader) {
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    }
+    migrateHeaders(sheet, headers);
   }
   return sheet;
+}
+
+function migrateHeaders(sheet, headers) {
+  const lastRow = sheet.getLastRow();
+  const lastColumn = Math.max(sheet.getLastColumn(), headers.length);
+  const current = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(String);
+  const isCurrent = headers.every((header, index) => current[index] === header);
+  if (isCurrent) return;
+
+  const data = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues() : [];
+  const rebuilt = data.map((row) => headers.map((header) => {
+    const oldIndex = current.indexOf(header);
+    return oldIndex >= 0 ? row[oldIndex] : "";
+  }));
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  if (rebuilt.length) {
+    sheet.getRange(2, 1, rebuilt.length, headers.length).setValues(rebuilt);
+  }
 }
 
 function rowToObject(headers, row) {

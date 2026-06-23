@@ -267,9 +267,8 @@ function App() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
-    const { workMinutes: _workMinutes, timeSlots: _timeSlots, minutesPerSlot: _minutesPerSlot, ...logDraft } = draft;
     const log: ProductionLog = {
-      ...logDraft,
+      ...draft,
       id: makeLogId(),
       machineName: machine.name,
       normalMinutes: computedNormalMinutes,
