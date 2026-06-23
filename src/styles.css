@@ -13,10 +13,15 @@
   box-sizing: border-box;
 }
 
+html {
+  background: #f5f7f4;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button,
@@ -184,6 +189,7 @@ button {
   gap: 8px;
   min-height: 42px;
   padding: 0 14px;
+  touch-action: manipulation;
   white-space: nowrap;
 }
 
@@ -973,7 +979,9 @@ textarea:focus {
 }
 
 .data-table-wrap {
+  max-width: 100%;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .users-table table {
@@ -1118,4 +1126,242 @@ td:nth-child(9) {
     text-align: left;
   }
 
+}
+
+@media (max-width: 640px) {
+  body {
+    min-width: 0;
+  }
+
+  .login-screen {
+    align-items: start;
+    padding: 14px;
+  }
+
+  .login-card {
+    padding: 18px;
+  }
+
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side-nav {
+    align-items: center;
+    box-shadow: 0 8px 20px rgba(23, 32, 51, 0.18);
+    flex-direction: row;
+    gap: 10px;
+    padding: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .brand-mark {
+    flex: 1 1 auto;
+    min-height: 40px;
+    min-width: 0;
+  }
+
+  .brand-logo {
+    height: 38px;
+    width: 38px;
+  }
+
+  .brand-mark strong {
+    font-size: 16px;
+  }
+
+  .brand-mark span,
+  .user-panel span {
+    display: none;
+  }
+
+  .side-nav nav {
+    display: flex;
+    flex: 0 0 100%;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 0 -10px;
+    order: 3;
+    overflow-x: auto;
+    padding: 0 10px 4px;
+    scrollbar-width: none;
+  }
+
+  .side-nav nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .side-nav button {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 12px;
+    width: auto;
+  }
+
+  .user-panel {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+  }
+
+  .connection {
+    flex: 0 0 100%;
+    margin-top: 0;
+    max-width: none;
+    order: 4;
+    padding: 8px 10px;
+  }
+
+  .connection span {
+    font-size: 12px;
+  }
+
+  .workspace {
+    padding: 10px;
+  }
+
+  .topbar {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .topbar-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .topbar-actions .ghost-button {
+    justify-content: center;
+    min-width: 0;
+    padding: 0 10px;
+    width: 100%;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .entry-form,
+  .entry-summary,
+  .analysis-panel,
+  .filters-bar,
+  .table-toolbar,
+  .user-form {
+    padding: 12px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 46px;
+  }
+
+  .runtime-panel {
+    padding: 12px;
+  }
+
+  .runtime-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .runtime-input-row input {
+    font-size: 20px;
+    max-width: none;
+    width: 100%;
+  }
+
+  .runtime-input-row b {
+    font-size: 16px;
+  }
+
+  .form-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi {
+    min-height: 82px;
+    padding: 12px;
+  }
+
+  .kpi strong {
+    font-size: 21px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .part-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .part-summary-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .oee-gauge-wrap {
+    min-height: 170px;
+  }
+
+  .oee-gauge {
+    height: 160px;
+    width: 160px;
+  }
+
+  .oee-gauge-label strong {
+    font-size: 28px;
+  }
+
+  .oee-summary-layout {
+    gap: 12px;
+  }
+
+  .ranking-row {
+    align-items: start;
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .ranking-row b,
+  .ranking-row em {
+    text-align: left;
+  }
+
+  .data-table-wrap {
+    border-left: 0;
+    border-radius: 0;
+    border-right: 0;
+    margin: 0 -10px;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-actions,
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .runtime-panel strong {
+    font-size: 20px;
+  }
 }

@@ -10,6 +10,7 @@ import {
   LogOut,
   Save,
   Search,
+  Share2,
   TableProperties,
   Trash2,
   UserPlus,
@@ -61,6 +62,7 @@ const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
 const orderedShiftOptions = Array.from(new Set(["白", "夜", ...shiftOptions]));
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
+const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
 
 const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
@@ -304,6 +306,27 @@ function App() {
     setTab("entry");
   };
 
+  const shareApp = async () => {
+    const shareData = {
+      title: "OEE Production Entry",
+      text: "เปิดระบบกรอกยอดผลิต OEE",
+      url: productionShareUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await navigator.clipboard.writeText(productionShareUrl);
+      setStatus("คัดลอกลิงก์สำหรับแชร์แล้ว");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setStatus(`ลิงก์สำหรับแชร์: ${productionShareUrl}`);
+    }
+  };
+
   if (!session) return <LoginScreen onSignedIn={setSession} />;
 
   return (
@@ -359,6 +382,9 @@ function App() {
             <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel</h1>
           </div>
           <div className="topbar-actions">
+            <button className="ghost-button" onClick={shareApp} type="button">
+              <Share2 size={17} /> Share
+            </button>
             <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
               <Download size={17} /> CSV
             </button>
