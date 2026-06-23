@@ -611,6 +611,7 @@ function App() {
               <Kpi label="Logs" value={formatNumber(visibleLogs.length)} tone="neutral" />
             </div>
             <FiltersBar filters={filters} setFilters={setFilters} />
+            <PartNoSummary logs={visibleLogs} />
             <OeeSummaryChart summary={summary} />
             <div className="analytics-grid">
               <DowntimeChart items={downtime} />
@@ -988,6 +989,77 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone: strin
     <div className={`kpi ${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
+  const rows = [...logs
+    .reduce(
+      (map, log) => {
+        const key = `${log.productName}::${log.partNo}::${log.step}`;
+        const current =
+          map.get(key) ??
+          {
+            good: 0,
+            ng: 0,
+            partNo: log.partNo,
+            productName: log.productName,
+            step: log.step,
+            test: 0,
+            total: 0,
+          };
+        current.good += Number(log.goodQty || 0);
+        current.ng += Number(log.ngQty || 0);
+        current.test += Number(log.testQty || 0);
+        current.total += 1;
+        map.set(key, current);
+        return map;
+      },
+      new Map<
+        string,
+        {
+          good: number;
+          ng: number;
+          partNo: string;
+          productName: string;
+          step: string;
+          test: number;
+          total: number;
+        }
+      >(),
+    )
+    .values()]
+    .sort((a, b) => b.total - a.total || a.partNo.localeCompare(b.partNo));
+  const visibleRows = rows.slice(0, 12);
+  const hiddenCount = Math.max(rows.length - visibleRows.length, 0);
+
+  return (
+    <div className="analysis-panel part-summary-panel">
+      <div className="part-summary-heading">
+        <h2>รุ่น / Part No.</h2>
+        <span>{formatNumber(rows.length)} Part No.</span>
+      </div>
+      {visibleRows.length > 0 ? (
+        <>
+          <div className="part-summary-grid">
+            {visibleRows.map((row) => (
+              <div className="part-summary-row" key={`${row.productName}-${row.partNo}-${row.step}`}>
+                <div>
+                  <strong>{row.partNo || "-"}</strong>
+                  <span>{row.productName || "-"}</span>
+                </div>
+                <em>Step {row.step || "-"}</em>
+                <b>{formatNumber(row.good + row.ng + row.test)}</b>
+                <small>{formatNumber(row.total)} logs</small>
+              </div>
+            ))}
+          </div>
+          {hiddenCount > 0 && <p className="empty-text">แสดงอีก {formatNumber(hiddenCount)} Part No. ในตารางประวัติ</p>}
+        </>
+      ) : (
+        <p className="empty-text">ไม่มี Part No. ตามตัวกรองนี้</p>
+      )}
     </div>
   );
 }
