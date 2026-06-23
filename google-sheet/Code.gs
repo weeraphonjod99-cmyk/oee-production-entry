@@ -1,5 +1,12 @@
 const SPREADSHEET_ID = "";
+const DATABASE_TITLE = "OEE Production Database";
 const LOG_SHEET = "production_logs";
+const MACHINE_SHEET = "machines";
+const PRODUCT_MASTER_SHEET = "product_master";
+const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
+
+const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
+const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/product_master.csv";
 
 const LOG_HEADERS = [
   "id",
@@ -31,12 +38,54 @@ const LOG_HEADERS = [
   "source",
 ];
 
+const MACHINE_HEADERS = [
+  "id",
+  "name",
+  "capacityUnits",
+  "capacityMinutes",
+  "hasStep",
+  "rowCount",
+];
+
+const PRODUCT_MASTER_HEADERS = [
+  "id",
+  "machineId",
+  "machineName",
+  "productName",
+  "partNo",
+  "step",
+  "sampleGoodQty",
+  "sampleNgQty",
+  "sampleTestQty",
+];
+
+const DOWNTIME_CATALOG_ROWS = [
+  ["key", "thLabel", "enLabel", "sortOrder"],
+  ["changeoverMinutes", "เปลี่ยนรุ่น", "Changeover", 10],
+  ["inspectionMinutes", "ตรวจสอบ", "Inspection", 20],
+  ["equipmentRepairMinutes", "ซ่อมเครื่อง", "Equipment repair", 30],
+  ["moldRepairMinutes", "ซ่อมแม่พิมพ์", "Mold repair", 40],
+  ["materialChangeMinutes", "เปลี่ยนวัตถุดิบ", "Material change", 50],
+  ["emergencyStopMinutes", "หยุดไม่ทราบสาเหตุ", "Emergency stop", 60],
+  ["meetingMinutes", "ประชุม / 5S / เปลี่ยนกะ", "Meeting or shift break", 70],
+  ["plannedStopMinutes", "หยุดตามแผน", "Planned stop", 80],
+];
+
 function doGet(e) {
   const action = e.parameter.action || "health";
   try {
     if (action === "logs") {
       const limit = Number(e.parameter.limit || 500);
       return jsonResponse({ ok: true, logs: getLogs(limit) });
+    }
+    if (action === "setup") {
+      const book = setupProductionWorkbook();
+      return jsonResponse({
+        ok: true,
+        service: "oee-production-entry",
+        spreadsheetId: book.getId(),
+        spreadsheetUrl: book.getUrl(),
+      });
     }
     return jsonResponse({ ok: true, service: "oee-production-entry" });
   } catch (error) {
@@ -83,15 +132,15 @@ function getLogs(limit) {
 
 function setupProductionWorkbook() {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
-  sheet.setFrozenRows(1);
-  sheet.getRange(1, 1, 1, LOG_HEADERS.length).setFontWeight("bold").setBackground("#17372f").setFontColor("#ffffff");
-  sheet.autoResizeColumns(1, LOG_HEADERS.length);
+  formatHeader(sheet, LOG_HEADERS.length);
+  importCsvSheet(MACHINE_SHEET, MACHINE_HEADERS, MACHINES_CSV_URL);
+  importCsvSheet(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS, PRODUCT_MASTER_CSV_URL);
+  setupDowntimeCatalog();
+  return sheet.getParent();
 }
 
 function ensureSheet(name, headers) {
-  const book = SPREADSHEET_ID
-    ? SpreadsheetApp.openById(SPREADSHEET_ID)
-    : SpreadsheetApp.getActiveSpreadsheet();
+  const book = getWorkbook();
   const sheet = book.getSheetByName(name) || book.insertSheet(name);
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
@@ -99,6 +148,31 @@ function ensureSheet(name, headers) {
     migrateHeaders(sheet, headers);
   }
   return sheet;
+}
+
+function getWorkbook() {
+  if (SPREADSHEET_ID) {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  }
+
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) {
+    return active;
+  }
+
+  const properties = PropertiesService.getScriptProperties();
+  const storedId = properties.getProperty("OEE_SPREADSHEET_ID");
+  if (storedId) {
+    try {
+      return SpreadsheetApp.openById(storedId);
+    } catch (error) {
+      properties.deleteProperty("OEE_SPREADSHEET_ID");
+    }
+  }
+
+  const book = SpreadsheetApp.create(DATABASE_TITLE);
+  properties.setProperty("OEE_SPREADSHEET_ID", book.getId());
+  return book;
 }
 
 function migrateHeaders(sheet, headers) {
@@ -119,6 +193,41 @@ function migrateHeaders(sheet, headers) {
   if (rebuilt.length) {
     sheet.getRange(2, 1, rebuilt.length, headers.length).setValues(rebuilt);
   }
+}
+
+function importCsvSheet(name, headers, url) {
+  const sheet = ensureSheet(name, headers);
+  if (sheet.getLastRow() > 1) {
+    formatHeader(sheet, headers.length);
+    return;
+  }
+
+  const csv = UrlFetchApp.fetch(url).getContentText();
+  const rows = Utilities.parseCsv(csv);
+  if (!rows.length) return;
+
+  const normalizedRows = rows.map((row, index) => {
+    if (index === 0) return headers;
+    return headers.map((_, columnIndex) => row[columnIndex] == null ? "" : row[columnIndex]);
+  });
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, normalizedRows.length, headers.length).setValues(normalizedRows);
+  formatHeader(sheet, headers.length);
+}
+
+function setupDowntimeCatalog() {
+  const headers = DOWNTIME_CATALOG_ROWS[0];
+  const sheet = ensureSheet(DOWNTIME_CATALOG_SHEET, headers);
+  sheet.clearContents();
+  sheet.getRange(1, 1, DOWNTIME_CATALOG_ROWS.length, headers.length).setValues(DOWNTIME_CATALOG_ROWS);
+  formatHeader(sheet, headers.length);
+}
+
+function formatHeader(sheet, columnCount) {
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, columnCount).setFontWeight("bold").setBackground("#17372f").setFontColor("#ffffff");
+  sheet.autoResizeColumns(1, columnCount);
 }
 
 function rowToObject(headers, row) {
