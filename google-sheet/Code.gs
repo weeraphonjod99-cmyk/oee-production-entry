@@ -1,4 +1,4 @@
-const SPREADSHEET_ID = "";
+const SPREADSHEET_ID = "1-3RKcRJC_ENe-xCWMIYYHqYYaKj0cyCG8n-MwMWQMXM";
 const DATABASE_TITLE = "OEE Production Database";
 const LOG_SHEET = "production_logs";
 const MACHINE_SHEET = "machines";
@@ -7,6 +7,9 @@ const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 
 const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
 const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/product_master.csv";
+const OEE_HEADER_ROW = 3;
+const OEE_FIRST_DATA_ROW = 4;
+const OEE_MINUTES_PER_SLOT = 5;
 
 const LOG_HEADERS = [
   "id",
@@ -107,14 +110,221 @@ function doPost(e) {
 }
 
 function appendLog(payload) {
-  const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
     createdAt: payload.createdAt || new Date().toISOString(),
     source: "google-sheet",
   });
+  appendFormattedOeeRow(log);
+  const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   sheet.appendRow(LOG_HEADERS.map((header) => log[header] == null ? "" : log[header]));
   return log;
+}
+
+function appendFormattedOeeRow(log) {
+  const book = getWorkbook();
+  const sheet = findOeeMachineSheet(book, log.machineName);
+  if (!sheet) {
+    throw new Error("Machine sheet not found: " + log.machineName);
+  }
+
+  const layout = getOeeLayout(sheet);
+  const targetRow = Math.max(sheet.getLastRow() + 1, OEE_FIRST_DATA_ROW);
+  ensureRowExists(sheet, targetRow);
+
+  const templateRow = findOeeTemplateRow(sheet, layout, log, targetRow - 1);
+  copyOeeTemplateRow(sheet, templateRow, targetRow);
+  writeOeeInputRow(sheet, layout, targetRow, log);
+
+  return { sheetName: sheet.getName(), row: targetRow };
+}
+
+function findOeeMachineSheet(book, machineName) {
+  if (!machineName) return null;
+  const exact = book.getSheetByName(machineName);
+  if (exact) return exact;
+
+  const wanted = normalizeSheetName(machineName);
+  const sheets = book.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    if (normalizeSheetName(sheets[i].getName()) === wanted) {
+      return sheets[i];
+    }
+  }
+  return null;
+}
+
+function normalizeSheetName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getOeeLayout(sheet) {
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 60)).getDisplayValues()[0];
+  const hasStep = String(headers[5] || "").toLowerCase().indexOf("step") >= 0;
+  return hasStep
+    ? {
+        hasStep: true,
+        sequence: 1,
+        date: 2,
+        shift: 3,
+        productName: 4,
+        partNo: 5,
+        step: 6,
+        normalSlot: 7,
+        downtimeStart: 8,
+        normalMinutes: 16,
+        goodQty: 25,
+        ngQty: 26,
+        testQty: 27,
+        theoreticalImpulse: 29,
+      }
+    : {
+        hasStep: false,
+        sequence: 1,
+        date: 2,
+        shift: 3,
+        productName: 4,
+        partNo: 5,
+        normalSlot: 6,
+        downtimeStart: 7,
+        normalMinutes: 15,
+        goodQty: 24,
+        ngQty: 25,
+        testQty: 26,
+        theoreticalImpulse: 28,
+      };
+}
+
+function ensureRowExists(sheet, row) {
+  if (row > sheet.getMaxRows()) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), row - sheet.getMaxRows());
+  }
+}
+
+function findOeeTemplateRow(sheet, layout, log, lastDataRow) {
+  const product = normalizeLookup(log.productName);
+  const partNo = normalizeLookup(log.partNo);
+  const step = normalizeLookup(log.step || "-");
+
+  for (let row = lastDataRow; row >= OEE_FIRST_DATA_ROW; row--) {
+    const width = layout.hasStep ? 3 : 2;
+    const values = sheet.getRange(row, layout.productName, 1, width).getDisplayValues()[0];
+    const sameProduct = normalizeLookup(values[0]) === product;
+    const samePart = normalizeLookup(values[1]) === partNo;
+    const sameStep = !layout.hasStep || normalizeLookup(values[2] || "-") === step;
+    if (sameProduct && samePart && sameStep) {
+      return row;
+    }
+  }
+
+  return Math.max(lastDataRow, OEE_FIRST_DATA_ROW);
+}
+
+function normalizeLookup(value) {
+  return String(value == null ? "" : value).trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function copyOeeTemplateRow(sheet, templateRow, targetRow) {
+  if (templateRow < OEE_FIRST_DATA_ROW || templateRow === targetRow) return;
+  const lastColumn = sheet.getLastColumn();
+  sheet
+    .getRange(templateRow, 1, 1, lastColumn)
+    .copyTo(sheet.getRange(targetRow, 1, 1, lastColumn), { contentsOnly: false });
+  sheet.setRowHeight(targetRow, sheet.getRowHeight(templateRow));
+}
+
+function writeOeeInputRow(sheet, layout, row, log) {
+  const downtimeSlots = [
+    minutesToSheetSlots(log.changeoverMinutes),
+    minutesToSheetSlots(log.inspectionMinutes),
+    minutesToSheetSlots(log.equipmentRepairMinutes),
+    minutesToSheetSlots(log.moldRepairMinutes),
+    minutesToSheetSlots(log.materialChangeMinutes),
+    minutesToSheetSlots(log.emergencyStopMinutes),
+    minutesToSheetSlots(log.meetingMinutes),
+    minutesToSheetSlots(log.plannedStopMinutes),
+  ];
+  const workMinutes = Number(log.workMinutes || 0) || (Number(log.normalMinutes || 0) + sumValues([
+    log.changeoverMinutes,
+    log.inspectionMinutes,
+    log.equipmentRepairMinutes,
+    log.moldRepairMinutes,
+    log.materialChangeMinutes,
+    log.emergencyStopMinutes,
+    log.meetingMinutes,
+    log.plannedStopMinutes,
+  ]));
+  const workSlots = roundNumber(workMinutes / OEE_MINUTES_PER_SLOT);
+
+  sheet.getRange(row, layout.sequence).setFormula("=ROW()-ROW($A$3)");
+  sheet.getRange(row, layout.date).setValue(parseSheetDate(log.date));
+  sheet.getRange(row, layout.shift).setValue(toOriginalShift(log.shift));
+  sheet.getRange(row, layout.productName).setValue(log.productName || "");
+  sheet.getRange(row, layout.partNo).setValue(log.partNo || "");
+  if (layout.hasStep) {
+    sheet.getRange(row, layout.step).setValue(log.step || "-");
+  }
+
+  sheet.getRange(row, layout.normalSlot).setFormula(buildNormalSlotFormula(row, layout, workSlots));
+  sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
+  sheet.getRange(row, layout.goodQty, 1, 3).setValues([[
+    numberValue(log.goodQty),
+    numberValue(log.ngQty),
+    numberValue(log.testQty),
+  ]]);
+
+  if (numberValue(log.machineSpeed) > 0) {
+    sheet.getRange(row, layout.theoreticalImpulse).setValue(numberValue(log.machineSpeed));
+  }
+}
+
+function minutesToSheetSlots(value) {
+  return roundNumber(numberValue(value) / OEE_MINUTES_PER_SLOT);
+}
+
+function numberValue(value) {
+  const number = Number(value || 0);
+  return isFinite(number) ? number : 0;
+}
+
+function sumValues(values) {
+  return values.reduce((sum, value) => sum + numberValue(value), 0);
+}
+
+function roundNumber(value) {
+  return Math.round(numberValue(value) * 100) / 100;
+}
+
+function buildNormalSlotFormula(row, layout, workSlots) {
+  const parts = [];
+  for (let column = layout.downtimeStart; column < layout.downtimeStart + 8; column++) {
+    parts.push(columnToLetter(column) + row);
+  }
+  return "=" + workSlots + "-" + parts.join("-");
+}
+
+function columnToLetter(column) {
+  let letter = "";
+  while (column > 0) {
+    const modulo = (column - 1) % 26;
+    letter = String.fromCharCode(65 + modulo) + letter;
+    column = Math.floor((column - modulo) / 26);
+  }
+  return letter;
+}
+
+function parseSheetDate(value) {
+  const text = String(value || "");
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value || "";
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function toOriginalShift(value) {
+  const text = String(value || "").trim();
+  if (text === "白" || text === "็ฝ" || text.toLowerCase() === "day" || text.toUpperCase() === "A") return "白";
+  if (text === "夜" || text === "ๅค\u009c" || text.toLowerCase() === "night" || text.toUpperCase() === "B") return "夜";
+  return text;
 }
 
 function getLogs(limit) {
