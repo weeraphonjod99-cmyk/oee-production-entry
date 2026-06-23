@@ -370,10 +370,6 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.wide-field {
-  grid-column: span 2;
-}
-
 label {
   color: #405066;
   display: grid;
@@ -1034,10 +1030,6 @@ td:nth-child(9) {
   .kpi-grid,
   .master-stats {
     grid-template-columns: 1fr;
-  }
-
-  .wide-field {
-    grid-column: auto;
   }
 
   .bar-row {

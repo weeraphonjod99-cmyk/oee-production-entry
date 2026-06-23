@@ -54,6 +54,8 @@ type Filters = {
   to: string;
 };
 
+type ProductFieldKey = "productName" | "partNo" | "step";
+
 const today = new Date().toISOString().slice(0, 10);
 const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
@@ -92,6 +94,12 @@ const shiftLabel = (shift: string) => {
 };
 
 const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const normalizeText = (value: string) => value.trim().toLowerCase();
+
+function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
+  return Array.from(new Set(items.map((item) => item[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
 
 function uniqueLogs(logs: ProductionLog[]) {
   const map = new Map<string, ProductionLog>();
@@ -138,6 +146,12 @@ function App() {
       `${product.productName} ${product.partNo} ${product.step}`.toLowerCase().includes(query),
     );
   }, [machineProducts, productSearch]);
+  const productNameOptions = useMemo(
+    () => uniqueProductValues(filteredProducts, "productName"),
+    [filteredProducts],
+  );
+  const partNoOptions = useMemo(() => uniqueProductValues(filteredProducts, "partNo"), [filteredProducts]);
+  const stepOptions = useMemo(() => uniqueProductValues(filteredProducts, "step"), [filteredProducts]);
 
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
@@ -181,15 +195,26 @@ function App() {
     }));
   };
 
-  const selectProduct = (productId: string) => {
-    const product = products.find((item) => item.id === productId);
-    if (!product) return;
-    setDraft((prev) => ({
-      ...prev,
-      productName: product.productName,
-      partNo: product.partNo,
-      step: product.step,
-    }));
+  const updateProductField = (key: ProductFieldKey, value: string) => {
+    const normalized = normalizeText(value);
+    const matches = normalized
+      ? filteredProducts.filter((product) => normalizeText(product[key]) === normalized)
+      : [];
+    const matchedProduct = matches.length === 1 ? matches[0] : null;
+
+    setDraft((prev) =>
+      matchedProduct
+        ? {
+            ...prev,
+            productName: matchedProduct.productName,
+            partNo: matchedProduct.partNo,
+            step: matchedProduct.step,
+          }
+        : {
+            ...prev,
+            [key]: value,
+          },
+    );
   };
 
   const handleNumber = (key: keyof EntryDraft, value: string) => {
@@ -351,27 +376,49 @@ function App() {
                     />
                   </div>
                 </label>
-                <label className="wide-field">
-                  รุ่น / Part No. / Step
-                  <select
-                    value={
-                      products.find(
-                        (product) =>
-                          product.machineId === draft.machineId &&
-                          product.productName === draft.productName &&
-                          product.partNo === draft.partNo &&
-                          product.step === draft.step,
-                      )?.id ?? ""
-                    }
-                    onChange={(event) => selectProduct(event.target.value)}
-                  >
-                    {filteredProducts.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.productName} | {product.partNo || "-"} | Step {product.step || "-"}
-                      </option>
-                    ))}
-                  </select>
+                <label>
+                  รุ่น
+                  <input
+                    list="product-name-options"
+                    onChange={(event) => updateProductField("productName", event.target.value)}
+                    type="text"
+                    value={draft.productName}
+                  />
                 </label>
+                <label>
+                  Part No.
+                  <input
+                    list="part-no-options"
+                    onChange={(event) => updateProductField("partNo", event.target.value)}
+                    type="text"
+                    value={draft.partNo}
+                  />
+                </label>
+                <label>
+                  Step
+                  <input
+                    list="step-options"
+                    onChange={(event) => updateProductField("step", event.target.value)}
+                    placeholder="-"
+                    type="text"
+                    value={draft.step}
+                  />
+                </label>
+                <datalist id="product-name-options">
+                  {productNameOptions.map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <datalist id="part-no-options">
+                  {partNoOptions.map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <datalist id="step-options">
+                  {stepOptions.map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="runtime-panel">
