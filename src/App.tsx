@@ -22,9 +22,9 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { machines, products, seedLogs } from "./data/oeeMasterData.generated";
-import { appendRemoteLog, fetchProductDefaults, fetchRemoteLogs, remoteEnabled, updateRemoteLog } from "./lib/api";
+import { appendRemoteLog, fetchProductDefaults, fetchRemoteLogs, remoteEnabled, updateRemoteLog, type ProductDefaults } from "./lib/api";
 import {
   canAccessTab,
   changePassword,
@@ -431,7 +431,9 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
 }
 
 function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
-  return Array.from(new Set(items.map((item) => item[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  return Array.from(new Set(items.map((item) => item[key]).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b))
+    .slice(0, 200);
 }
 
 function uniqueLogs(logs: ProductionLog[]) {
@@ -531,6 +533,8 @@ function App() {
   const [saving, setSaving] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [historySearch, setHistorySearch] = useState("");
+  const deferredProductSearch = useDeferredValue(productSearch);
+  const deferredHistorySearch = useDeferredValue(historySearch);
   const [filters, setFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
@@ -538,6 +542,7 @@ function App() {
   const [successDialog, setSuccessDialog] = useState<{ title: string; message: string } | null>(null);
   const [problemDialog, setProblemDialog] = useState<{ title: string; message: string } | null>(null);
   const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
+  const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -560,12 +565,12 @@ function App() {
     [draft.machineId],
   );
   const filteredProducts = useMemo(() => {
-    const query = productSearch.trim().toLowerCase();
+    const query = deferredProductSearch.trim().toLowerCase();
     if (!query) return machineProducts;
     return machineProducts.filter((product) =>
       `${product.productName} ${product.partNo} ${product.step}`.toLowerCase().includes(query),
     );
-  }, [machineProducts, productSearch]);
+  }, [machineProducts, deferredProductSearch]);
   const productNameOptions = useMemo(
     () => uniqueProductValues(filteredProducts, "productName"),
     [filteredProducts],
@@ -574,13 +579,14 @@ function App() {
   const stepOptions = useMemo(() => uniqueProductValues(filteredProducts, "step"), [filteredProducts]);
 
   const allLogs = useMemo(
-    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
+    () => uniqueLogs(remoteLogs.length > 0 ? [...localLogs, ...remoteLogs] : [...localLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
   const visibleLogs = useMemo(() => {
+    const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
     return allLogs.filter((log) => {
       if (filters.machineId && log.machineId !== filters.machineId) return false;
-      if (filters.shift && log.shift !== filters.shift) return false;
+      if (wantedShift && normalizeShiftCode(log.shift) !== wantedShift) return false;
       if (filters.from && log.date < filters.from) return false;
       if (filters.to && log.date > filters.to) return false;
       return true;
@@ -593,15 +599,15 @@ function App() {
   );
 
   const searchedHistory = useMemo(() => {
-    const query = historySearch.trim().toLowerCase();
+    const query = deferredHistorySearch.trim().toLowerCase();
     if (!query) return visibleLogs.slice(0, 120);
     return visibleLogs
       .filter((log) => `${log.machineName} ${log.productName} ${log.partNo} ${log.step}`.toLowerCase().includes(query))
       .slice(0, 120);
-  }, [visibleLogs, historySearch]);
+  }, [visibleLogs, deferredHistorySearch]);
 
-  const summary = useMemo(() => summarize(visibleLogs), [visibleLogs]);
-  const downtime = useMemo(() => groupDowntime(visibleLogs), [visibleLogs]);
+  const summary = useMemo(() => (tab === "dashboard" ? summarize(visibleLogs) : summarize([])), [visibleLogs, tab]);
+  const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(visibleLogs) : groupDowntime([])), [visibleLogs, tab]);
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
   const duplicateEntry = useMemo(() => {
@@ -642,13 +648,8 @@ function App() {
 
   const loadProductDefaults = async (product: ProductMaster, machine: Machine) => {
     if (!remoteEnabled) return;
-    try {
-      const defaults = await fetchProductDefaults({
-        machineName: machine.name,
-        productName: product.productName,
-        partNo: product.partNo,
-        step: product.step || "-",
-      });
+    const cacheKey = [machine.name, product.productName, product.partNo, product.step || "-"].map(normalizeText).join("::");
+    const applyDefaults = (defaults: ProductDefaults) => {
       setDraft((prev) => {
         const sameProduct =
           prev.machineId === machine.id &&
@@ -665,6 +666,21 @@ function App() {
           workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
         };
       });
+    };
+    const cachedDefaults = productDefaultsCache.current.get(cacheKey);
+    if (cachedDefaults) {
+      applyDefaults(cachedDefaults);
+      return;
+    }
+    try {
+      const defaults = await fetchProductDefaults({
+        machineName: machine.name,
+        productName: product.productName,
+        partNo: product.partNo,
+        step: product.step || "-",
+      });
+      productDefaultsCache.current.set(cacheKey, defaults);
+      applyDefaults(defaults);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "โหลดความเร็วจาก Google Sheet ไม่สำเร็จ");
     }
@@ -1949,13 +1965,45 @@ function DowntimeChart({ items }: { items: ReturnType<typeof groupDowntime> }) {
 }
 
 function MachineRanking({ logs }: { logs: ProductionLog[] }) {
-  const rows = machines
-    .map((machine) => {
-      const machineLogs = logs.filter((log) => log.machineId === machine.id);
-      const summary = summarize(machineLogs);
-      return { machine, ...summary, count: machineLogs.length };
+  const summaries = logs.reduce(
+    (map, log) => {
+      const current =
+        map.get(log.machineId) ??
+        {
+          downtime: 0,
+          good: 0,
+          ng: 0,
+          normalMinutes: 0,
+          test: 0,
+          count: 0,
+        };
+      current.good += Number(log.goodQty || 0);
+      current.ng += Number(log.ngQty || 0);
+      current.test += Number(log.testQty || 0);
+      current.normalMinutes += Number(log.normalMinutes || 0);
+      current.downtime += totalDowntime(log);
+      current.count += 1;
+      map.set(log.machineId, current);
+      return map;
+    },
+    new Map<
+      string,
+      {
+        count: number;
+        downtime: number;
+        good: number;
+        ng: number;
+        normalMinutes: number;
+        test: number;
+      }
+    >(),
+  );
+  const rows = [...summaries.entries()]
+    .map(([machineId, row]) => {
+      const machine = machines.find((item) => item.id === machineId) ?? { id: machineId, name: machineId };
+      const qualityValue = row.good + row.ng === 0 ? 0 : row.good / (row.good + row.ng);
+      return { machine, quality: qualityValue, ...row };
     })
-    .filter((row) => row.count > 0)
     .sort((a, b) => b.good - a.good)
     .slice(0, 10);
 
@@ -1977,13 +2025,15 @@ function MachineRanking({ logs }: { logs: ProductionLog[] }) {
 }
 
 function Trend({ logs }: { logs: ProductionLog[] }) {
-  const points = [...logs]
-    .reduce<Array<{ date: string; good: number }>>((acc, log) => {
-      const current = acc.find((item) => item.date === log.date);
-      if (current) current.good += log.goodQty;
-      else acc.push({ date: log.date, good: log.goodQty });
-      return acc;
-    }, [])
+  const points = [
+    ...logs
+      .reduce((map, log) => {
+        map.set(log.date, (map.get(log.date) ?? 0) + Number(log.goodQty || 0));
+        return map;
+      }, new Map<string, number>())
+      .entries(),
+  ]
+    .map(([date, good]) => ({ date, good }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-18);
   const max = Math.max(...points.map((point) => point.good), 1);

@@ -375,15 +375,18 @@ function findOeeProductRow(sheet, layout, log) {
   const product = normalizeLookup(log.productName);
   const partNo = normalizeLookup(log.partNo);
   const step = normalizeLookup(log.step || "-");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < OEE_FIRST_DATA_ROW) return null;
 
-  for (let row = sheet.getLastRow(); row >= OEE_FIRST_DATA_ROW; row--) {
-    const width = layout.hasStep ? 3 : 2;
-    const values = sheet.getRange(row, layout.productName, 1, width).getDisplayValues()[0];
-    const sameProduct = normalizeLookup(values[0]) === product;
-    const samePart = normalizeLookup(values[1]) === partNo;
-    const sameStep = !layout.hasStep || normalizeLookup(values[2] || "-") === step;
+  const width = layout.hasStep ? 3 : 2;
+  const values = sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, lastRow - OEE_FIRST_DATA_ROW + 1, width).getDisplayValues();
+  for (let index = values.length - 1; index >= 0; index--) {
+    const row = values[index];
+    const sameProduct = normalizeLookup(row[0]) === product;
+    const samePart = normalizeLookup(row[1]) === partNo;
+    const sameStep = !layout.hasStep || normalizeLookup(row[2] || "-") === step;
     if (sameProduct && samePart && sameStep) {
-      return row;
+      return OEE_FIRST_DATA_ROW + index;
     }
   }
   return null;
@@ -776,8 +779,7 @@ function toOriginalShift(value) {
 function getLogs(limit) {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   const values = sheet.getDataRange().getValues();
-  const legacyLogs = getLegacyOeeLogs();
-  if (values.length <= 1) return legacyLogs.slice(0, limit);
+  if (values.length <= 1) return getLegacyOeeLogs().slice(0, limit);
   const headers = values[0];
   const productionLogs = values
     .slice(1)
@@ -785,7 +787,8 @@ function getLogs(limit) {
     .slice(Math.max(values.length - 1 - limit, 0))
     .map((row) => rowToObject(headers, row))
     .reverse();
-  return mergeLogs(productionLogs, legacyLogs).slice(0, limit);
+  if (productionLogs.length > 0) return productionLogs.slice(0, limit);
+  return getLegacyOeeLogs().slice(0, limit);
 }
 
 function getLegacyOeeLogs() {
