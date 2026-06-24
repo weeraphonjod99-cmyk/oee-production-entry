@@ -36,6 +36,8 @@ export function exportLogsCsv(logs: ProductionLog[]) {
     "recordDate",
     "date",
     "shift",
+    "shiftStartAt",
+    "shiftEndAt",
     "machineName",
     "productName",
     "partNo",

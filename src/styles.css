@@ -410,6 +410,13 @@ label {
   gap: 4px;
 }
 
+.field-help {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .required-mark {
   color: #dc2626;
   font-weight: 900;

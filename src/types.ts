@@ -26,6 +26,8 @@ export type ProductionLog = {
   recordDate?: string;
   date: string;
   shift: ShiftCode;
+  shiftStartAt?: string;
+  shiftEndAt?: string;
   machineId: string;
   machineName: string;
   productName: string;

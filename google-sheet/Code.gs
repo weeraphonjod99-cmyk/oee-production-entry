@@ -17,6 +17,8 @@ const LOG_HEADERS = [
   "recordDate",
   "date",
   "shift",
+  "shiftStartAt",
+  "shiftEndAt",
   "machineId",
   "machineName",
   "productName",
@@ -159,6 +161,8 @@ function appendLog(payload) {
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
     recordDate: payload.recordDate || formatRecordDate(payload.createdAt) || todayBangkok(now),
+    shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
+    shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
     createdAt: payload.createdAt || now.toISOString(),
     updatedAt: payload.updatedAt || now.toISOString(),
     source: "google-sheet",
@@ -183,6 +187,8 @@ function upsertLog(payload) {
   });
   const log = Object.assign({}, payload, {
     recordDate: payload.recordDate || formatRecordDate(payload.createdAt) || formatLegacyDate(payload.date),
+    shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
+    shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: payload.updatedAt || new Date().toISOString(),
     source: "google-sheet",
@@ -822,6 +828,8 @@ function getLegacyOeeLogs() {
         recordDate: date,
         date: date,
         shift: toOriginalShift(row[layout.shift - 1]),
+        shiftStartAt: getShiftStartAt(date, row[layout.shift - 1]),
+        shiftEndAt: getShiftEndAt(date, row[layout.shift - 1]),
         machineId: machine.id,
         machineName: machine.name,
         productName: productName,
@@ -911,6 +919,28 @@ function formatRecordDate(value) {
 
 function todayBangkok(value) {
   return Utilities.formatDate(value || new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+}
+
+function addDaysToLegacyDate(date, days) {
+  const formatted = formatLegacyDate(date);
+  if (!formatted) return "";
+  const parts = formatted.split("-").map(Number);
+  const value = new Date(parts[0], parts[1] - 1, parts[2]);
+  value.setDate(value.getDate() + days);
+  return Utilities.formatDate(value, "Asia/Bangkok", "yyyy-MM-dd");
+}
+
+function getShiftStartAt(date, shift) {
+  const productionDate = formatLegacyDate(date);
+  if (!productionDate) return "";
+  return productionDate + "T" + (toOriginalShift(shift) === "ๅค" ? "20:00:00" : "08:00:00");
+}
+
+function getShiftEndAt(date, shift) {
+  const productionDate = formatLegacyDate(date);
+  if (!productionDate) return "";
+  const isNight = toOriginalShift(shift) === "ๅค";
+  return (isNight ? addDaysToLegacyDate(productionDate, 1) : productionDate) + "T" + (isNight ? "08:00:00" : "20:00:00");
 }
 
 function setupProductionWorkbook() {

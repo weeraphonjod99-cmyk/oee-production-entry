@@ -113,6 +113,8 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     date: getTodayInputValue(),
     recordDate: getTodayInputValue(),
     shift: SHIFT_DAY,
+    shiftStartAt: shiftStartAt(getTodayInputValue(), SHIFT_DAY),
+    shiftEndAt: shiftEndAt(getTodayInputValue(), SHIFT_DAY),
     machineId: machine.id,
     productName: product.productName,
     partNo: product.partNo,
@@ -139,8 +141,8 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
 
 const shiftLabel = (shift: string) => {
   const normalized = normalizeShiftCode(shift);
-  if (normalized === SHIFT_DAY) return "กลางวัน / Day";
-  if (normalized === SHIFT_NIGHT) return "กลางคืน / Night";
+  if (normalized === SHIFT_DAY) return "กะเช้า / Day";
+  if (normalized === SHIFT_NIGHT) return "กะดึก / Night";
   return shift;
 };
 
@@ -152,6 +154,54 @@ const normalizeShiftCode = (value: unknown) => {
   if (["白", "day", "a", "็ฝ", "เนยเธ"].includes(text)) return SHIFT_DAY;
   if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return SHIFT_NIGHT;
   return text;
+};
+
+const addDaysToInputDate = (date: string, days: number) => {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return date;
+  const value = new Date(year, month - 1, day);
+  value.setDate(value.getDate() + days);
+  return [
+    value.getFullYear(),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+
+const getShiftSchedule = (productionDate: string, shift: string) => {
+  const date = productionDate || getTodayInputValue();
+  const normalized = normalizeShiftCode(shift);
+  if (normalized === SHIFT_NIGHT) {
+    const endDate = addDaysToInputDate(date, 1);
+    return {
+      endDate,
+      endTime: "08:00",
+      label: "กะดึก",
+      rangeLabel: `${date} 20:00 - ${endDate} 08:00`,
+      startDate: date,
+      startTime: "20:00",
+    };
+  }
+  return {
+    endDate: date,
+    endTime: "20:00",
+    label: "กะเช้า",
+    rangeLabel: `${date} 08:00 - ${date} 20:00`,
+    startDate: date,
+    startTime: "08:00",
+  };
+};
+
+const shiftWindowLabel = (productionDate: string, shift: string) => getShiftSchedule(productionDate, shift).rangeLabel;
+
+const shiftStartAt = (productionDate: string, shift: string) => {
+  const schedule = getShiftSchedule(productionDate, shift);
+  return `${schedule.startDate}T${schedule.startTime}:00`;
+};
+
+const shiftEndAt = (productionDate: string, shift: string) => {
+  const schedule = getShiftSchedule(productionDate, shift);
+  return `${schedule.endDate}T${schedule.endTime}:00`;
 };
 
 type ReportRow = {
@@ -214,6 +264,9 @@ const reportMachineLabel = (filters: Filters) =>
 
 const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filters.shift) : "ทุกกะ");
 
+const shiftRuleLabel = (shift: string) =>
+  normalizeShiftCode(shift) === SHIFT_NIGHT ? "20:00 - 08:00 ของวันถัดไป" : "08:00 - 20:00 ของวันที่ผลิต";
+
 const tableRowsHtml = (rows: ReportRow[]) =>
   rows.length
     ? rows
@@ -234,17 +287,44 @@ const tableRowsHtml = (rows: ReportRow[]) =>
         .join("")
     : `<tr><td colspan="9" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
+const detailRowsHtml = (logs: ProductionLog[]) =>
+  logs.length
+    ? logs
+        .slice(0, 80)
+        .map(
+          (log, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${escapeHtml(getRecordDate(log))}</td>
+              <td>${escapeHtml(log.date)}</td>
+              <td><strong>${escapeHtml(shiftLabel(log.shift))}</strong><small>${escapeHtml(shiftWindowLabel(log.date, log.shift))}</small></td>
+              <td>${escapeHtml(log.machineName)}</td>
+              <td><strong>${escapeHtml(log.productName)}</strong><small>${escapeHtml(log.partNo)} | Step ${escapeHtml(log.step || "-")}</small></td>
+              <td class="number">${formatNumber(Number(log.goodQty || 0))}</td>
+              <td class="number">${formatNumber(Number(log.ngQty || 0))}</td>
+              <td class="number">${formatNumber(Number(log.testQty || 0))}</td>
+              <td class="number">${formatNumber(totalDowntime(log))}</td>
+            </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="10" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
+
 function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
   const reportWindow = window.open("", "_blank", "width=1100,height=820");
   if (!reportWindow) return false;
 
   const summary = summarize(logs);
   const downtimeRows = groupDowntime(logs);
+  const shiftRows = aggregateReportRows(
+    logs,
+    (log) => shiftLabel(log.shift),
+    (log) => shiftRuleLabel(log.shift),
+  );
   const machineRows = aggregateReportRows(logs, (log) => log.machineName, () => "");
   const partRows = aggregateReportRows(
     logs,
     (log) => `${log.productName} / ${log.partNo}`,
-    (log) => `Step ${log.step || "-"} | ${log.machineName}`,
+    (log) => `Step ${log.step || "-"} | ${log.machineName} | ${shiftWindowLabel(log.date, log.shift)}`,
   );
   const generatedAt = new Date().toLocaleString("th-TH");
   const html = `<!doctype html>
@@ -287,6 +367,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
             <p class="muted">OEE PRODUCTION ENTRY</p>
             <h1>รายงานสรุปการกรอกยอดผลิต</h1>
             <p>ช่วงวันที่ผลิต: ${escapeHtml(reportRangeLabel(filters))} | เครื่อง: ${escapeHtml(reportMachineLabel(filters))} | กะ: ${escapeHtml(reportShiftLabel(filters))}</p>
+            <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
           </div>
           <div class="meta">
             <strong>JR Production</strong>
@@ -303,6 +384,12 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
           <div class="kpi red"><span>Downtime</span><strong>${formatNumber(summary.downtime)} นาที</strong></div>
           <div class="kpi"><span>Quality</span><strong>${formatPercent(summary.quality)}</strong></div>
         </section>
+
+        <h2>สรุปตามกะและช่วงเวลาทำงาน</h2>
+        <table>
+          <thead><tr><th>No.</th><th>Shift / Time window</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
+          <tbody>${tableRowsHtml(shiftRows)}</tbody>
+        </table>
 
         <h2>สรุปตามเครื่องจักร</h2>
         <table>
@@ -322,6 +409,11 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
             .map((item) => `<div class="downtime-item"><span>${escapeHtml(item.shortLabel)}</span><b>${formatNumber(item.minutes)} นาที</b></div>`)
             .join("")}
         </div>
+        <h2>รายละเอียดรายการผลิต</h2>
+        <table>
+          <thead><tr><th>No.</th><th>Record date</th><th>Production date</th><th>Shift time</th><th>Machine</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Downtime</th></tr></thead>
+          <tbody>${detailRowsHtml(logs)}</tbody>
+        </table>
         <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ OEE Production Entry</footer>
         <script>
           window.addEventListener("load", () => {
@@ -401,6 +493,8 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   recordDate: getRecordDate(log),
   date: log.date || getTodayInputValue(),
   shift: log.shift,
+  shiftStartAt: log.shiftStartAt || shiftStartAt(log.date || getTodayInputValue(), log.shift),
+  shiftEndAt: log.shiftEndAt || shiftEndAt(log.date || getTodayInputValue(), log.shift),
   machineId: log.machineId,
   productName: log.productName,
   partNo: log.partNo,
@@ -525,7 +619,7 @@ function App() {
   }, [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, editingLog?.id]);
   const duplicateEntryKey = duplicateEntry ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}` : "";
   const duplicateEntryMessage = duplicateEntry
-    ? `วันที่ ${draft.date} กะ ${shiftLabel(draft.shift)} เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
+    ? `วันที่ผลิต ${draft.date} กะ ${shiftLabel(draft.shift)} (${shiftWindowLabel(draft.date, draft.shift)}) เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
     : "";
 
   useEffect(() => {
@@ -695,6 +789,8 @@ function App() {
       ...draft,
       recordDate: savedRecordDate,
       date: savedDate,
+      shiftStartAt: shiftStartAt(savedDate, draft.shift),
+      shiftEndAt: shiftEndAt(savedDate, draft.shift),
       id: editingLog?.id ?? makeLogId(),
       machineName: machine.name,
       normalMinutes: computedNormalMinutes,
@@ -876,6 +972,7 @@ function App() {
                       </option>
                     ))}
                   </select>
+                  <small className="field-help">เวลาทำงาน: {shiftWindowLabel(draft.date, draft.shift)}</small>
                 </label>
                 <label>
                   <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>
@@ -1111,7 +1208,7 @@ function App() {
                   <div className="recent-item" key={log.id}>
                     <b>{log.machineName}</b>
                     <span>
-                      {log.date} · {log.productName} · Good {formatNumber(log.goodQty)} · Speed {formatRate(log.machineSpeed ?? 0)}
+                      {log.date} · {shiftLabel(log.shift)} · {shiftWindowLabel(log.date, log.shift)} · {log.productName} · Good {formatNumber(log.goodQty)} · Speed {formatRate(log.machineSpeed ?? 0)}
                     </span>
                   </div>
                 ))}
@@ -1537,11 +1634,16 @@ function ReportsView({
   setFilters: (filters: Filters) => void;
 }) {
   const summary = summarize(logs);
+  const shiftRows = aggregateReportRows(
+    logs,
+    (log) => shiftLabel(log.shift),
+    (log) => shiftRuleLabel(log.shift),
+  );
   const machineRows = aggregateReportRows(logs, (log) => log.machineName, () => "");
   const partRows = aggregateReportRows(
     logs,
     (log) => `${log.productName} / ${log.partNo}`,
-    (log) => `Step ${log.step || "-"} | ${log.machineName}`,
+    (log) => `Step ${log.step || "-"} | ${log.machineName} | ${shiftWindowLabel(log.date, log.shift)}`,
   );
   const downtimeRows = groupDowntime(logs);
 
@@ -1552,6 +1654,7 @@ function ReportsView({
           <p className="eyebrow">Production document</p>
           <h2>สรุปการกรอกยอดสำหรับดาวน์โหลด PDF</h2>
           <p>ช่วงวันที่ผลิต: {reportRangeLabel(filters)} | เครื่อง: {reportMachineLabel(filters)} | กะ: {reportShiftLabel(filters)}</p>
+          <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
         </div>
         <button className="primary-button" onClick={onDownloadPdf} type="button">
           <FileText size={18} /> ดาวน์โหลด PDF
@@ -1569,6 +1672,7 @@ function ReportsView({
         <Kpi label="Records" value={formatNumber(logs.length)} tone="neutral" />
       </div>
 
+      <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
       <ReportRowsTable rows={machineRows} title="สรุปตามเครื่องจักร" />
       <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No." />
 
@@ -1923,6 +2027,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
             <th>Record Date</th>
             <th>Production Date</th>
             <th>Shift</th>
+            <th>Shift Time</th>
             <th>Machine</th>
             <th>Product</th>
             <th>Part No.</th>
@@ -1944,6 +2049,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
               <td>{getRecordDate(log)}</td>
               <td>{log.date}</td>
               <td>{shiftLabel(log.shift)}</td>
+              <td>{shiftWindowLabel(log.date, log.shift)}</td>
               <td>{log.machineName}</td>
               <td>{log.productName}</td>
               <td>{log.partNo}</td>
