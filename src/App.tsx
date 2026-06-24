@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  AlertTriangle,
   CheckCircle2,
   ClipboardList,
   Database,
@@ -239,6 +240,8 @@ function App() {
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
   const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
   const [successDialog, setSuccessDialog] = useState<{ title: string; message: string } | null>(null);
+  const [problemDialog, setProblemDialog] = useState<{ title: string; message: string } | null>(null);
+  const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -305,6 +308,33 @@ function App() {
   const downtime = useMemo(() => groupDowntime(visibleLogs), [visibleLogs]);
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
+  const duplicateEntry = useMemo(() => {
+    if (!draft.date || !draft.shift || !draft.machineId) return null;
+    return (
+      allLogs.find(
+        (log) =>
+          log.id !== editingLog?.id &&
+          log.date === draft.date &&
+          log.shift === draft.shift &&
+          log.machineId === draft.machineId,
+      ) ?? null
+    );
+  }, [allLogs, draft.date, draft.machineId, draft.shift, editingLog?.id]);
+  const duplicateEntryKey = duplicateEntry ? `${draft.date}::${draft.shift}::${draft.machineId}` : "";
+  const duplicateEntryMessage = duplicateEntry
+    ? `วันที่ ${draft.date} กะ ${shiftLabel(draft.shift)} เครื่อง ${duplicateEntry.machineName} มีการบันทึกแล้ว ห้ามบันทึกซ้ำใน 1 วัน`
+    : "";
+
+  useEffect(() => {
+    if (!duplicateEntryMessage) {
+      setWarnedDuplicateKey("");
+      return;
+    }
+    setStatus(duplicateEntryMessage);
+    if (warnedDuplicateKey === duplicateEntryKey) return;
+    setWarnedDuplicateKey(duplicateEntryKey);
+    setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
+  }, [duplicateEntryKey, duplicateEntryMessage, warnedDuplicateKey]);
 
   const applyProductToDraft = (product: ProductMaster, logs = allLogs, machine = currentMachine) => ({
     productName: product.productName,
@@ -451,6 +481,11 @@ function App() {
     event.preventDefault();
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
     const shouldUpdate = Boolean(editingLog);
+    if (duplicateEntryMessage) {
+      setStatus(duplicateEntryMessage);
+      setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
+      return;
+    }
     const savedDate = draft.date || getTodayInputValue();
     const log: ProductionLog = {
       ...draft,
@@ -684,6 +719,12 @@ function App() {
                   ))}
                 </datalist>
               </div>
+              {duplicateEntryMessage && (
+                <div className="duplicate-warning" role="alert">
+                  <AlertTriangle size={18} />
+                  <span>{duplicateEntryMessage}</span>
+                </div>
+              )}
 
               <div className="runtime-panel">
                 <label className="runtime-input-block">
@@ -817,7 +858,7 @@ function App() {
               </label>
 
               <div className="form-actions">
-                <button className="primary-button" disabled={saving} type="submit">
+                <button className="primary-button" disabled={saving || Boolean(duplicateEntry)} type="submit">
                   <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : "บันทึกยอด"}
                 </button>
                 <button className="ghost-button" onClick={resetDraft} type="button">
@@ -918,6 +959,21 @@ function App() {
             <h2 id="success-dialog-title">{successDialog.title}</h2>
             <p>{successDialog.message}</p>
             <button className="primary-button" type="button" autoFocus onClick={() => setSuccessDialog(null)}>
+              ยืนยัน
+            </button>
+          </div>
+        </div>
+      )}
+
+      {problemDialog && (
+        <div className="problem-modal-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="problem-dialog-title">
+          <div className="problem-modal">
+            <div className="problem-modal-icon">
+              <AlertTriangle size={30} />
+            </div>
+            <h2 id="problem-dialog-title">{problemDialog.title}</h2>
+            <p>{problemDialog.message}</p>
+            <button className="ghost-button danger" type="button" autoFocus onClick={() => setProblemDialog(null)}>
               ยืนยัน
             </button>
           </div>
