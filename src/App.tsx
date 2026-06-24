@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Database,
   Download,
+  FileText,
   Gauge,
   History,
   KeyRound,
@@ -49,7 +50,7 @@ import {
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
 
-type TabId = "entry" | "dashboard" | "history" | "master" | "users";
+type TabId = "entry" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -152,6 +153,190 @@ const normalizeShiftCode = (value: unknown) => {
   if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return SHIFT_NIGHT;
   return text;
 };
+
+type ReportRow = {
+  good: number;
+  ng: number;
+  test: number;
+  downtime: number;
+  normalMinutes: number;
+  total: number;
+  count: number;
+  label: string;
+  detail: string;
+};
+
+const emptyReportRow = (label: string, detail = ""): ReportRow => ({
+  good: 0,
+  ng: 0,
+  test: 0,
+  downtime: 0,
+  normalMinutes: 0,
+  total: 0,
+  count: 0,
+  label,
+  detail,
+});
+
+function aggregateReportRows(logs: ProductionLog[], keyFor: (log: ProductionLog) => string, detailFor: (log: ProductionLog) => string) {
+  const map = new Map<string, ReportRow>();
+  logs.forEach((log) => {
+    const key = keyFor(log);
+    const current = map.get(key) ?? emptyReportRow(key, detailFor(log));
+    current.good += Number(log.goodQty || 0);
+    current.ng += Number(log.ngQty || 0);
+    current.test += Number(log.testQty || 0);
+    current.downtime += totalDowntime(log);
+    current.normalMinutes += Number(log.normalMinutes || 0);
+    current.total += Number(log.goodQty || 0) + Number(log.ngQty || 0) + Number(log.testQty || 0);
+    current.count += 1;
+    map.set(key, current);
+  });
+  return [...map.values()].sort((a, b) => b.total - a.total || b.downtime - a.downtime || a.label.localeCompare(b.label));
+}
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const reportRangeLabel = (filters: Filters) => {
+  if (filters.from && filters.to) return `${filters.from} ถึง ${filters.to}`;
+  if (filters.from) return `ตั้งแต่ ${filters.from}`;
+  if (filters.to) return `ถึง ${filters.to}`;
+  return "ทั้งหมด";
+};
+
+const reportMachineLabel = (filters: Filters) =>
+  filters.machineId ? machines.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
+
+const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filters.shift) : "ทุกกะ");
+
+const tableRowsHtml = (rows: ReportRow[]) =>
+  rows.length
+    ? rows
+        .map(
+          (row, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td><strong>${escapeHtml(row.label)}</strong><small>${escapeHtml(row.detail)}</small></td>
+              <td class="number">${formatNumber(row.good)}</td>
+              <td class="number">${formatNumber(row.ng)}</td>
+              <td class="number">${formatNumber(row.test)}</td>
+              <td class="number">${formatNumber(row.total)}</td>
+              <td class="number">${formatNumber(row.downtime)}</td>
+              <td class="number">${formatNumber(row.normalMinutes)}</td>
+              <td class="number">${formatNumber(row.count)}</td>
+            </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="9" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
+
+function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
+  const reportWindow = window.open("", "_blank", "width=1100,height=820");
+  if (!reportWindow) return false;
+
+  const summary = summarize(logs);
+  const downtimeRows = groupDowntime(logs);
+  const machineRows = aggregateReportRows(logs, (log) => log.machineName, () => "");
+  const partRows = aggregateReportRows(
+    logs,
+    (log) => `${log.productName} / ${log.partNo}`,
+    (log) => `Step ${log.step || "-"} | ${log.machineName}`,
+  );
+  const generatedAt = new Date().toLocaleString("th-TH");
+  const html = `<!doctype html>
+    <html lang="th">
+      <head>
+        <meta charset="utf-8" />
+        <title>OEE Production Summary</title>
+        <style>
+          @page { margin: 12mm; size: A4 landscape; }
+          * { box-sizing: border-box; }
+          body { color: #172033; font-family: "Segoe UI", "Noto Sans Thai", Arial, sans-serif; margin: 0; }
+          header { border-bottom: 3px solid #177245; display: flex; justify-content: space-between; gap: 24px; padding-bottom: 12px; }
+          h1 { font-size: 24px; margin: 0 0 6px; }
+          h2 { font-size: 16px; margin: 20px 0 8px; }
+          p { margin: 0; }
+          .muted { color: #667085; font-size: 12px; font-weight: 700; }
+          .meta { display: grid; gap: 4px; min-width: 270px; text-align: right; }
+          .kpis { display: grid; gap: 8px; grid-template-columns: repeat(6, 1fr); margin: 16px 0; }
+          .kpi { border: 1px solid #d7dfd8; border-top: 4px solid #177245; padding: 10px; }
+          .kpi.red { border-top-color: #dc2626; }
+          .kpi.amber { border-top-color: #d97706; }
+          .kpi.blue { border-top-color: #2563eb; }
+          .kpi span { color: #53627b; display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+          .kpi strong { display: block; font-size: 20px; margin-top: 4px; }
+          table { border-collapse: collapse; font-size: 11px; margin-bottom: 14px; table-layout: fixed; width: 100%; }
+          th, td { border: 1px solid #cfd8cf; padding: 6px 7px; vertical-align: top; }
+          th { background: #17372f; color: #ffffff; text-align: left; }
+          td small { color: #667085; display: block; font-size: 10px; margin-top: 2px; }
+          .number { text-align: right; white-space: nowrap; }
+          .empty { color: #667085; font-weight: 700; text-align: center; }
+          .downtime-grid { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); }
+          .downtime-item { border: 1px solid #d7dfd8; padding: 8px; }
+          .downtime-item b { display: block; font-size: 15px; }
+          footer { border-top: 1px solid #d7dfd8; color: #667085; font-size: 10px; margin-top: 16px; padding-top: 8px; }
+        </style>
+      </head>
+      <body>
+        <header>
+          <div>
+            <p class="muted">OEE PRODUCTION ENTRY</p>
+            <h1>รายงานสรุปการกรอกยอดผลิต</h1>
+            <p>ช่วงวันที่ผลิต: ${escapeHtml(reportRangeLabel(filters))} | เครื่อง: ${escapeHtml(reportMachineLabel(filters))} | กะ: ${escapeHtml(reportShiftLabel(filters))}</p>
+          </div>
+          <div class="meta">
+            <strong>JR Production</strong>
+            <span>สร้างรายงาน: ${escapeHtml(generatedAt)}</span>
+            <span>จำนวนรายการ: ${formatNumber(logs.length)}</span>
+          </div>
+        </header>
+
+        <section class="kpis">
+          <div class="kpi"><span>Good quantity</span><strong>${formatNumber(summary.good)}</strong></div>
+          <div class="kpi red"><span>NG quantity</span><strong>${formatNumber(summary.ng)}</strong></div>
+          <div class="kpi amber"><span>Test quantity</span><strong>${formatNumber(summary.test)}</strong></div>
+          <div class="kpi blue"><span>Total quantity</span><strong>${formatNumber(summary.total)}</strong></div>
+          <div class="kpi red"><span>Downtime</span><strong>${formatNumber(summary.downtime)} นาที</strong></div>
+          <div class="kpi"><span>Quality</span><strong>${formatPercent(summary.quality)}</strong></div>
+        </section>
+
+        <h2>สรุปตามเครื่องจักร</h2>
+        <table>
+          <thead><tr><th>No.</th><th>Machine</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
+          <tbody>${tableRowsHtml(machineRows)}</tbody>
+        </table>
+
+        <h2>สรุปตามรุ่น / Part No.</h2>
+        <table>
+          <thead><tr><th>No.</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
+          <tbody>${tableRowsHtml(partRows.slice(0, 40))}</tbody>
+        </table>
+
+        <h2>Downtime แยกตามหัวข้อ</h2>
+        <div class="downtime-grid">
+          ${downtimeRows
+            .map((item) => `<div class="downtime-item"><span>${escapeHtml(item.shortLabel)}</span><b>${formatNumber(item.minutes)} นาที</b></div>`)
+            .join("")}
+        </div>
+        <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ OEE Production Entry</footer>
+        <script>
+          window.addEventListener("load", () => {
+            window.focus();
+            setTimeout(() => window.print(), 300);
+          });
+        </script>
+      </body>
+    </html>`;
+
+  reportWindow.document.open();
+  reportWindow.document.write(html);
+  reportWindow.document.close();
+  return true;
+}
 
 function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
   return Array.from(new Set(items.map((item) => item[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -572,6 +757,18 @@ function App() {
     }
   };
 
+  const downloadPdfReport = () => {
+    const opened = openProductionPdfReport(visibleLogs, filters);
+    if (!opened) {
+      setProblemDialog({
+        title: "เปิดรายงานไม่ได้",
+        message: "เบราว์เซอร์บล็อกหน้าต่างรายงาน กรุณาอนุญาต pop-up แล้วกดดาวน์โหลด PDF อีกครั้ง",
+      });
+      return;
+    }
+    setStatus("เปิดรายงานแล้ว เลือก Save as PDF ในหน้าต่างพิมพ์");
+  };
+
   if (!session) return <LoginScreen onSignedIn={setSession} />;
 
   return (
@@ -593,6 +790,9 @@ function App() {
               <BarChart3 size={18} /> Dashboard
             </button>
           )}
+          <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")} type="button">
+            <FileText size={18} /> Reports
+          </button>
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ
           </button>
@@ -632,6 +832,9 @@ function App() {
             </button>
             <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
               <Download size={17} /> CSV
+            </button>
+            <button className="ghost-button" onClick={downloadPdfReport} type="button">
+              <FileText size={17} /> PDF
             </button>
             <button className="ghost-button" onClick={signOut} type="button">
               <LogOut size={17} /> Logout
@@ -937,6 +1140,10 @@ function App() {
             </div>
             <Trend logs={visibleLogs} />
           </section>
+        )}
+
+        {tab === "reports" && (
+          <ReportsView filters={filters} logs={visibleLogs} onDownloadPdf={downloadPdfReport} setFilters={setFilters} />
         )}
 
         {tab === "history" && (
@@ -1315,6 +1522,120 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
         </p>
       </form>
     </main>
+  );
+}
+
+function ReportsView({
+  filters,
+  logs,
+  onDownloadPdf,
+  setFilters,
+}: {
+  filters: Filters;
+  logs: ProductionLog[];
+  onDownloadPdf: () => void;
+  setFilters: (filters: Filters) => void;
+}) {
+  const summary = summarize(logs);
+  const machineRows = aggregateReportRows(logs, (log) => log.machineName, () => "");
+  const partRows = aggregateReportRows(
+    logs,
+    (log) => `${log.productName} / ${log.partNo}`,
+    (log) => `Step ${log.step || "-"} | ${log.machineName}`,
+  );
+  const downtimeRows = groupDowntime(logs);
+
+  return (
+    <section className="reports-layout">
+      <div className="report-toolbar analysis-panel">
+        <div>
+          <p className="eyebrow">Production document</p>
+          <h2>สรุปการกรอกยอดสำหรับดาวน์โหลด PDF</h2>
+          <p>ช่วงวันที่ผลิต: {reportRangeLabel(filters)} | เครื่อง: {reportMachineLabel(filters)} | กะ: {reportShiftLabel(filters)}</p>
+        </div>
+        <button className="primary-button" onClick={onDownloadPdf} type="button">
+          <FileText size={18} /> ดาวน์โหลด PDF
+        </button>
+      </div>
+
+      <FiltersBar filters={filters} setFilters={setFilters} />
+
+      <div className="kpi-grid">
+        <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
+        <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
+        <Kpi label="Test" value={formatNumber(summary.test)} tone="amber" />
+        <Kpi label="Total" value={formatNumber(summary.total)} tone="blue" />
+        <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
+        <Kpi label="Records" value={formatNumber(logs.length)} tone="neutral" />
+      </div>
+
+      <ReportRowsTable rows={machineRows} title="สรุปตามเครื่องจักร" />
+      <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No." />
+
+      <div className="analysis-panel">
+        <h2>Downtime แยกตามหัวข้อ</h2>
+        <div className="report-downtime-grid">
+          {downtimeRows.map((item) => (
+            <div className="report-downtime-item" key={item.key}>
+              <span>{item.shortLabel}</span>
+              <strong>{formatNumber(item.minutes)} นาที</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReportRowsTable({ rows, title }: { rows: ReportRow[]; title: string }) {
+  return (
+    <div className="data-table-wrap report-table">
+      <div className="report-table-heading">
+        <h2>{title}</h2>
+        <span>{formatNumber(rows.length)} รายการ</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>รายการ</th>
+            <th>Good</th>
+            <th>NG</th>
+            <th>Test</th>
+            <th>Total</th>
+            <th>Downtime</th>
+            <th>Normal</th>
+            <th>Records</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td className="empty-cell" colSpan={9}>
+                ไม่มีข้อมูลตามตัวกรองนี้
+              </td>
+            </tr>
+          ) : (
+            rows.map((row, index) => (
+              <tr key={`${row.label}-${index}`}>
+                <td>{index + 1}</td>
+                <td>
+                  <strong>{row.label}</strong>
+                  {row.detail && <small>{row.detail}</small>}
+                </td>
+                <td>{formatNumber(row.good)}</td>
+                <td>{formatNumber(row.ng)}</td>
+                <td>{formatNumber(row.test)}</td>
+                <td>{formatNumber(row.total)}</td>
+                <td>{formatNumber(row.downtime)} นาที</td>
+                <td>{formatNumber(row.normalMinutes)} นาที</td>
+                <td>{formatNumber(row.count)}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

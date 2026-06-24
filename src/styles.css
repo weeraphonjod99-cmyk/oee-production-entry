@@ -809,9 +809,93 @@ textarea:focus {
 }
 
 .dashboard-layout,
+.reports-layout,
 .table-view {
   display: grid;
   gap: 16px;
+}
+
+.report-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.report-toolbar p:not(.eyebrow) {
+  color: #53627b;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.report-table {
+  padding: 0;
+}
+
+.report-table-heading {
+  align-items: center;
+  border-bottom: 1px solid #e2e8e2;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.report-table-heading h2 {
+  margin: 0;
+}
+
+.report-table-heading span {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-table td strong,
+.report-table td small {
+  display: block;
+}
+
+.report-table td small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.empty-cell {
+  color: #667085;
+  font-weight: 800;
+  text-align: center;
+}
+
+.report-downtime-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.report-downtime-item {
+  background: #f8faf8;
+  border: 1px solid #e2e8e2;
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.report-downtime-item span {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-downtime-item strong {
+  color: #061635;
+  font-size: 18px;
 }
 
 .filters-bar {
@@ -1298,6 +1382,7 @@ td:nth-child(10) {
   }
 
   .topbar,
+  .report-toolbar,
   .table-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -1466,6 +1551,11 @@ td:nth-child(10) {
   .table-toolbar,
   .user-form {
     padding: 12px;
+  }
+
+  .report-toolbar .primary-button {
+    justify-content: center;
+    width: 100%;
   }
 
   input,
