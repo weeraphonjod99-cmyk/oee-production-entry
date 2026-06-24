@@ -217,7 +217,7 @@ function assertNoDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
 }
 
 function findDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
-  const wantedKey = buildOeeLogKey(log);
+  const wantedKey = buildDuplicateOeeLogKey(log);
   const logSheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   const rows = logSheet.getDataRange().getValues();
   if (rows.length > 1) {
@@ -227,7 +227,7 @@ function findDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
       if (!row.some(function(cell) { return cell !== ""; })) continue;
       const existing = rowToObject(headers, row);
       if (String(existing.id || "") === String(ignoredId || "")) continue;
-      if (buildOeeLogKey(existing) === wantedKey) return existing;
+      if (buildDuplicateOeeLogKey(existing) === wantedKey) return existing;
     }
   }
 
@@ -252,7 +252,7 @@ function findDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
       partNo: partNo,
       step: layout.hasStep ? String(row[layout.step - 1] || "-").trim() || "-" : "-",
     };
-    if (buildOeeLogKey(existing) === wantedKey) return existing;
+    if (buildDuplicateOeeLogKey(existing) === wantedKey) return existing;
   }
   return null;
 }
@@ -688,6 +688,15 @@ function buildOeeLogKey(log) {
     normalizeLookup(log.productName),
     normalizeLookup(log.partNo),
     normalizeLookup(log.step || "-"),
+  ].join("::");
+}
+
+function buildDuplicateOeeLogKey(log) {
+  return [
+    formatLegacyDate(log.date),
+    toOriginalShift(log.shift),
+    normalizeSheetName(log.machineName),
+    normalizeLookup(log.partNo),
   ].join("::");
 }
 
