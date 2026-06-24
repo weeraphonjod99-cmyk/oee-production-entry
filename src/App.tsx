@@ -22,7 +22,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
+import { machines, products, seedLogs } from "./data/oeeMasterData.generated";
 import { appendRemoteLog, fetchProductDefaults, fetchRemoteLogs, remoteEnabled, updateRemoteLog } from "./lib/api";
 import {
   canAccessTab,
@@ -81,7 +81,9 @@ const downtimeExcelCodes = {
 
 const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
-const orderedShiftOptions = Array.from(new Set(["白", "夜", ...shiftOptions]));
+const SHIFT_DAY = "day";
+const SHIFT_NIGHT = "night";
+const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
@@ -102,7 +104,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
   const minutesPerSlot = defaultMinutesPerSlot;
   return {
     date: getTodayInputValue(),
-    shift: orderedShiftOptions[0] ?? "白",
+    shift: SHIFT_DAY,
     machineId: machine.id,
     productName: product.productName,
     partNo: product.partNo,
@@ -128,8 +130,9 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
 }
 
 const shiftLabel = (shift: string) => {
-  if (shift === "白") return "白 / Day";
-  if (shift === "夜") return "夜 / Night";
+  const normalized = normalizeShiftCode(shift);
+  if (normalized === SHIFT_DAY) return "กลางวัน / Day";
+  if (normalized === SHIFT_NIGHT) return "กลางคืน / Night";
   return shift;
 };
 
@@ -138,8 +141,8 @@ const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)
 const normalizeText = (value: unknown) => String(value ?? "").trim().toLowerCase();
 const normalizeShiftCode = (value: unknown) => {
   const text = normalizeText(value);
-  if (["白", "day", "a", "็ฝ", "เนยเธ"].includes(text)) return "day";
-  if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return "night";
+  if (["白", "day", "a", "็ฝ", "เนยเธ"].includes(text)) return SHIFT_DAY;
+  if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return SHIFT_NIGHT;
   return text;
 };
 
