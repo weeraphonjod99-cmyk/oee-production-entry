@@ -449,7 +449,7 @@ function App() {
     event.preventDefault();
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
     const shouldUpdate = Boolean(editingLog);
-    const savedDate = dateManuallyEdited ? draft.date : getTodayInputValue();
+    const savedDate = draft.date || getTodayInputValue();
     const log: ProductionLog = {
       ...draft,
       date: savedDate,
@@ -466,7 +466,11 @@ function App() {
       const saved = remoteEnabled ? (shouldUpdate ? await updateRemoteLog(log) : await appendRemoteLog(log)) : log;
       const next = shouldUpdate ? upsertLocalLog(saved) : appendLocalLog(saved);
       setLocalLogs(next);
-      setStatus(shouldUpdate ? "บันทึกการแก้ไขแล้ว" : "บันทึกยอดแล้ว");
+      setStatus(
+        shouldUpdate
+          ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
+          : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`,
+      );
       resetDraft();
     } catch (error) {
       const localLog = { ...log, source: "local" as const };
