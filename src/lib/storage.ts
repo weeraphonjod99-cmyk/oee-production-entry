@@ -23,6 +23,14 @@ export function appendLocalLog(log: ProductionLog) {
   return next;
 }
 
+export function upsertLocalLog(log: ProductionLog) {
+  const existing = loadLocalLogs();
+  const index = existing.findIndex((item) => item.id === log.id);
+  const next = index >= 0 ? existing.map((item) => (item.id === log.id ? log : item)) : [log, ...existing];
+  saveLocalLogs(next);
+  return next;
+}
+
 export function exportLogsCsv(logs: ProductionLog[]) {
   const headers = [
     "date",

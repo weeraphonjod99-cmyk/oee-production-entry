@@ -393,6 +393,17 @@ label {
   gap: 6px;
 }
 
+.label-text {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.required-mark {
+  color: #dc2626;
+  font-weight: 900;
+}
+
 input,
 select,
 textarea {
@@ -587,16 +598,30 @@ textarea:focus {
   color: #b42318;
 }
 
+.icon-action-button,
 .icon-danger-button {
   align-items: center;
-  background: #fff3f0;
-  border: 1px solid #ffd5cc;
   border-radius: 8px;
-  color: #b42318;
   display: inline-flex;
   height: 34px;
   justify-content: center;
   width: 38px;
+}
+
+.icon-action-button {
+  background: #eef7f1;
+  border: 1px solid #cbe7d5;
+  color: #177245;
+}
+
+.icon-action-button:hover {
+  background: #e0f2e8;
+}
+
+.icon-danger-button {
+  background: #fff3f0;
+  border: 1px solid #ffd5cc;
+  color: #b42318;
 }
 
 .icon-danger-button:disabled {
@@ -1100,9 +1125,9 @@ td {
   font-size: 13px;
 }
 
-td:nth-child(7),
 td:nth-child(8),
-td:nth-child(9) {
+td:nth-child(9),
+td:nth-child(10) {
   text-align: right;
 }
 

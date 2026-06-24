@@ -29,6 +29,8 @@ type AppUser = {
 const SESSION_KEY = "oee-production-session-v1";
 const CUSTOM_USERS_KEY = "oee-production-users-v1";
 const PASSWORD_OVERRIDES_KEY = "oee-production-password-overrides-v1";
+const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL?.trim() ?? "";
+const remoteUsersEnabled = APPS_SCRIPT_URL.length > 0;
 
 const builtInUsers: AppUser[] = [
   {
@@ -51,6 +53,28 @@ async function sha256(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+}
+
+async function postUserAction<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action, payload }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "Google Sheet user API failed");
+  }
+  return data as T;
 }
 
 function normalizeUsername(username: string) {
@@ -113,8 +137,16 @@ function toSummary(user: AppUser): AppUserSummary {
   };
 }
 
-export function listUsers() {
+function listLocalUsers() {
   return getUsers().map(toSummary);
+}
+
+export async function listUsers() {
+  if (remoteUsersEnabled) {
+    const data = await postUserAction<{ ok: boolean; users: AppUserSummary[] }>("listUsers");
+    return Array.isArray(data.users) ? data.users : [];
+  }
+  return listLocalUsers();
 }
 
 export function loadSession(): AppSession | null {
@@ -135,10 +167,21 @@ export function clearSession() {
 
 export async function signIn(username: string, password: string) {
   const normalized = normalizeUsername(username);
+  const hash = await sha256(password);
+
+  if (remoteUsersEnabled) {
+    const data = await postUserAction<{ ok: boolean; session: AppSession }>("signIn", {
+      username: normalized,
+      passwordHash: hash,
+    });
+    if (!data.session) throw new Error("เข้าสู่ระบบไม่สำเร็จ");
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
+    return data.session;
+  }
+
   const user = getUsers().find((item) => item.username === normalized);
   if (!user) throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
 
-  const hash = await sha256(password);
   if (hash !== user.passwordHash) {
     throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
   }
@@ -172,6 +215,17 @@ export async function createUser(input: {
   if (input.role !== "admin" && input.role !== "production") {
     throw new Error("Role ไม่ถูกต้อง");
   }
+  const passwordHash = await sha256(password);
+
+  if (remoteUsersEnabled) {
+    const data = await postUserAction<{ ok: boolean; users: AppUserSummary[] }>("createUser", {
+      username,
+      displayName,
+      role: input.role,
+      passwordHash,
+    });
+    return Array.isArray(data.users) ? data.users : [];
+  }
   if (getUsers().some((user) => user.username === username)) {
     throw new Error("Username นี้มีอยู่แล้ว");
   }
@@ -181,20 +235,24 @@ export async function createUser(input: {
     username,
     displayName,
     role: input.role,
-    passwordHash: await sha256(password),
+    passwordHash,
     createdAt: new Date().toISOString(),
   });
   saveCustomUsers(customUsers);
-  return listUsers();
+  return listLocalUsers();
 }
 
-export function deleteUser(username: string) {
+export async function deleteUser(username: string) {
   const normalized = normalizeUsername(username);
+  if (remoteUsersEnabled) {
+    const data = await postUserAction<{ ok: boolean; users: AppUserSummary[] }>("deleteUser", { username: normalized });
+    return Array.isArray(data.users) ? data.users : [];
+  }
   if (builtInUsers.some((user) => user.username === normalized)) {
     throw new Error("ไม่สามารถลบบัญชีเริ่มต้นได้");
   }
   saveCustomUsers(loadCustomUsers().filter((user) => user.username !== normalized));
-  return listUsers();
+  return listLocalUsers();
 }
 
 export async function changePassword(username: string, password: string) {
@@ -202,6 +260,15 @@ export async function changePassword(username: string, password: string) {
   const nextPassword = password.trim();
   if (nextPassword.length < 6) {
     throw new Error("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+  }
+  const passwordHash = await sha256(nextPassword);
+
+  if (remoteUsersEnabled) {
+    const data = await postUserAction<{ ok: boolean; users: AppUserSummary[] }>("changePassword", {
+      username: normalized,
+      passwordHash,
+    });
+    return Array.isArray(data.users) ? data.users : [];
   }
 
   const customUsers = loadCustomUsers();
@@ -212,7 +279,6 @@ export async function changePassword(username: string, password: string) {
     throw new Error("ไม่พบบัญชีผู้ใช้");
   }
 
-  const passwordHash = await sha256(nextPassword);
   const changedAt = new Date().toISOString();
 
   if (customUserIndex >= 0) {
@@ -222,13 +288,13 @@ export async function changePassword(username: string, password: string) {
       passwordChangedAt: changedAt,
     };
     saveCustomUsers(customUsers);
-    return listUsers();
+    return listLocalUsers();
   }
 
   const overrides = loadPasswordOverrides();
   overrides[normalized] = { passwordHash, changedAt };
   savePasswordOverrides(overrides);
-  return listUsers();
+  return listLocalUsers();
 }
 
 export function canAccessTab(session: AppSession, tab: string) {

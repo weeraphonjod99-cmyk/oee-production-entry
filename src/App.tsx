@@ -9,6 +9,7 @@ import {
   Lock,
   LockKeyhole,
   LogOut,
+  Pencil,
   Save,
   Search,
   Share2,
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
-import { appendRemoteLog, fetchRemoteLogs, remoteEnabled } from "./lib/api";
+import { appendRemoteLog, fetchRemoteLogs, remoteEnabled, updateRemoteLog } from "./lib/api";
 import {
   canAccessTab,
   changePassword,
@@ -45,7 +46,7 @@ import {
   summarize,
   totalDowntime,
 } from "./lib/metrics";
-import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs } from "./lib/storage";
+import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
 
 type TabId = "entry" | "dashboard" | "history" | "master" | "users";
@@ -140,8 +141,86 @@ function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
 
 function uniqueLogs(logs: ProductionLog[]) {
   const map = new Map<string, ProductionLog>();
-  for (const log of logs) map.set(log.id, log);
+  for (const log of logs) {
+    if (!map.has(log.id)) map.set(log.id, log);
+  }
   return [...map.values()].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`));
+}
+
+const sameProductKey = (left: Pick<ProductionLog | ProductMaster, "machineId" | "productName" | "partNo" | "step">) =>
+  [left.machineId, left.productName, left.partNo, left.step || "-"].map(normalizeText).join("::");
+
+const findMatchingProduct = (
+  items: ProductMaster[],
+  key: ProductFieldKey,
+  value: string,
+  current: EntryDraft,
+) => {
+  const normalized = normalizeText(value);
+  if (!normalized) return null;
+
+  const matches = items.filter((product) => normalizeText(product[key]) === normalized);
+  if (matches.length === 0) return null;
+  if (matches.length === 1) return matches[0];
+
+  return (
+    matches.find((product) => normalizeText(product.partNo) === normalizeText(current.partNo) && normalizeText(product.step) === normalizeText(current.step)) ??
+    matches.find((product) => normalizeText(product.productName) === normalizeText(current.productName)) ??
+    matches[0]
+  );
+};
+
+const inferMachineSpeed = (
+  product: Pick<ProductMaster, "machineId" | "productName" | "partNo" | "step" | "sampleGoodQty">,
+  logs: ProductionLog[],
+  machine: Machine,
+) => {
+  const productKey = sameProductKey(product);
+  const matchedLogs = logs
+    .filter((log) => sameProductKey(log) === productKey)
+    .sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`));
+  const loggedSpeed = matchedLogs.find((log) => Number(log.machineSpeed || 0) > 0)?.machineSpeed;
+  if (loggedSpeed) return roundNumber(loggedSpeed);
+
+  const calculatedSpeed = matchedLogs
+    .map((log) => {
+      const runMinutes = Number(log.normalMinutes || 0);
+      const output = Number(log.goodQty || 0) + Number(log.ngQty || 0) + Number(log.testQty || 0);
+      return runMinutes > 0 && output > 0 ? output / runMinutes : 0;
+    })
+    .find((value) => value > 0);
+  if (calculatedSpeed) return roundNumber(calculatedSpeed);
+
+  return machine.capacityMinutes > 0 ? roundNumber(Number(product.sampleGoodQty || 0) / machine.capacityMinutes) : 0;
+};
+
+const draftFromLog = (log: ProductionLog): EntryDraft => ({
+  date: log.date || getTodayInputValue(),
+  shift: log.shift,
+  machineId: log.machineId,
+  productName: log.productName,
+  partNo: log.partNo,
+  step: log.step,
+  workMinutes: Number(log.workMinutes || 0) || Number(log.normalMinutes || 0) + totalDowntime(log),
+  timeSlots: Number(log.timeSlots || 0),
+  minutesPerSlot: Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot,
+  machineSpeed: Number(log.machineSpeed || 0),
+  changeoverMinutes: Number(log.changeoverMinutes || 0),
+  inspectionMinutes: Number(log.inspectionMinutes || 0),
+  equipmentRepairMinutes: Number(log.equipmentRepairMinutes || 0),
+  moldRepairMinutes: Number(log.moldRepairMinutes || 0),
+  materialChangeMinutes: Number(log.materialChangeMinutes || 0),
+  emergencyStopMinutes: Number(log.emergencyStopMinutes || 0),
+  meetingMinutes: Number(log.meetingMinutes || 0),
+  plannedStopMinutes: Number(log.plannedStopMinutes || 0),
+  goodQty: Number(log.goodQty || 0),
+  ngQty: Number(log.ngQty || 0),
+  testQty: Number(log.testQty || 0),
+  note: log.note || "",
+});
+
+function RequiredMark() {
+  return <span className="required-mark" aria-label="required">*</span>;
 }
 
 function App() {
@@ -155,6 +234,8 @@ function App() {
   const [historySearch, setHistorySearch] = useState("");
   const [filters, setFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
+  const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
+  const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
   const [runtimeLocked, setRuntimeLocked] = useState(true);
 
   useEffect(() => {
@@ -171,17 +252,6 @@ function App() {
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("entry");
   }, [session, tab]);
-
-  useEffect(() => {
-    const syncDate = () => {
-      const currentDate = getTodayInputValue();
-      setDraft((prev) => (prev.date === currentDate ? prev : { ...prev, date: currentDate }));
-    };
-
-    syncDate();
-    const timer = window.setInterval(syncDate, 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const machineProducts = useMemo(
@@ -229,6 +299,13 @@ function App() {
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
 
+  const applyProductToDraft = (product: ProductMaster, logs = allLogs, machine = currentMachine) => ({
+    productName: product.productName,
+    partNo: product.partNo,
+    step: product.step,
+    machineSpeed: inferMachineSpeed(product, logs, machine),
+  });
+
   const selectMachine = (machineId: string) => {
     const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
     const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
@@ -236,29 +313,20 @@ function App() {
     setDraft((prev) => ({
       ...prev,
       machineId: machine.id,
-      productName: nextProduct.productName,
-      partNo: nextProduct.partNo,
-      step: nextProduct.step,
-      machineSpeed: 0,
+      ...applyProductToDraft(nextProduct, allLogs, machine),
       workMinutes: machine.capacityMinutes,
       timeSlots: slotsFromMinutes(machine.capacityMinutes, prev.minutesPerSlot),
     }));
   };
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
-    const normalized = normalizeText(value);
-    const matches = normalized
-      ? filteredProducts.filter((product) => normalizeText(product[key]) === normalized)
-      : [];
-    const matchedProduct = matches.length === 1 ? matches[0] : null;
+    const matchedProduct = findMatchingProduct(machineProducts, key, value, draft);
 
     setDraft((prev) =>
       matchedProduct
         ? {
             ...prev,
-            productName: matchedProduct.productName,
-            partNo: matchedProduct.partNo,
-            step: matchedProduct.step,
+            ...applyProductToDraft(matchedProduct),
           }
         : {
             ...prev,
@@ -314,30 +382,57 @@ function App() {
 
   const resetDraft = () => {
     const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
-    setDraft(createEmptyDraft(currentMachine, product));
+    const nextDraft = createEmptyDraft(currentMachine, product);
+    setDraft({
+      ...nextDraft,
+      ...applyProductToDraft(product),
+    });
+    setEditingLog(null);
+    setDateManuallyEdited(false);
+    setProductSearch("");
+  };
+
+  const editLog = (log: ProductionLog) => {
+    const nextDraft = draftFromLog(log);
+    const minutesPerSlot = nextDraft.minutesPerSlot || defaultMinutesPerSlot;
+    setDraft({
+      ...nextDraft,
+      timeSlots: nextDraft.timeSlots || slotsFromMinutes(nextDraft.workMinutes, minutesPerSlot),
+      minutesPerSlot,
+    });
+    setEditingLog(log);
+    setDateManuallyEdited(true);
+    setRuntimeLocked(false);
+    setProductSearch("");
+    setTab("entry");
+    setStatus(`กำลังแก้ไขรายการ ${log.machineName} วันที่ ${log.date}`);
   };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
+    const shouldUpdate = Boolean(editingLog);
+    const savedDate = dateManuallyEdited ? draft.date : getTodayInputValue();
     const log: ProductionLog = {
       ...draft,
-      id: makeLogId(),
+      date: savedDate,
+      id: editingLog?.id ?? makeLogId(),
       machineName: machine.name,
       normalMinutes: computedNormalMinutes,
-      createdAt: new Date().toISOString(),
+      createdAt: editingLog?.createdAt ?? new Date().toISOString(),
       source: remoteEnabled ? "google-sheet" : "local",
     };
 
     setSaving(true);
     try {
-      const saved = remoteEnabled ? await appendRemoteLog(log) : log;
-      const next = appendLocalLog(saved);
+      const saved = remoteEnabled ? (shouldUpdate ? await updateRemoteLog(log) : await appendRemoteLog(log)) : log;
+      const next = shouldUpdate ? upsertLocalLog(saved) : appendLocalLog(saved);
       setLocalLogs(next);
-      setStatus(remoteEnabled ? "บันทึกลง Google Sheet แล้ว" : "บันทึกในเครื่องแล้ว");
+      setStatus(shouldUpdate ? "บันทึกการแก้ไขแล้ว" : "บันทึกยอดแล้ว");
       resetDraft();
     } catch (error) {
-      const next = appendLocalLog({ ...log, source: "local" });
+      const localLog = { ...log, source: "local" as const };
+      const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
     } finally {
@@ -450,17 +545,25 @@ function App() {
             <form className="entry-form" onSubmit={submit}>
               <div className="section-title">
                 <Gauge size={20} />
-                <h2>กรอกยอดผลิต</h2>
+                <h2>{editingLog ? "แก้ไขยอดผลิต" : "กรอกยอดผลิต"}</h2>
               </div>
 
               <div className="form-grid">
                 <label>
-                  วันที่
-                  <input disabled value={draft.date} type="date" />
+                  <span className="label-text">วันที่ <RequiredMark /></span>
+                  <input
+                    required
+                    value={draft.date}
+                    onChange={(event) => {
+                      setDateManuallyEdited(true);
+                      setDraft({ ...draft, date: event.target.value });
+                    }}
+                    type="date"
+                  />
                 </label>
                 <label>
-                  กะ
-                  <select value={draft.shift} onChange={(event) => setDraft({ ...draft, shift: event.target.value })}>
+                  <span className="label-text">กะ <RequiredMark /></span>
+                  <select required value={draft.shift} onChange={(event) => setDraft({ ...draft, shift: event.target.value })}>
                     {orderedShiftOptions.map((shift) => (
                       <option key={shift} value={shift}>
                         {shiftLabel(shift)}
@@ -469,8 +572,8 @@ function App() {
                   </select>
                 </label>
                 <label>
-                  เครื่อง / ไลน์
-                  <select value={draft.machineId} onChange={(event) => selectMachine(event.target.value)}>
+                  <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>
+                  <select required value={draft.machineId} onChange={(event) => selectMachine(event.target.value)}>
                     {machines.map((machine) => (
                       <option key={machine.id} value={machine.id}>
                         {machine.name}
@@ -491,29 +594,32 @@ function App() {
                   </div>
                 </label>
                 <label>
-                  รุ่น
+                  <span className="label-text">รุ่น <RequiredMark /></span>
                   <input
                     list="product-name-options"
                     onChange={(event) => updateProductField("productName", event.target.value)}
+                    required
                     type="text"
                     value={draft.productName}
                   />
                 </label>
                 <label>
-                  Part No.
+                  <span className="label-text">Part No. <RequiredMark /></span>
                   <input
                     list="part-no-options"
                     onChange={(event) => updateProductField("partNo", event.target.value)}
+                    required
                     type="text"
                     value={draft.partNo}
                   />
                 </label>
                 <label>
-                  Step
+                  <span className="label-text">Step <RequiredMark /></span>
                   <input
                     list="step-options"
                     onChange={(event) => updateProductField("step", event.target.value)}
                     placeholder="-"
+                    required
                     type="text"
                     value={draft.step}
                   />
@@ -547,12 +653,13 @@ function App() {
                   </button>
                 </div>
                 <label className="runtime-input-block">
-                  <span>เวลาตามกะ</span>
+                  <span>เวลาตามกะ <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateWorkMinutes(event.target.value)}
+                      required
                       type="number"
                       value={draft.workMinutes}
                     />
@@ -560,12 +667,13 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>จำนวนช่องเวลา</span>
+                  <span>จำนวนช่องเวลา <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateTimeSlots(event.target.value)}
+                      required
                       step="0.01"
                       type="number"
                       value={draft.timeSlots}
@@ -574,12 +682,13 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>นาที/ช่อง</span>
+                  <span>นาที/ช่อง <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateMinutesPerSlot(event.target.value)}
+                      required
                       step="0.01"
                       type="number"
                       value={draft.minutesPerSlot}
@@ -588,12 +697,12 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>ความเร็วเครื่องจักร</span>
+                  <span>ความเร็วเครื่องจักร <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
-                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => handleNumber("machineSpeed", event.target.value)}
+                      required
                       step="0.01"
                       type="number"
                       value={draft.machineSpeed}
@@ -617,16 +726,16 @@ function App() {
               </div>
               <div className="form-grid three">
                 <label>
-                  Good quantity
-                  <input value={draft.goodQty} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
+                  <span className="label-text">Good quantity <RequiredMark /></span>
+                  <input required value={draft.goodQty} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
-                  NG quantity
-                  <input value={draft.ngQty} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
+                  <span className="label-text">NG quantity <RequiredMark /></span>
+                  <input required value={draft.ngQty} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
-                  Test
-                  <input value={draft.testQty} onChange={(event) => handleNumber("testQty", event.target.value)} min="0" type="number" />
+                  <span className="label-text">Test <RequiredMark /></span>
+                  <input required value={draft.testQty} onChange={(event) => handleNumber("testQty", event.target.value)} min="0" type="number" />
                 </label>
               </div>
 
@@ -646,6 +755,7 @@ function App() {
                         value={minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot)}
                         onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
                         min="0"
+                        required
                         step="0.01"
                         type="number"
                       />
@@ -663,10 +773,10 @@ function App() {
 
               <div className="form-actions">
                 <button className="primary-button" disabled={saving} type="submit">
-                  <Save size={18} /> {saving ? "กำลังบันทึก" : "บันทึกยอด"}
+                  <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : "บันทึกยอด"}
                 </button>
                 <button className="ghost-button" onClick={resetDraft} type="button">
-                  ล้างฟอร์ม
+                  {editingLog ? "ยกเลิกแก้ไข" : "ล้างฟอร์ม"}
                 </button>
               </div>
             </form>
@@ -736,7 +846,7 @@ function App() {
                 ล้าง local
               </button>
             </div>
-            <LogsTable logs={searchedHistory} />
+            <LogsTable logs={searchedHistory} onEdit={editLog} />
           </section>
         )}
 
@@ -771,13 +881,27 @@ const createEmptyPasswordForm = (username: string) => ({
 });
 
 function UsersAdmin({ currentUsername }: { currentUsername: string }) {
-  const [users, setUsers] = useState<AppUserSummary[]>(() => listUsers());
+  const [users, setUsers] = useState<AppUserSummary[]>([]);
   const [form, setForm] = useState(emptyUserForm);
   const [passwordForm, setPasswordForm] = useState(() => createEmptyPasswordForm(currentUsername));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [savingUser, setSavingUser] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    listUsers()
+      .then((nextUsers) => {
+        if (active) setUsers(nextUsers);
+      })
+      .catch((userError) => {
+        if (active) setError(userError instanceof Error ? userError.message : "โหลดรายชื่อผู้ใช้ไม่สำเร็จ");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const submitUser = async (event: FormEvent) => {
     event.preventDefault();
@@ -796,11 +920,11 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
     }
   };
 
-  const removeUser = (username: string) => {
+  const removeUser = async (username: string) => {
     setMessage("");
     setError("");
     try {
-      setUsers(deleteUser(username));
+      setUsers(await deleteUser(username));
       setMessage(`ลบผู้ใช้ ${username} แล้ว`);
     } catch (userError) {
       setError(userError instanceof Error ? userError.message : "ลบผู้ใช้ไม่สำเร็จ");
@@ -837,29 +961,32 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         </div>
         <div className="form-grid">
           <label>
-            Username
+            <span className="label-text">Username <RequiredMark /></span>
             <input
               autoComplete="off"
               onChange={(event) => setForm({ ...form, username: event.target.value })}
               placeholder="เช่น operator01"
+              required
               type="text"
               value={form.username}
             />
           </label>
           <label>
-            ชื่อแสดงผล
+            <span className="label-text">ชื่อแสดงผล <RequiredMark /></span>
             <input
               autoComplete="off"
               onChange={(event) => setForm({ ...form, displayName: event.target.value })}
               placeholder="เช่น Line A"
+              required
               type="text"
               value={form.displayName}
             />
           </label>
           <label>
-            Role
+            <span className="label-text">Role <RequiredMark /></span>
             <select
               onChange={(event) => setForm({ ...form, role: event.target.value as AppRole })}
+              required
               value={form.role}
             >
               <option value="production">Production</option>
@@ -867,11 +994,12 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            Password
+            <span className="label-text">Password <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setForm({ ...form, password: event.target.value })}
               placeholder="อย่างน้อย 6 ตัว"
+              required
               type="password"
               value={form.password}
             />
@@ -893,9 +1021,10 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         </div>
         <div className="form-grid three">
           <label>
-            บัญชี
+            <span className="label-text">บัญชี <RequiredMark /></span>
             <select
               onChange={(event) => setPasswordForm(createEmptyPasswordForm(event.target.value))}
+              required
               value={passwordForm.username}
             >
               {users.map((user) => (
@@ -906,21 +1035,23 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            รหัสผ่านใหม่
+            <span className="label-text">รหัสผ่านใหม่ <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })}
               placeholder="อย่างน้อย 6 ตัว"
+              required
               type="password"
               value={passwordForm.password}
             />
           </label>
           <label>
-            ยืนยันรหัสผ่าน
+            <span className="label-text">ยืนยันรหัสผ่าน <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
               placeholder="พิมพ์ซ้ำอีกครั้ง"
+              required
               type="password"
               value={passwordForm.confirmPassword}
             />
@@ -1013,22 +1144,24 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           <h1>เข้าสู่ระบบ</h1>
         </div>
         <label>
-          Username
+          <span className="label-text">Username <RequiredMark /></span>
           <input
             autoComplete="username"
             autoFocus
             onChange={(event) => setUsername(event.target.value)}
             placeholder="admin หรือ production"
+            required
             type="text"
             value={username}
           />
         </label>
         <label>
-          Password
+          <span className="label-text">Password <RequiredMark /></span>
           <input
             autoComplete="current-password"
             onChange={(event) => setPassword(event.target.value)}
             placeholder="รหัสผ่าน"
+            required
             type="password"
             value={password}
           />
@@ -1319,12 +1452,13 @@ function Trend({ logs }: { logs: ProductionLog[] }) {
   );
 }
 
-function LogsTable({ logs }: { logs: ProductionLog[] }) {
+function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: ProductionLog) => void }) {
   return (
     <div className="data-table-wrap">
       <table>
         <thead>
           <tr>
+            <th>Action</th>
             <th>Date</th>
             <th>Shift</th>
             <th>Machine</th>
@@ -1340,6 +1474,11 @@ function LogsTable({ logs }: { logs: ProductionLog[] }) {
         <tbody>
           {logs.map((log) => (
             <tr key={log.id}>
+              <td>
+                <button className="icon-action-button" onClick={() => onEdit(log)} title="แก้ไขรายการนี้" type="button">
+                  <Pencil size={16} />
+                </button>
+              </td>
               <td>{log.date}</td>
               <td>{shiftLabel(log.shift)}</td>
               <td>{log.machineName}</td>

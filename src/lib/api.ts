@@ -39,3 +39,17 @@ export async function appendRemoteLog(log: ProductionLog): Promise<ProductionLog
   }
   return data.log ?? log;
 }
+
+export async function updateRemoteLog(log: ProductionLog): Promise<ProductionLog> {
+  if (!remoteEnabled) return log;
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "upsertLog", payload: log }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "บันทึกแก้ไขข้อมูลลง Google Sheet ไม่สำเร็จ");
+  }
+  return data.log ?? log;
+}

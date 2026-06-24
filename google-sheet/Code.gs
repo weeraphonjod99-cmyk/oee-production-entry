@@ -4,6 +4,7 @@ const LOG_SHEET = "production_logs";
 const MACHINE_SHEET = "machines";
 const PRODUCT_MASTER_SHEET = "product_master";
 const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
+const USER_SHEET = "app_users";
 
 const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
 const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/product_master.csv";
@@ -62,6 +63,22 @@ const PRODUCT_MASTER_HEADERS = [
   "sampleTestQty",
 ];
 
+const USER_HEADERS = [
+  "username",
+  "displayName",
+  "role",
+  "passwordHash",
+  "builtIn",
+  "createdAt",
+  "passwordChangedAt",
+  "active",
+];
+
+const DEFAULT_USER_ROWS = [
+  ["admin", "Administrator", "admin", "c3baf7d2bef9cffb097eb144a14df41f143af3b023ef21d448f449d2e9d4baf0", true, "", "", true],
+  ["production", "Production", "production", "86a1f963447b489c579084029ae10e1c31ffcc90081bc220fa9da83bf1dfe89f", true, "", "", true],
+];
+
 const DOWNTIME_CATALOG_ROWS = [
   ["key", "thLabel", "enLabel", "sortOrder"],
   ["changeoverMinutes", "เปลี่ยนรุ่น", "Changeover", 10],
@@ -103,6 +120,25 @@ function doPost(e) {
       const log = appendLog(body.payload || {});
       return jsonResponse({ ok: true, log });
     }
+    if (body.action === "upsertLog") {
+      const log = upsertLog(body.payload || {});
+      return jsonResponse({ ok: true, log });
+    }
+    if (body.action === "listUsers") {
+      return jsonResponse({ ok: true, users: listAppUsers() });
+    }
+    if (body.action === "signIn") {
+      return jsonResponse({ ok: true, session: signInUser(body.payload || {}) });
+    }
+    if (body.action === "createUser") {
+      return jsonResponse({ ok: true, users: createAppUser(body.payload || {}) });
+    }
+    if (body.action === "changePassword") {
+      return jsonResponse({ ok: true, users: changeAppUserPassword(body.payload || {}) });
+    }
+    if (body.action === "deleteUser") {
+      return jsonResponse({ ok: true, users: deleteAppUser(body.payload || {}) });
+    }
     return jsonResponse({ ok: false, error: "Unknown action" });
   } catch (error) {
     return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) });
@@ -119,6 +155,170 @@ function appendLog(payload) {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   sheet.appendRow(LOG_HEADERS.map((header) => log[header] == null ? "" : log[header]));
   return log;
+}
+
+function upsertLog(payload) {
+  if (!payload.id) {
+    return appendLog(payload);
+  }
+
+  const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  const idColumn = LOG_HEADERS.indexOf("id") + 1;
+  const rowIndex = values.findIndex(function(row, index) {
+    return index > 0 && String(row[idColumn - 1]) === String(payload.id);
+  });
+  const log = Object.assign({}, payload, {
+    createdAt: payload.createdAt || new Date().toISOString(),
+    source: "google-sheet",
+  });
+
+  if (rowIndex >= 0) {
+    sheet.getRange(rowIndex + 1, 1, 1, LOG_HEADERS.length).setValues([
+      LOG_HEADERS.map(function(header) {
+        return log[header] == null ? "" : log[header];
+      }),
+    ]);
+    return log;
+  }
+
+  sheet.appendRow(LOG_HEADERS.map(function(header) {
+    return log[header] == null ? "" : log[header];
+  }));
+  return log;
+}
+
+function listAppUsers() {
+  return getUserRows().map(function(item) {
+    return toUserSummary(item.user);
+  });
+}
+
+function signInUser(payload) {
+  const username = normalizeUsername(payload.username);
+  const passwordHash = String(payload.passwordHash || "");
+  const user = getUserRows().map(function(item) { return item.user; }).find(function(item) {
+    return item.username === username && item.active !== false;
+  });
+  if (!user || user.passwordHash !== passwordHash) {
+    throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+  }
+  return {
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    signedInAt: new Date().toISOString(),
+  };
+}
+
+function createAppUser(payload) {
+  const username = normalizeUsername(payload.username);
+  const displayName = String(payload.displayName || username).trim() || username;
+  const role = String(payload.role || "production").trim();
+  const passwordHash = String(payload.passwordHash || "").trim();
+  if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+    throw new Error("Username ต้องเป็น a-z, 0-9, จุด, ขีดกลาง หรือ underscore ความยาว 3-32 ตัว");
+  }
+  if (role !== "admin" && role !== "production") {
+    throw new Error("Role ไม่ถูกต้อง");
+  }
+  if (!passwordHash) {
+    throw new Error("Password hash is required");
+  }
+
+  const sheet = ensureUsersSheet();
+  const users = getUserRows();
+  if (users.some(function(item) { return item.user.username === username; })) {
+    throw new Error("Username นี้มีอยู่แล้ว");
+  }
+  sheet.appendRow([username, displayName, role, passwordHash, false, new Date().toISOString(), "", true]);
+  return listAppUsers();
+}
+
+function changeAppUserPassword(payload) {
+  const username = normalizeUsername(payload.username);
+  const passwordHash = String(payload.passwordHash || "").trim();
+  if (!passwordHash) {
+    throw new Error("Password hash is required");
+  }
+  const sheet = ensureUsersSheet();
+  const rows = getUserRows();
+  const found = rows.find(function(item) { return item.user.username === username; });
+  if (!found) {
+    throw new Error("ไม่พบบัญชีผู้ใช้");
+  }
+  sheet.getRange(found.row, 4).setValue(passwordHash);
+  sheet.getRange(found.row, 7).setValue(new Date().toISOString());
+  sheet.getRange(found.row, 8).setValue(true);
+  return listAppUsers();
+}
+
+function deleteAppUser(payload) {
+  const username = normalizeUsername(payload.username);
+  const sheet = ensureUsersSheet();
+  const rows = getUserRows();
+  const found = rows.find(function(item) { return item.user.username === username; });
+  if (!found) {
+    throw new Error("ไม่พบบัญชีผู้ใช้");
+  }
+  if (found.user.builtIn) {
+    throw new Error("ไม่สามารถลบบัญชีเริ่มต้นได้");
+  }
+  sheet.deleteRow(found.row);
+  return listAppUsers();
+}
+
+function ensureUsersSheet() {
+  const sheet = ensureSheet(USER_SHEET, USER_HEADERS);
+  const rows = getUserRows(false);
+  DEFAULT_USER_ROWS.forEach(function(defaultRow) {
+    const username = defaultRow[0];
+    if (!rows.some(function(item) { return item.user.username === username; })) {
+      sheet.appendRow(defaultRow);
+    }
+  });
+  formatHeader(sheet, USER_HEADERS.length);
+  return sheet;
+}
+
+function getUserRows(seedDefaults) {
+  if (seedDefaults !== false) {
+    ensureUsersSheet();
+  }
+  const sheet = ensureSheet(USER_SHEET, USER_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  return values.slice(1).map(function(row, index) {
+    return {
+      row: index + 2,
+      user: {
+        username: normalizeUsername(row[0]),
+        displayName: String(row[1] || row[0] || "").trim(),
+        role: String(row[2] || "production").trim(),
+        passwordHash: String(row[3] || "").trim(),
+        builtIn: row[4] === true || String(row[4]).toLowerCase() === "true",
+        createdAt: row[5] ? String(row[5]) : "",
+        passwordChangedAt: row[6] ? String(row[6]) : "",
+        active: row[7] === "" ? true : row[7] === true || String(row[7]).toLowerCase() === "true",
+      },
+    };
+  }).filter(function(item) {
+    return item.user.username && item.user.passwordHash && item.user.active !== false;
+  });
+}
+
+function toUserSummary(user) {
+  return {
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    builtIn: Boolean(user.builtIn),
+    createdAt: user.createdAt,
+    passwordChangedAt: user.passwordChangedAt,
+  };
+}
+
+function normalizeUsername(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function appendFormattedOeeRow(log) {
@@ -347,6 +547,7 @@ function setupProductionWorkbook() {
   importCsvSheet(MACHINE_SHEET, MACHINE_HEADERS, MACHINES_CSV_URL);
   importCsvSheet(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS, PRODUCT_MASTER_CSV_URL);
   setupDowntimeCatalog();
+  ensureUsersSheet();
   return sheet.getParent();
 }
 
