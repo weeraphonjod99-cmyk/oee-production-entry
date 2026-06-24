@@ -135,7 +135,7 @@ const shiftLabel = (shift: string) => {
 
 const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const normalizeText = (value: string) => value.trim().toLowerCase();
+const normalizeText = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
   return Array.from(new Set(items.map((item) => item[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -309,7 +309,7 @@ function App() {
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
   const duplicateEntry = useMemo(() => {
-    if (!draft.date || !draft.shift || !draft.machineId || !draft.partNo.trim()) return null;
+    if (!draft.date || !draft.shift || !draft.machineId || !normalizeText(draft.partNo)) return null;
     return (
       allLogs.find(
         (log) =>
