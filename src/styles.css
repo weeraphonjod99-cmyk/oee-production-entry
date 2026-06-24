@@ -58,6 +58,17 @@ button {
   width: 100%;
 }
 
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 input:disabled,
 select:disabled,
 textarea:disabled {
@@ -455,34 +466,11 @@ textarea:focus {
   padding: 14px;
 }
 
-.runtime-lock-row {
-  align-items: center;
-  border-bottom: 1px solid #d7ecdf;
-  display: flex;
-  gap: 12px;
-  grid-column: 1 / -1;
-  justify-content: space-between;
-  padding-bottom: 12px;
-}
-
-.runtime-lock-row div {
-  display: grid;
-  gap: 3px;
-}
-
-.runtime-lock-button {
-  min-height: 36px;
-}
-
 .runtime-panel div,
 .runtime-panel label,
 .summary-block {
   display: grid;
   gap: 4px;
-}
-
-.runtime-panel .runtime-lock-row {
-  display: flex;
 }
 
 .runtime-panel span,
@@ -1356,16 +1344,6 @@ td:nth-child(10) {
 
   .runtime-panel {
     padding: 12px;
-  }
-
-  .runtime-lock-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .runtime-lock-button {
-    justify-content: center;
-    width: 100%;
   }
 
   .runtime-input-row {

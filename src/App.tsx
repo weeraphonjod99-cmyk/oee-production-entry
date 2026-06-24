@@ -6,7 +6,6 @@ import {
   Gauge,
   History,
   KeyRound,
-  Lock,
   LockKeyhole,
   LogOut,
   Pencil,
@@ -15,7 +14,6 @@ import {
   Share2,
   TableProperties,
   Trash2,
-  Unlock,
   UserPlus,
   UserRound,
   Wifi,
@@ -23,7 +21,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { machines, products, seedLogs, shiftOptions } from "./data/oeeMasterData.generated";
-import { appendRemoteLog, fetchRemoteLogs, remoteEnabled, updateRemoteLog } from "./lib/api";
+import { appendRemoteLog, fetchProductDefaults, fetchRemoteLogs, remoteEnabled, updateRemoteLog } from "./lib/api";
 import {
   canAccessTab,
   changePassword,
@@ -236,7 +234,6 @@ function App() {
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
   const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
-  const [runtimeLocked, setRuntimeLocked] = useState(true);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -286,6 +283,11 @@ function App() {
     });
   }, [allLogs, filters]);
 
+  const entryDateLogs = useMemo(
+    () => allLogs.filter((log) => log.date === draft.date).slice(0, 8),
+    [allLogs, draft.date],
+  );
+
   const searchedHistory = useMemo(() => {
     const query = historySearch.trim().toLowerCase();
     if (!query) return visibleLogs.slice(0, 120);
@@ -306,6 +308,35 @@ function App() {
     machineSpeed: inferMachineSpeed(product, logs, machine),
   });
 
+  const loadProductDefaults = async (product: ProductMaster, machine: Machine) => {
+    if (!remoteEnabled) return;
+    try {
+      const defaults = await fetchProductDefaults({
+        machineName: machine.name,
+        productName: product.productName,
+        partNo: product.partNo,
+        step: product.step || "-",
+      });
+      setDraft((prev) => {
+        const sameProduct =
+          prev.machineId === machine.id &&
+          normalizeText(prev.productName) === normalizeText(product.productName) &&
+          normalizeText(prev.partNo) === normalizeText(product.partNo) &&
+          normalizeText(prev.step || "-") === normalizeText(product.step || "-");
+        if (!sameProduct) return prev;
+        const minutesPerSlot = Number(defaults.minutesPerSlot || prev.minutesPerSlot || defaultMinutesPerSlot);
+        return {
+          ...prev,
+          machineSpeed: Number(defaults.machineSpeed || 0) > 0 ? roundNumber(Number(defaults.machineSpeed)) : prev.machineSpeed,
+          minutesPerSlot,
+          workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
+        };
+      });
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "โหลดความเร็วจาก Google Sheet ไม่สำเร็จ");
+    }
+  };
+
   const selectMachine = (machineId: string) => {
     const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
     const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
@@ -317,6 +348,7 @@ function App() {
       workMinutes: machine.capacityMinutes,
       timeSlots: slotsFromMinutes(machine.capacityMinutes, prev.minutesPerSlot),
     }));
+    void loadProductDefaults(nextProduct, machine);
   };
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
@@ -333,6 +365,7 @@ function App() {
             [key]: value,
           },
     );
+    if (matchedProduct) void loadProductDefaults(matchedProduct, currentMachine);
   };
 
   const handleNumber = (key: keyof EntryDraft, value: string) => {
@@ -390,6 +423,7 @@ function App() {
     setEditingLog(null);
     setDateManuallyEdited(false);
     setProductSearch("");
+    void loadProductDefaults(product, currentMachine);
   };
 
   const editLog = (log: ProductionLog) => {
@@ -402,7 +436,6 @@ function App() {
     });
     setEditingLog(log);
     setDateManuallyEdited(true);
-    setRuntimeLocked(false);
     setProductSearch("");
     setTab("entry");
     setStatus(`กำลังแก้ไขรายการ ${log.machineName} วันที่ ${log.date}`);
@@ -420,6 +453,7 @@ function App() {
       machineName: machine.name,
       normalMinutes: computedNormalMinutes,
       createdAt: editingLog?.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       source: remoteEnabled ? "google-sheet" : "local",
     };
 
@@ -642,35 +676,10 @@ function App() {
               </div>
 
               <div className="runtime-panel">
-                <div className="runtime-lock-row">
-                  <div>
-                    <span>ตั้งค่าเวลา / ช่อง Excel</span>
-                    <strong>{runtimeLocked ? "ล็อกตัวเลขแล้ว" : "ปลดล็อกเพื่อปรับตั้ง"}</strong>
-                  </div>
-                  <button className="ghost-button runtime-lock-button" onClick={() => setRuntimeLocked((locked) => !locked)} type="button">
-                    {runtimeLocked ? <Lock size={16} /> : <Unlock size={16} />}
-                    {runtimeLocked ? "ปลดล็อก" : "ล็อก"}
-                  </button>
-                </div>
-                <label className="runtime-input-block">
-                  <span>เวลาตามกะ <RequiredMark /></span>
-                  <div className="runtime-input-row">
-                    <input
-                      disabled={runtimeLocked}
-                      min="0"
-                      onChange={(event) => updateWorkMinutes(event.target.value)}
-                      required
-                      type="number"
-                      value={draft.workMinutes}
-                    />
-                    <b>นาที</b>
-                  </div>
-                </label>
                 <label className="runtime-input-block">
                   <span>จำนวนช่องเวลา <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
-                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateTimeSlots(event.target.value)}
                       required
@@ -685,13 +694,25 @@ function App() {
                   <span>นาที/ช่อง <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
-                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateMinutesPerSlot(event.target.value)}
                       required
                       step="0.01"
                       type="number"
                       value={draft.minutesPerSlot}
+                    />
+                    <b>นาที</b>
+                  </div>
+                </label>
+                <label className="runtime-input-block">
+                  <span>เวลาตามกะ <RequiredMark /></span>
+                  <div className="runtime-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => updateWorkMinutes(event.target.value)}
+                      required
+                      type="number"
+                      value={draft.workMinutes}
                     />
                     <b>นาที</b>
                   </div>
@@ -794,7 +815,7 @@ function App() {
               </div>
               <div className="recent-list">
                 <h3>รายการล่าสุด</h3>
-                {localLogs.slice(0, 6).map((log) => (
+                {entryDateLogs.map((log) => (
                   <div className="recent-item" key={log.id}>
                     <b>{log.machineName}</b>
                     <span>
@@ -802,7 +823,7 @@ function App() {
                     </span>
                   </div>
                 ))}
-                {localLogs.length === 0 && <p className="empty-text">ยังไม่มีรายการทดลองในเครื่อง</p>}
+                {entryDateLogs.length === 0 && <p className="empty-text">ยังไม่มีรายการของวันที่ {draft.date}</p>}
               </div>
             </aside>
           </section>

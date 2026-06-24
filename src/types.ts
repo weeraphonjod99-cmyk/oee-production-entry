@@ -48,6 +48,7 @@ export type ProductionLog = {
   testQty: number;
   note: string;
   createdAt: string;
+  updatedAt?: string;
   source: "excel-seed" | "local" | "google-sheet";
 };
 

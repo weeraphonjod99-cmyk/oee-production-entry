@@ -56,6 +56,7 @@ export function exportLogsCsv(logs: ProductionLog[]) {
     "ngQty",
     "testQty",
     "note",
+    "updatedAt",
   ];
   const rows = logs.map((log) =>
     headers

@@ -39,6 +39,7 @@ const LOG_HEADERS = [
   "testQty",
   "note",
   "createdAt",
+  "updatedAt",
   "source",
 ];
 
@@ -124,6 +125,9 @@ function doPost(e) {
       const log = upsertLog(body.payload || {});
       return jsonResponse({ ok: true, log });
     }
+    if (body.action === "getProductDefaults") {
+      return jsonResponse({ ok: true, defaults: getProductDefaults(body.payload || {}) });
+    }
     if (body.action === "listUsers") {
       return jsonResponse({ ok: true, users: listAppUsers() });
     }
@@ -149,6 +153,7 @@ function appendLog(payload) {
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
     createdAt: payload.createdAt || new Date().toISOString(),
+    updatedAt: payload.updatedAt || new Date().toISOString(),
     source: "google-sheet",
   });
   appendFormattedOeeRow(log);
@@ -170,6 +175,7 @@ function upsertLog(payload) {
   });
   const log = Object.assign({}, payload, {
     createdAt: payload.createdAt || new Date().toISOString(),
+    updatedAt: payload.updatedAt || new Date().toISOString(),
     source: "google-sheet",
   });
 
@@ -266,6 +272,46 @@ function deleteAppUser(payload) {
   }
   sheet.deleteRow(found.row);
   return listAppUsers();
+}
+
+function getProductDefaults(payload) {
+  const book = getWorkbook();
+  const sheet = findOeeMachineSheet(book, payload.machineName);
+  if (!sheet) {
+    return { minutesPerSlot: OEE_MINUTES_PER_SLOT };
+  }
+  const layout = getOeeLayout(sheet);
+  const row = findOeeProductRow(sheet, layout, {
+    productName: payload.productName,
+    partNo: payload.partNo,
+    step: payload.step || "-",
+  });
+  if (!row || row < OEE_FIRST_DATA_ROW) {
+    return { minutesPerSlot: OEE_MINUTES_PER_SLOT };
+  }
+  const machineSpeed = numberValue(sheet.getRange(row, layout.theoreticalImpulse).getValue());
+  return {
+    machineSpeed: machineSpeed > 0 ? machineSpeed : "",
+    minutesPerSlot: OEE_MINUTES_PER_SLOT,
+  };
+}
+
+function findOeeProductRow(sheet, layout, log) {
+  const product = normalizeLookup(log.productName);
+  const partNo = normalizeLookup(log.partNo);
+  const step = normalizeLookup(log.step || "-");
+
+  for (let row = sheet.getLastRow(); row >= OEE_FIRST_DATA_ROW; row--) {
+    const width = layout.hasStep ? 3 : 2;
+    const values = sheet.getRange(row, layout.productName, 1, width).getDisplayValues()[0];
+    const sameProduct = normalizeLookup(values[0]) === product;
+    const samePart = normalizeLookup(values[1]) === partNo;
+    const sameStep = !layout.hasStep || normalizeLookup(values[2] || "-") === step;
+    if (sameProduct && samePart && sameStep) {
+      return row;
+    }
+  }
+  return null;
 }
 
 function ensureUsersSheet() {

@@ -4,6 +4,11 @@ const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL?.trim() ?? "";
 
 export const remoteEnabled = APPS_SCRIPT_URL.length > 0;
 
+export type ProductDefaults = {
+  machineSpeed?: number;
+  minutesPerSlot?: number;
+};
+
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
   try {
@@ -52,4 +57,23 @@ export async function updateRemoteLog(log: ProductionLog): Promise<ProductionLog
     throw new Error(data.error || "บันทึกแก้ไขข้อมูลลง Google Sheet ไม่สำเร็จ");
   }
   return data.log ?? log;
+}
+
+export async function fetchProductDefaults(input: {
+  machineName: string;
+  productName: string;
+  partNo: string;
+  step: string;
+}): Promise<ProductDefaults> {
+  if (!remoteEnabled) return {};
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "getProductDefaults", payload: input }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดค่ามาตรฐานจาก Google Sheet ไม่สำเร็จ");
+  }
+  return data.defaults ?? {};
 }
