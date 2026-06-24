@@ -85,6 +85,7 @@ const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production
 const defaultMinutesPerSlot = 5;
 
 const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
+const numberInputValue = (value: number | undefined) => (Number(value || 0) > 0 ? String(value) : "");
 const roundNumber = (value: number) => Number(value.toFixed(2));
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
@@ -105,6 +106,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     partNo: product.partNo,
     step: product.step,
     machineSpeed: 0,
+    cavityQty: 0,
     workMinutes: machine.capacityMinutes,
     timeSlots: slotsFromMinutes(machine.capacityMinutes, minutesPerSlot),
     minutesPerSlot,
@@ -203,6 +205,7 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   timeSlots: Number(log.timeSlots || 0),
   minutesPerSlot: Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot,
   machineSpeed: Number(log.machineSpeed || 0),
+  cavityQty: Number(log.cavityQty || 0),
   changeoverMinutes: Number(log.changeoverMinutes || 0),
   inspectionMinutes: Number(log.inspectionMinutes || 0),
   equipmentRepairMinutes: Number(log.equipmentRepairMinutes || 0),
@@ -328,6 +331,7 @@ function App() {
         return {
           ...prev,
           machineSpeed: Number(defaults.machineSpeed || 0) > 0 ? roundNumber(Number(defaults.machineSpeed)) : prev.machineSpeed,
+          cavityQty: Number(defaults.cavityQty || 0) > 0 ? roundNumber(Number(defaults.cavityQty)) : prev.cavityQty,
           minutesPerSlot,
           workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
         };
@@ -718,17 +722,29 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>ความเร็วเครื่องจักร <RequiredMark /></span>
+                  <span>ความเร็วเครื่องจักร</span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
                       onChange={(event) => handleNumber("machineSpeed", event.target.value)}
-                      required
                       step="0.01"
                       type="number"
-                      value={draft.machineSpeed}
+                      value={numberInputValue(draft.machineSpeed)}
                     />
                     <b>ชิ้น/นาที</b>
+                  </div>
+                </label>
+                <label className="runtime-input-block">
+                  <span>จำนวนคาวิตี้</span>
+                  <div className="runtime-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => handleNumber("cavityQty", event.target.value)}
+                      step="1"
+                      type="number"
+                      value={numberInputValue(draft.cavityQty)}
+                    />
+                    <b>ช่อง</b>
                   </div>
                 </label>
                 <div>
@@ -747,16 +763,16 @@ function App() {
               </div>
               <div className="form-grid three">
                 <label>
-                  <span className="label-text">Good quantity <RequiredMark /></span>
-                  <input required value={draft.goodQty} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
+                  <span className="label-text">Good quantity</span>
+                  <input value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
-                  <span className="label-text">NG quantity <RequiredMark /></span>
-                  <input required value={draft.ngQty} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
+                  <span className="label-text">NG quantity</span>
+                  <input value={numberInputValue(draft.ngQty)} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
-                  <span className="label-text">Test <RequiredMark /></span>
-                  <input required value={draft.testQty} onChange={(event) => handleNumber("testQty", event.target.value)} min="0" type="number" />
+                  <span className="label-text">Test / ตรวจชิ้นงาน</span>
+                  <input value={numberInputValue(draft.testQty)} onChange={(event) => handleNumber("testQty", event.target.value)} min="0" type="number" />
                 </label>
               </div>
 
@@ -776,10 +792,9 @@ function App() {
                     </span>
                     <div className="downtime-slot-input">
                       <input
-                        value={minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot)}
+                        value={numberInputValue(minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot))}
                         onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
                         min="0"
-                        required
                         step="1"
                         type="number"
                       />

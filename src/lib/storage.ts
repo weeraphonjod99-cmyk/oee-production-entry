@@ -43,6 +43,7 @@ export function exportLogsCsv(logs: ProductionLog[]) {
     "timeSlots",
     "minutesPerSlot",
     "machineSpeed",
+    "cavityQty",
     "normalMinutes",
     "changeoverMinutes",
     "inspectionMinutes",

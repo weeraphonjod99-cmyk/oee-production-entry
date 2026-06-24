@@ -34,6 +34,7 @@ export type ProductionLog = {
   timeSlots?: number;
   minutesPerSlot?: number;
   machineSpeed?: number;
+  cavityQty?: number;
   normalMinutes: number;
   changeoverMinutes: number;
   inspectionMinutes: number;

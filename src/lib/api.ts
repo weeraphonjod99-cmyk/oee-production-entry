@@ -6,6 +6,7 @@ export const remoteEnabled = APPS_SCRIPT_URL.length > 0;
 
 export type ProductDefaults = {
   machineSpeed?: number;
+  cavityQty?: number;
   minutesPerSlot?: number;
 };
 

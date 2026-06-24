@@ -25,6 +25,7 @@ const LOG_HEADERS = [
   "timeSlots",
   "minutesPerSlot",
   "machineSpeed",
+  "cavityQty",
   "normalMinutes",
   "changeoverMinutes",
   "inspectionMinutes",
@@ -290,8 +291,10 @@ function getProductDefaults(payload) {
     return { minutesPerSlot: OEE_MINUTES_PER_SLOT };
   }
   const machineSpeed = numberValue(sheet.getRange(row, layout.theoreticalImpulse).getValue());
+  const cavityQty = numberValue(sheet.getRange(row, layout.cavityQty).getValue());
   return {
     machineSpeed: machineSpeed > 0 ? machineSpeed : "",
+    cavityQty: cavityQty > 0 ? cavityQty : "",
     minutesPerSlot: OEE_MINUTES_PER_SLOT,
   };
 }
@@ -423,6 +426,7 @@ function getOeeLayout(sheet) {
         ngQty: 26,
         testQty: 27,
         theoreticalImpulse: 29,
+        cavityQty: 30,
       }
     : {
         hasStep: false,
@@ -438,6 +442,7 @@ function getOeeLayout(sheet) {
         ngQty: 25,
         testQty: 26,
         theoreticalImpulse: 28,
+        cavityQty: 29,
       };
 }
 
@@ -520,9 +525,8 @@ function writeOeeInputRow(sheet, layout, row, log) {
     numberValue(log.testQty),
   ]]);
 
-  if (numberValue(log.machineSpeed) > 0) {
-    sheet.getRange(row, layout.theoreticalImpulse).setValue(numberValue(log.machineSpeed));
-  }
+  sheet.getRange(row, layout.theoreticalImpulse).setValue(numberValue(log.machineSpeed));
+  sheet.getRange(row, layout.cavityQty).setValue(numberValue(log.cavityQty));
 }
 
 function minutesToSheetSlots(value, minutesPerSlot) {
@@ -598,7 +602,7 @@ function getLegacyOeeLogs() {
     if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
 
     const layout = getOeeLayout(sheet);
-    const lastColumn = Math.max(layout.theoreticalImpulse, layout.testQty);
+    const lastColumn = Math.max(layout.cavityQty, layout.theoreticalImpulse, layout.testQty);
     const rows = sheet
       .getRange(OEE_FIRST_DATA_ROW, 1, sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, lastColumn)
       .getValues();
@@ -637,6 +641,7 @@ function getLegacyOeeLogs() {
         timeSlots: roundNumber(workMinutes / OEE_MINUTES_PER_SLOT),
         minutesPerSlot: OEE_MINUTES_PER_SLOT,
         machineSpeed: numberValue(row[layout.theoreticalImpulse - 1]),
+        cavityQty: numberValue(row[layout.cavityQty - 1]),
         normalMinutes: normalMinutes,
         changeoverMinutes: downtimeMinutes[0],
         inspectionMinutes: downtimeMinutes[1],
