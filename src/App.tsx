@@ -600,14 +600,20 @@ function App() {
       return true;
     });
   }, [allLogs, filters.machineId, filters.shift]);
+  const filterAvailableDateRange = useMemo(() => {
+    if (filterScopeLogs.length === 0) return null;
+    const dates = Array.from(new Set(filterScopeLogs.map((log) => log.date).filter(Boolean))).sort();
+    return {
+      count: filterScopeLogs.length,
+      firstDate: dates[0],
+      lastDate: dates[dates.length - 1],
+    };
+  }, [filterScopeLogs]);
   const filterEmptyMessage = useMemo(() => {
     if (visibleLogs.length > 0 || (!filters.from && !filters.to)) return "";
-    if (filterScopeLogs.length === 0) return "ไม่พบข้อมูลของเครื่องหรือกะที่เลือกในระบบ";
-    const dates = Array.from(new Set(filterScopeLogs.map((log) => log.date).filter(Boolean))).sort();
-    const firstDate = dates[0];
-    const lastDate = dates[dates.length - 1];
-    return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${firstDate} ถึง ${lastDate} รวม ${formatNumber(filterScopeLogs.length)} รายการ`;
-  }, [filterScopeLogs, filters.from, filters.to, visibleLogs.length]);
+    if (!filterAvailableDateRange) return "ไม่พบข้อมูลของเครื่องหรือกะที่เลือกในระบบ";
+    return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${filterAvailableDateRange.firstDate} ถึง ${filterAvailableDateRange.lastDate} รวม ${formatNumber(filterAvailableDateRange.count)} รายการ`;
+  }, [filterAvailableDateRange, filters.from, filters.to, visibleLogs.length]);
 
   const entryDateLogs = useMemo(
     () => allLogs.filter((log) => log.date === draft.date).slice(0, 8),
@@ -895,6 +901,13 @@ function App() {
       return;
     }
     setStatus("เปิดรายงานแล้ว เลือก Save as PDF ในหน้าต่างพิมพ์");
+  };
+  const useLatestAvailableDate = () => {
+    if (!filterAvailableDateRange?.lastDate) return;
+    setFilters((prev) => ({ ...prev, from: filterAvailableDateRange.lastDate, to: filterAvailableDateRange.lastDate }));
+  };
+  const clearFilterDates = () => {
+    setFilters((prev) => ({ ...prev, from: "", to: "" }));
   };
 
   if (!session) return <LoginScreen onSignedIn={setSession} />;
@@ -1261,7 +1274,14 @@ function App() {
               <Kpi label="Logs" value={formatNumber(visibleLogs.length)} tone="neutral" />
             </div>
             <FiltersBar filters={filters} setFilters={setFilters} />
-            {filterEmptyMessage && <p className="filter-empty-message">{filterEmptyMessage}</p>}
+            {filterEmptyMessage && (
+              <FilterEmptyNotice
+                latestDate={filterAvailableDateRange?.lastDate}
+                message={filterEmptyMessage}
+                onClearDates={clearFilterDates}
+                onUseLatest={useLatestAvailableDate}
+              />
+            )}
             <PartNoSummary logs={visibleLogs} />
             <OeeSummaryChart summary={summary} />
             <div className="analytics-grid">
@@ -1275,9 +1295,12 @@ function App() {
         {tab === "reports" && (
           <ReportsView
             emptyMessage={filterEmptyMessage}
+            latestDate={filterAvailableDateRange?.lastDate}
             filters={filters}
             logs={visibleLogs}
+            onClearDates={clearFilterDates}
             onDownloadPdf={downloadPdfReport}
+            onUseLatest={useLatestAvailableDate}
             setFilters={setFilters}
           />
         )}
@@ -1285,7 +1308,14 @@ function App() {
         {tab === "history" && (
           <section className="table-view">
             <FiltersBar filters={filters} setFilters={setFilters} />
-            {filterEmptyMessage && <p className="filter-empty-message">{filterEmptyMessage}</p>}
+            {filterEmptyMessage && (
+              <FilterEmptyNotice
+                latestDate={filterAvailableDateRange?.lastDate}
+                message={filterEmptyMessage}
+                onClearDates={clearFilterDates}
+                onUseLatest={useLatestAvailableDate}
+              />
+            )}
             <div className="table-toolbar">
               <div className="input-with-icon search-box">
                 <Search size={16} />
@@ -1662,17 +1692,51 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
   );
 }
 
+function FilterEmptyNotice({
+  latestDate,
+  message,
+  onClearDates,
+  onUseLatest,
+}: {
+  latestDate?: string;
+  message: string;
+  onClearDates: () => void;
+  onUseLatest: () => void;
+}) {
+  return (
+    <div className="filter-empty-message" role="status">
+      <span>{message}</span>
+      <div>
+        {latestDate && (
+          <button onClick={onUseLatest} type="button">
+            ใช้วันที่ล่าสุด {latestDate}
+          </button>
+        )}
+        <button onClick={onClearDates} type="button">
+          ล้างวันที่
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ReportsView({
   emptyMessage,
   filters,
+  latestDate,
   logs,
+  onClearDates,
   onDownloadPdf,
+  onUseLatest,
   setFilters,
 }: {
   emptyMessage: string;
   filters: Filters;
+  latestDate?: string;
   logs: ProductionLog[];
+  onClearDates: () => void;
   onDownloadPdf: () => void;
+  onUseLatest: () => void;
   setFilters: (filters: Filters) => void;
 }) {
   const summary = summarize(logs);
@@ -1704,7 +1768,14 @@ function ReportsView({
       </div>
 
       <FiltersBar filters={filters} setFilters={setFilters} />
-      {emptyMessage && <p className="filter-empty-message">{emptyMessage}</p>}
+      {emptyMessage && (
+        <FilterEmptyNotice
+          latestDate={latestDate}
+          message={emptyMessage}
+          onClearDates={onClearDates}
+          onUseLatest={onUseLatest}
+        />
+      )}
 
       <div className="kpi-grid">
         <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />

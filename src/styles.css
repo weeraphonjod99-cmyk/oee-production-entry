@@ -911,15 +911,46 @@ textarea:focus {
 }
 
 .filter-empty-message {
+  align-items: center;
   background: #fff8e6;
   border: 1px solid #f6d58b;
   border-radius: 8px;
   color: #7a4d00;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
   font-size: 14px;
   font-weight: 800;
   line-height: 1.5;
   margin: 0;
   padding: 10px 12px;
+}
+
+.filter-empty-message span {
+  min-width: 0;
+}
+
+.filter-empty-message div {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.filter-empty-message button {
+  background: #ffffff;
+  border: 1px solid #d99a00;
+  border-radius: 8px;
+  color: #7a4d00;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.filter-empty-message button:hover {
+  background: #fff1c2;
 }
 
 .kpi-grid,
@@ -1575,6 +1606,19 @@ td:nth-child(10) {
   .report-toolbar .primary-button {
     justify-content: center;
     width: 100%;
+  }
+
+  .filter-empty-message {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-empty-message div {
+    justify-content: stretch;
+  }
+
+  .filter-empty-message button {
+    flex: 1 1 160px;
   }
 
   input,
