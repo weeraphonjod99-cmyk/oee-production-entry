@@ -69,11 +69,8 @@ const getTodayInputValue = () => {
   return `${year}-${month}-${day}`;
 };
 
-const getRecordDate = (log?: Pick<ProductionLog, "recordDate" | "createdAt" | "date"> | null) => {
-  if (log?.recordDate) return log.recordDate;
-  if (log?.createdAt) return log.createdAt.slice(0, 10);
-  return log?.date || getTodayInputValue();
-};
+const getRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => log?.recordDate || "";
+const getDraftRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => getRecordDate(log) || getTodayInputValue();
 
 const downtimeExcelCodes = {
   changeoverMinutes: "B",
@@ -520,7 +517,7 @@ const inferMachineSpeed = (
 };
 
 const draftFromLog = (log: ProductionLog): EntryDraft => ({
-  recordDate: getRecordDate(log),
+  recordDate: getDraftRecordDate(log),
   date: log.date || getTodayInputValue(),
   shift: log.shift,
   shiftStartAt: log.shiftStartAt || shiftStartAt(log.date || getTodayInputValue(), log.shift),
@@ -843,7 +840,7 @@ function App() {
       return;
     }
     const savedDate = draft.date || getTodayInputValue();
-    const savedRecordDate = shouldUpdate ? getRecordDate(editingLog) : getTodayInputValue();
+    const savedRecordDate = shouldUpdate ? getDraftRecordDate(editingLog) : getTodayInputValue();
     const log: ProductionLog = {
       ...draft,
       recordDate: savedRecordDate,
@@ -1028,11 +1025,11 @@ function App() {
 
               <div className="form-grid">
                 <label>
-                  <span className="label-text">วันที่บันทึก</span>
+                  <span className="label-text">วันที่กรอกยอด</span>
                   <input readOnly value={draft.recordDate || getTodayInputValue()} type="date" />
                 </label>
                 <label>
-                  <span className="label-text">วันที่ผลิตจริง <RequiredMark /></span>
+                  <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
                   <input
                     required
                     value={draft.date}
@@ -2207,7 +2204,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
         <thead>
           <tr>
             <th>Action</th>
-            <th>Record Date</th>
+            <th>Entry Date</th>
             <th>Production Date</th>
             <th>Shift</th>
             <th>Shift Time</th>

@@ -188,7 +188,7 @@ function appendLog(payload) {
   const now = new Date();
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
-    recordDate: payload.recordDate || formatRecordDate(payload.createdAt) || todayBangkok(now),
+    recordDate: formatRecordDate(payload.recordDate) || todayBangkok(now),
     shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
     shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
     createdAt: payload.createdAt || now.toISOString(),
@@ -214,7 +214,7 @@ function upsertLog(payload) {
     return index > 0 && String(row[idColumn - 1]) === String(payload.id);
   });
   const log = Object.assign({}, payload, {
-    recordDate: payload.recordDate || formatRecordDate(payload.createdAt) || formatLegacyDate(payload.date),
+    recordDate: formatRecordDate(payload.recordDate) || todayBangkok(new Date()),
     shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
     shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
     createdAt: payload.createdAt || new Date().toISOString(),
@@ -947,7 +947,7 @@ function getLegacyOeeLogs() {
 
       logs.push({
         id: "legacy-" + machine.id + "-" + sourceRow,
-        recordDate: date,
+        recordDate: "",
         date: date,
         shift: toOriginalShift(row[layout.shift - 1]),
         shiftStartAt: getShiftStartAt(date, row[layout.shift - 1]),

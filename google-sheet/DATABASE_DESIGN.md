@@ -9,7 +9,8 @@
 | Column | Type | Required | Source | Purpose |
 |---|---:|:---:|---|---|
 | id | text | yes | app / Apps Script | primary key ของ log |
-| date | date `yyyy-mm-dd` | yes | form | วันที่ผลิต |
+| recordDate | date `yyyy-mm-dd` | yes | app auto | วันที่กรอกยอด แยกจากวันที่ผลิต ไม่ใช้ในสูตร/ค้นหา/รายงาน |
+| date | date `yyyy-mm-dd` | yes | form | วันที่ผลิต ใช้กับสูตร ค้นหา รายงาน และการตรวจซ้ำ |
 | shift | text | yes | form | กะ เช่น Day / Night หรือค่าจาก Excel |
 | machineId | text | yes | form/master | รหัสเครื่อง |
 | machineName | text | yes | master | ชื่อเครื่องที่แสดงใน dashboard |
