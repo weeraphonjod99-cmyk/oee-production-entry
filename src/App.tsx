@@ -579,7 +579,7 @@ function App() {
   const stepOptions = useMemo(() => uniqueProductValues(filteredProducts, "step"), [filteredProducts]);
 
   const allLogs = useMemo(
-    () => uniqueLogs(remoteLogs.length > 0 ? [...localLogs, ...remoteLogs] : [...localLogs, ...seedLogs]),
+    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
   const visibleLogs = useMemo(() => {
@@ -592,6 +592,22 @@ function App() {
       return true;
     });
   }, [allLogs, filters]);
+  const filterScopeLogs = useMemo(() => {
+    const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
+    return allLogs.filter((log) => {
+      if (filters.machineId && log.machineId !== filters.machineId) return false;
+      if (wantedShift && normalizeShiftCode(log.shift) !== wantedShift) return false;
+      return true;
+    });
+  }, [allLogs, filters.machineId, filters.shift]);
+  const filterEmptyMessage = useMemo(() => {
+    if (visibleLogs.length > 0 || (!filters.from && !filters.to)) return "";
+    if (filterScopeLogs.length === 0) return "ไม่พบข้อมูลของเครื่องหรือกะที่เลือกในระบบ";
+    const dates = Array.from(new Set(filterScopeLogs.map((log) => log.date).filter(Boolean))).sort();
+    const firstDate = dates[0];
+    const lastDate = dates[dates.length - 1];
+    return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${firstDate} ถึง ${lastDate} รวม ${formatNumber(filterScopeLogs.length)} รายการ`;
+  }, [filterScopeLogs, filters.from, filters.to, visibleLogs.length]);
 
   const entryDateLogs = useMemo(
     () => allLogs.filter((log) => log.date === draft.date).slice(0, 8),
@@ -1245,6 +1261,7 @@ function App() {
               <Kpi label="Logs" value={formatNumber(visibleLogs.length)} tone="neutral" />
             </div>
             <FiltersBar filters={filters} setFilters={setFilters} />
+            {filterEmptyMessage && <p className="filter-empty-message">{filterEmptyMessage}</p>}
             <PartNoSummary logs={visibleLogs} />
             <OeeSummaryChart summary={summary} />
             <div className="analytics-grid">
@@ -1256,12 +1273,19 @@ function App() {
         )}
 
         {tab === "reports" && (
-          <ReportsView filters={filters} logs={visibleLogs} onDownloadPdf={downloadPdfReport} setFilters={setFilters} />
+          <ReportsView
+            emptyMessage={filterEmptyMessage}
+            filters={filters}
+            logs={visibleLogs}
+            onDownloadPdf={downloadPdfReport}
+            setFilters={setFilters}
+          />
         )}
 
         {tab === "history" && (
           <section className="table-view">
             <FiltersBar filters={filters} setFilters={setFilters} />
+            {filterEmptyMessage && <p className="filter-empty-message">{filterEmptyMessage}</p>}
             <div className="table-toolbar">
               <div className="input-with-icon search-box">
                 <Search size={16} />
@@ -1639,11 +1663,13 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
 }
 
 function ReportsView({
+  emptyMessage,
   filters,
   logs,
   onDownloadPdf,
   setFilters,
 }: {
+  emptyMessage: string;
   filters: Filters;
   logs: ProductionLog[];
   onDownloadPdf: () => void;
@@ -1678,6 +1704,7 @@ function ReportsView({
       </div>
 
       <FiltersBar filters={filters} setFilters={setFilters} />
+      {emptyMessage && <p className="filter-empty-message">{emptyMessage}</p>}
 
       <div className="kpi-grid">
         <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />

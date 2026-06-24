@@ -910,6 +910,18 @@ textarea:focus {
   padding: 14px;
 }
 
+.filter-empty-message {
+  background: #fff8e6;
+  border: 1px solid #f6d58b;
+  border-radius: 8px;
+  color: #7a4d00;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+  margin: 0;
+  padding: 10px 12px;
+}
+
 .kpi-grid,
 .master-stats {
   display: grid;
