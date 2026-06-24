@@ -577,14 +577,134 @@ function toOriginalShift(value) {
 function getLogs(limit) {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) return [];
+  const legacyLogs = getLegacyOeeLogs();
+  if (values.length <= 1) return legacyLogs.slice(0, limit);
   const headers = values[0];
-  return values
+  const productionLogs = values
     .slice(1)
     .filter((row) => row.some((cell) => cell !== ""))
     .slice(Math.max(values.length - 1 - limit, 0))
     .map((row) => rowToObject(headers, row))
     .reverse();
+  return mergeLogs(productionLogs, legacyLogs).slice(0, limit);
+}
+
+function getLegacyOeeLogs() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  const logs = [];
+  book.getSheets().forEach(function(sheet) {
+    const machine = machineByName[normalizeSheetName(sheet.getName())];
+    if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
+
+    const layout = getOeeLayout(sheet);
+    const lastColumn = Math.max(layout.theoreticalImpulse, layout.testQty);
+    const rows = sheet
+      .getRange(OEE_FIRST_DATA_ROW, 1, sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, lastColumn)
+      .getValues();
+
+    rows.forEach(function(row, index) {
+      const productName = String(row[layout.productName - 1] || "").trim();
+      const partNo = String(row[layout.partNo - 1] || "").trim();
+      if (!productName || !partNo) return;
+
+      const date = formatLegacyDate(row[layout.date - 1]);
+      if (!date) return;
+
+      const step = layout.hasStep ? String(row[layout.step - 1] || "-").trim() || "-" : "-";
+      const normalSlots = numberValue(row[layout.normalSlot - 1]);
+      const downtimeSlots = [];
+      for (let column = layout.downtimeStart; column < layout.downtimeStart + 8; column++) {
+        downtimeSlots.push(numberValue(row[column - 1]));
+      }
+      const downtimeMinutes = downtimeSlots.map(function(value) {
+        return roundNumber(value * OEE_MINUTES_PER_SLOT);
+      });
+      const normalMinutes = roundNumber(normalSlots * OEE_MINUTES_PER_SLOT);
+      const workMinutes = roundNumber(normalMinutes + sumValues(downtimeMinutes));
+      const sourceRow = index + OEE_FIRST_DATA_ROW;
+
+      logs.push({
+        id: "legacy-" + machine.id + "-" + sourceRow,
+        date: date,
+        shift: toOriginalShift(row[layout.shift - 1]),
+        machineId: machine.id,
+        machineName: machine.name,
+        productName: productName,
+        partNo: partNo,
+        step: step,
+        workMinutes: workMinutes,
+        timeSlots: roundNumber(workMinutes / OEE_MINUTES_PER_SLOT),
+        minutesPerSlot: OEE_MINUTES_PER_SLOT,
+        machineSpeed: numberValue(row[layout.theoreticalImpulse - 1]),
+        normalMinutes: normalMinutes,
+        changeoverMinutes: downtimeMinutes[0],
+        inspectionMinutes: downtimeMinutes[1],
+        equipmentRepairMinutes: downtimeMinutes[2],
+        moldRepairMinutes: downtimeMinutes[3],
+        materialChangeMinutes: downtimeMinutes[4],
+        emergencyStopMinutes: downtimeMinutes[5],
+        meetingMinutes: downtimeMinutes[6],
+        plannedStopMinutes: downtimeMinutes[7],
+        goodQty: numberValue(row[layout.goodQty - 1]),
+        ngQty: numberValue(row[layout.ngQty - 1]),
+        testQty: numberValue(row[layout.testQty - 1]),
+        note: "",
+        createdAt: date + "T00:00:00.000Z",
+        updatedAt: "",
+        source: "excel-seed",
+      });
+    });
+  });
+
+  return logs.sort(function(a, b) {
+    return (b.date + "-" + b.createdAt).localeCompare(a.date + "-" + a.createdAt);
+  });
+}
+
+function getMachineMap() {
+  const sheet = ensureSheet(MACHINE_SHEET, MACHINE_HEADERS);
+  const rows = sheet.getDataRange().getValues();
+  const map = {};
+  rows.slice(1).forEach(function(row) {
+    const id = String(row[0] || "").trim();
+    const name = String(row[1] || "").trim();
+    if (!id || !name) return;
+    map[normalizeSheetName(name)] = {
+      id: id,
+      name: name,
+    };
+  });
+  return map;
+}
+
+function mergeLogs(primaryLogs, fallbackLogs) {
+  const seen = {};
+  const merged = [];
+  primaryLogs.concat(fallbackLogs).forEach(function(log) {
+    const key = String(log.id || "");
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    merged.push(log);
+  });
+  return merged.sort(function(a, b) {
+    return String(b.date || "").localeCompare(String(a.date || ""));
+  });
+}
+
+function formatLegacyDate(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, "Asia/Bangkok", "yyyy-MM-dd");
+  }
+  const text = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const slash = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+  if (!slash) return "";
+  const year = Number(slash[3].length === 2 ? "20" + slash[3] : slash[3]);
+  const month = Number(slash[2]);
+  const day = Number(slash[1]);
+  if (!year || !month || !day) return "";
+  return Utilities.formatDate(new Date(year, month - 1, day), "Asia/Bangkok", "yyyy-MM-dd");
 }
 
 function setupProductionWorkbook() {

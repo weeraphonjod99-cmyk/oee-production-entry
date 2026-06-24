@@ -1,0 +1,4 @@
+id,date,shift,machineId,machineName,productName,partNo,step,workMinutes,timeSlots,minutesPerSlot,machineSpeed,normalMinutes,changeoverMinutes,inspectionMinutes,equipmentRepairMinutes,moldRepairMinutes,materialChangeMinutes,emergencyStopMinutes,meetingMinutes,plannedStopMinutes,goodQty,ngQty,testQty,note,createdAt,updatedAt,source
+log-1782220025743-8cfd0ec84f30d8,2026-06-23,白,1-ocp-80t,1# OCP-80T,ARC PLATE GV2,W113893530111,-,300,60,5,0,260,10,10,10,10,0,0,0,0,0,0,0,,2026-06-23T13:07:05.743Z,,google-sheet
+log-1782219866313-8c62084f376228,2026-06-22,白,1-ocp-80t,1# OCP-80T,MIDDLE,48187096,-,120,24,5,100,40,0,15,0,0,0,0,15,50,826,0,0,,2026-06-23T13:04:26.313Z,,google-sheet
+log-1782207111023-a37d0d9b630ad,2026-06-22,白,1-ocp-80t,1# OCP-80T,MIDDLE,48187096,-,300,60,5,0,270,10,10,10,0,0,0,0,0,0,0,0,,2026-06-23T09:31:51.023Z,,google-sheet
