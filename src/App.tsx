@@ -267,6 +267,34 @@ const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filte
 const shiftRuleLabel = (shift: string) =>
   normalizeShiftCode(shift) === SHIFT_NIGHT ? "20:00 - 08:00 ของวันถัดไป" : "08:00 - 20:00 ของวันที่ผลิต";
 
+const filterLogsByFilters = (logs: ProductionLog[], filters: Filters, includeDateRange = true) => {
+  const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
+  return logs.filter((log) => {
+    if (filters.machineId && log.machineId !== filters.machineId) return false;
+    if (wantedShift && normalizeShiftCode(log.shift) !== wantedShift) return false;
+    if (includeDateRange && filters.from && log.date < filters.from) return false;
+    if (includeDateRange && filters.to && log.date > filters.to) return false;
+    return true;
+  });
+};
+
+const getFilterAvailableDateRange = (logs: ProductionLog[]) => {
+  if (logs.length === 0) return null;
+  const dates = Array.from(new Set(logs.map((log) => log.date).filter(Boolean))).sort();
+  return {
+    count: logs.length,
+    firstDate: dates[0],
+    lastDate: dates[dates.length - 1],
+  };
+};
+
+const getFilterEmptyMessage = (visibleLogs: ProductionLog[], filters: Filters, scopeLogs: ProductionLog[]) => {
+  if (visibleLogs.length > 0 || (!filters.from && !filters.to)) return "";
+  const range = getFilterAvailableDateRange(scopeLogs);
+  if (!range) return "ไม่พบข้อมูลของเครื่องหรือกะที่เลือกในระบบ";
+  return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${range.firstDate} ถึง ${range.lastDate} รวม ${formatNumber(range.count)} รายการ`;
+};
+
 const tableRowsHtml = (rows: ReportRow[]) =>
   rows.length
     ? rows
@@ -535,7 +563,9 @@ function App() {
   const [historySearch, setHistorySearch] = useState("");
   const deferredProductSearch = useDeferredValue(productSearch);
   const deferredHistorySearch = useDeferredValue(historySearch);
-  const [filters, setFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [dashboardFilters, setDashboardFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
   const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
@@ -582,38 +612,29 @@ function App() {
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
-  const visibleLogs = useMemo(() => {
-    const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
-    return allLogs.filter((log) => {
-      if (filters.machineId && log.machineId !== filters.machineId) return false;
-      if (wantedShift && normalizeShiftCode(log.shift) !== wantedShift) return false;
-      if (filters.from && log.date < filters.from) return false;
-      if (filters.to && log.date > filters.to) return false;
-      return true;
-    });
-  }, [allLogs, filters]);
-  const filterScopeLogs = useMemo(() => {
-    const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
-    return allLogs.filter((log) => {
-      if (filters.machineId && log.machineId !== filters.machineId) return false;
-      if (wantedShift && normalizeShiftCode(log.shift) !== wantedShift) return false;
-      return true;
-    });
-  }, [allLogs, filters.machineId, filters.shift]);
-  const filterAvailableDateRange = useMemo(() => {
-    if (filterScopeLogs.length === 0) return null;
-    const dates = Array.from(new Set(filterScopeLogs.map((log) => log.date).filter(Boolean))).sort();
-    return {
-      count: filterScopeLogs.length,
-      firstDate: dates[0],
-      lastDate: dates[dates.length - 1],
-    };
-  }, [filterScopeLogs]);
-  const filterEmptyMessage = useMemo(() => {
-    if (visibleLogs.length > 0 || (!filters.from && !filters.to)) return "";
-    if (!filterAvailableDateRange) return "ไม่พบข้อมูลของเครื่องหรือกะที่เลือกในระบบ";
-    return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${filterAvailableDateRange.firstDate} ถึง ${filterAvailableDateRange.lastDate} รวม ${formatNumber(filterAvailableDateRange.count)} รายการ`;
-  }, [filterAvailableDateRange, filters.from, filters.to, visibleLogs.length]);
+  const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
+  const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
+  const historyLogs = useMemo(() => filterLogsByFilters(allLogs, historyFilters), [allLogs, historyFilters]);
+  const dashboardScopeLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters, false), [allLogs, dashboardFilters]);
+  const reportScopeLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters, false), [allLogs, reportFilters]);
+  const historyScopeLogs = useMemo(() => filterLogsByFilters(allLogs, historyFilters, false), [allLogs, historyFilters]);
+  const dashboardAvailableDateRange = useMemo(() => getFilterAvailableDateRange(dashboardScopeLogs), [dashboardScopeLogs]);
+  const reportAvailableDateRange = useMemo(() => getFilterAvailableDateRange(reportScopeLogs), [reportScopeLogs]);
+  const historyAvailableDateRange = useMemo(() => getFilterAvailableDateRange(historyScopeLogs), [historyScopeLogs]);
+  const dashboardEmptyMessage = useMemo(
+    () => getFilterEmptyMessage(dashboardLogs, dashboardFilters, dashboardScopeLogs),
+    [dashboardFilters, dashboardLogs, dashboardScopeLogs],
+  );
+  const reportEmptyMessage = useMemo(
+    () => getFilterEmptyMessage(reportLogs, reportFilters, reportScopeLogs),
+    [reportFilters, reportLogs, reportScopeLogs],
+  );
+  const historyEmptyMessage = useMemo(
+    () => getFilterEmptyMessage(historyLogs, historyFilters, historyScopeLogs),
+    [historyFilters, historyLogs, historyScopeLogs],
+  );
+  const activeFilters = tab === "reports" ? reportFilters : tab === "history" ? historyFilters : dashboardFilters;
+  const activeLogs = tab === "reports" ? reportLogs : tab === "history" ? historyLogs : dashboardLogs;
 
   const entryDateLogs = useMemo(
     () => allLogs.filter((log) => log.date === draft.date).slice(0, 8),
@@ -622,14 +643,14 @@ function App() {
 
   const searchedHistory = useMemo(() => {
     const query = deferredHistorySearch.trim().toLowerCase();
-    if (!query) return visibleLogs.slice(0, 120);
-    return visibleLogs
+    if (!query) return historyLogs.slice(0, 120);
+    return historyLogs
       .filter((log) => `${log.machineName} ${log.productName} ${log.partNo} ${log.step}`.toLowerCase().includes(query))
       .slice(0, 120);
-  }, [visibleLogs, deferredHistorySearch]);
+  }, [historyLogs, deferredHistorySearch]);
 
-  const summary = useMemo(() => (tab === "dashboard" ? summarize(visibleLogs) : summarize([])), [visibleLogs, tab]);
-  const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(visibleLogs) : groupDowntime([])), [visibleLogs, tab]);
+  const summary = useMemo(() => (tab === "dashboard" ? summarize(dashboardLogs) : summarize([])), [dashboardLogs, tab]);
+  const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
   const duplicateEntry = useMemo(() => {
@@ -892,7 +913,7 @@ function App() {
   };
 
   const downloadPdfReport = () => {
-    const opened = openProductionPdfReport(visibleLogs, filters);
+    const opened = openProductionPdfReport(activeLogs, activeFilters);
     if (!opened) {
       setProblemDialog({
         title: "เปิดรายงานไม่ได้",
@@ -902,12 +923,26 @@ function App() {
     }
     setStatus("เปิดรายงานแล้ว เลือก Save as PDF ในหน้าต่างพิมพ์");
   };
-  const useLatestAvailableDate = () => {
-    if (!filterAvailableDateRange?.lastDate) return;
-    setFilters((prev) => ({ ...prev, from: filterAvailableDateRange.lastDate, to: filterAvailableDateRange.lastDate }));
+  const useLatestDashboardDate = () => {
+    if (!dashboardAvailableDateRange?.lastDate) return;
+    setDashboardFilters((prev) => ({ ...prev, from: dashboardAvailableDateRange.lastDate, to: dashboardAvailableDateRange.lastDate }));
   };
-  const clearFilterDates = () => {
-    setFilters((prev) => ({ ...prev, from: "", to: "" }));
+  const useLatestReportDate = () => {
+    if (!reportAvailableDateRange?.lastDate) return;
+    setReportFilters((prev) => ({ ...prev, from: reportAvailableDateRange.lastDate, to: reportAvailableDateRange.lastDate }));
+  };
+  const useLatestHistoryDate = () => {
+    if (!historyAvailableDateRange?.lastDate) return;
+    setHistoryFilters((prev) => ({ ...prev, from: historyAvailableDateRange.lastDate, to: historyAvailableDateRange.lastDate }));
+  };
+  const clearDashboardDates = () => {
+    setDashboardFilters((prev) => ({ ...prev, from: "", to: "" }));
+  };
+  const clearReportDates = () => {
+    setReportFilters((prev) => ({ ...prev, from: "", to: "" }));
+  };
+  const clearHistoryDates = () => {
+    setHistoryFilters((prev) => ({ ...prev, from: "", to: "" }));
   };
 
   if (!session) return <LoginScreen onSignedIn={setSession} />;
@@ -971,7 +1006,7 @@ function App() {
             <button className="ghost-button" onClick={shareApp} type="button">
               <Share2 size={17} /> Share
             </button>
-            <button className="ghost-button" onClick={() => exportLogsCsv(visibleLogs)} type="button">
+            <button className="ghost-button" onClick={() => exportLogsCsv(activeLogs)} type="button">
               <Download size={17} /> CSV
             </button>
             <button className="ghost-button" onClick={downloadPdfReport} type="button">
@@ -1271,49 +1306,49 @@ function App() {
               <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
               <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
               <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
-              <Kpi label="Logs" value={formatNumber(visibleLogs.length)} tone="neutral" />
+              <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
             </div>
-            <FiltersBar filters={filters} setFilters={setFilters} />
-            {filterEmptyMessage && (
+            <FiltersBar filters={dashboardFilters} setFilters={setDashboardFilters} />
+            {dashboardEmptyMessage && (
               <FilterEmptyNotice
-                latestDate={filterAvailableDateRange?.lastDate}
-                message={filterEmptyMessage}
-                onClearDates={clearFilterDates}
-                onUseLatest={useLatestAvailableDate}
+                latestDate={dashboardAvailableDateRange?.lastDate}
+                message={dashboardEmptyMessage}
+                onClearDates={clearDashboardDates}
+                onUseLatest={useLatestDashboardDate}
               />
             )}
-            <PartNoSummary logs={visibleLogs} />
+            <PartNoSummary logs={dashboardLogs} />
             <OeeSummaryChart summary={summary} />
             <div className="analytics-grid">
               <DowntimeChart items={downtime} />
-              <MachineRanking logs={visibleLogs} />
+              <MachineRanking logs={dashboardLogs} />
             </div>
-            <Trend logs={visibleLogs} />
+            <Trend logs={dashboardLogs} />
           </section>
         )}
 
         {tab === "reports" && (
           <ReportsView
-            emptyMessage={filterEmptyMessage}
-            latestDate={filterAvailableDateRange?.lastDate}
-            filters={filters}
-            logs={visibleLogs}
-            onClearDates={clearFilterDates}
+            emptyMessage={reportEmptyMessage}
+            latestDate={reportAvailableDateRange?.lastDate}
+            filters={reportFilters}
+            logs={reportLogs}
+            onClearDates={clearReportDates}
             onDownloadPdf={downloadPdfReport}
-            onUseLatest={useLatestAvailableDate}
-            setFilters={setFilters}
+            onUseLatest={useLatestReportDate}
+            setFilters={setReportFilters}
           />
         )}
 
         {tab === "history" && (
           <section className="table-view">
-            <FiltersBar filters={filters} setFilters={setFilters} />
-            {filterEmptyMessage && (
+            <FiltersBar filters={historyFilters} setFilters={setHistoryFilters} />
+            {historyEmptyMessage && (
               <FilterEmptyNotice
-                latestDate={filterAvailableDateRange?.lastDate}
-                message={filterEmptyMessage}
-                onClearDates={clearFilterDates}
-                onUseLatest={useLatestAvailableDate}
+                latestDate={historyAvailableDateRange?.lastDate}
+                message={historyEmptyMessage}
+                onClearDates={clearHistoryDates}
+                onUseLatest={useLatestHistoryDate}
               />
             )}
             <div className="table-toolbar">

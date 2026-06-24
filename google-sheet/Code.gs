@@ -67,6 +67,8 @@ const LOG_NUMBER_HEADERS = [
   "testQty",
 ];
 
+const LOG_DATE_HEADERS = ["recordDate", "date"];
+
 const MACHINE_NUMBER_HEADERS = ["capacityUnits", "capacityMinutes", "rowCount"];
 const PRODUCT_NUMBER_HEADERS = ["sampleGoodQty", "sampleNgQty", "sampleTestQty"];
 
@@ -882,6 +884,10 @@ function toOriginalShift(value) {
   return text;
 }
 
+function isNightShift(shift) {
+  return toOriginalShift(shift) === "夜";
+}
+
 function getLogs(limit) {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   const values = sheet.getDataRange().getValues();
@@ -1042,13 +1048,13 @@ function addDaysToLegacyDate(date, days) {
 function getShiftStartAt(date, shift) {
   const productionDate = formatLegacyDate(date);
   if (!productionDate) return "";
-  return productionDate + "T" + (toOriginalShift(shift) === "ๅค" ? "20:00:00" : "08:00:00");
+  return productionDate + "T" + (isNightShift(shift) ? "20:00:00" : "08:00:00");
 }
 
 function getShiftEndAt(date, shift) {
   const productionDate = formatLegacyDate(date);
   if (!productionDate) return "";
-  const isNight = toOriginalShift(shift) === "ๅค";
+  const isNight = isNightShift(shift);
   return (isNight ? addDaysToLegacyDate(productionDate, 1) : productionDate) + "T" + (isNight ? "08:00:00" : "20:00:00");
 }
 
@@ -1179,7 +1185,17 @@ function rowToObject(headers, row) {
   const object = {};
   headers.forEach((header, index) => {
     const value = row[index];
-    object[header] = value instanceof Date ? Utilities.formatDate(value, "Asia/Bangkok", "yyyy-MM-dd") : value;
+    if (LOG_NUMBER_HEADERS.indexOf(header) >= 0) {
+      object[header] = numberValue(value);
+    } else if (LOG_DATE_HEADERS.indexOf(header) >= 0) {
+      object[header] = formatRecordDate(value) || formatLegacyDate(value) || "";
+    } else if (header === "shift") {
+      object[header] = toOriginalShift(value);
+    } else if (value instanceof Date) {
+      object[header] = Utilities.formatDate(value, "Asia/Bangkok", "yyyy-MM-dd");
+    } else {
+      object[header] = value == null ? "" : String(value);
+    }
   });
   return object;
 }
