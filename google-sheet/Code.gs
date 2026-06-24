@@ -896,11 +896,18 @@ function getLogs(limit) {
   const productionLogs = values
     .slice(1)
     .filter((row) => row.some((cell) => cell !== ""))
-    .slice(Math.max(values.length - 1 - limit, 0))
     .map((row) => rowToObject(headers, row))
+    .filter(isUsableLog)
     .reverse();
-  if (productionLogs.length > 0) return productionLogs.slice(0, limit);
-  return getLegacyOeeLogs().slice(0, limit);
+  return mergeLogs(productionLogs, getLegacyOeeLogs()).slice(0, limit);
+}
+
+function isUsableLog(log) {
+  return Boolean(
+    formatLegacyDate(log.date) &&
+      String(log.machineId || log.machineName || "").trim() &&
+      String(log.partNo || log.productName || "").trim()
+  );
 }
 
 function getLegacyOeeLogs() {

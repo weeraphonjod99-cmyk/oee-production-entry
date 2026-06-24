@@ -19,7 +19,7 @@ async function parseJsonResponse(response: Response) {
   }
 }
 
-export async function fetchRemoteLogs(limit = 500): Promise<ProductionLog[]> {
+export async function fetchRemoteLogs(limit = 3000): Promise<ProductionLog[]> {
   if (!remoteEnabled) return [];
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set("action", "logs");
