@@ -683,7 +683,7 @@ function App() {
                       min="0"
                       onChange={(event) => updateTimeSlots(event.target.value)}
                       required
-                      step="0.01"
+                      step="1"
                       type="number"
                       value={draft.timeSlots}
                     />
@@ -764,6 +764,9 @@ function App() {
                 <History size={19} />
                 <h2>เวลาหยุด</h2>
               </div>
+              <p className="slot-help">
+                กรอกเป็นจำนวนช่อง: 1 ช่อง = {formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้
+              </p>
               <div className="downtime-grid">
                 {downtimeFields.map((field) => (
                   <label key={field.key}>
@@ -777,7 +780,7 @@ function App() {
                         onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
                         min="0"
                         required
-                        step="0.01"
+                        step="1"
                         type="number"
                       />
                       <b>ช่อง</b>

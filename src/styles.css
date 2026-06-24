@@ -516,6 +516,13 @@ textarea:focus {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.slot-help {
+  color: #365044;
+  font-size: 13px;
+  font-weight: 800;
+  margin: -4px 0 12px;
+}
+
 .downtime-label-row {
   align-items: center;
   display: flex;
