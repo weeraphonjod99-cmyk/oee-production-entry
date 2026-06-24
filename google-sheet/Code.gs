@@ -14,6 +14,7 @@ const OEE_MINUTES_PER_SLOT = 5;
 
 const LOG_HEADERS = [
   "id",
+  "recordDate",
   "date",
   "shift",
   "machineId",
@@ -154,10 +155,12 @@ function doPost(e) {
 }
 
 function appendLog(payload) {
+  const now = new Date();
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
-    createdAt: payload.createdAt || new Date().toISOString(),
-    updatedAt: payload.updatedAt || new Date().toISOString(),
+    recordDate: payload.recordDate || formatRecordDate(payload.createdAt) || todayBangkok(now),
+    createdAt: payload.createdAt || now.toISOString(),
+    updatedAt: payload.updatedAt || now.toISOString(),
     source: "google-sheet",
   });
   assertNoDuplicateOeeLog(log, "", true);
@@ -179,6 +182,7 @@ function upsertLog(payload) {
     return index > 0 && String(row[idColumn - 1]) === String(payload.id);
   });
   const log = Object.assign({}, payload, {
+    recordDate: payload.recordDate || formatRecordDate(payload.createdAt) || formatLegacyDate(payload.date),
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: payload.updatedAt || new Date().toISOString(),
     source: "google-sheet",
@@ -815,6 +819,7 @@ function getLegacyOeeLogs() {
 
       logs.push({
         id: "legacy-" + machine.id + "-" + sourceRow,
+        recordDate: date,
         date: date,
         shift: toOriginalShift(row[layout.shift - 1]),
         machineId: machine.id,
@@ -895,6 +900,17 @@ function formatLegacyDate(value) {
   const day = Number(slash[1]);
   if (!year || !month || !day) return "";
   return Utilities.formatDate(new Date(year, month - 1, day), "Asia/Bangkok", "yyyy-MM-dd");
+}
+
+function formatRecordDate(value) {
+  const text = String(value || "").trim();
+  const isoDate = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDate) return isoDate[1];
+  return formatLegacyDate(value);
+}
+
+function todayBangkok(value) {
+  return Utilities.formatDate(value || new Date(), "Asia/Bangkok", "yyyy-MM-dd");
 }
 
 function setupProductionWorkbook() {

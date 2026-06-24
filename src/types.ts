@@ -23,6 +23,7 @@ export type ProductMaster = {
 
 export type ProductionLog = {
   id: string;
+  recordDate?: string;
   date: string;
   shift: ShiftCode;
   machineId: string;
