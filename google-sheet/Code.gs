@@ -428,6 +428,7 @@ function getOeeLayout(sheet) {
         goodQty: 25,
         ngQty: 26,
         testQty: 27,
+        totalQty: 28,
         theoreticalImpulse: 29,
         cavityQty: 30,
       }
@@ -444,6 +445,7 @@ function getOeeLayout(sheet) {
         goodQty: 24,
         ngQty: 25,
         testQty: 26,
+        totalQty: 27,
         theoreticalImpulse: 28,
         cavityQty: 29,
       };
@@ -522,11 +524,12 @@ function writeOeeInputRow(sheet, layout, row, log) {
 
   sheet.getRange(row, layout.normalSlot).setFormula(buildNormalSlotFormula(row, layout, workSlots));
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
-  sheet.getRange(row, layout.goodQty, 1, 2).setValues([[
+  sheet.getRange(row, layout.goodQty, 1, 3).setValues([[
     numberValue(log.goodQty),
     numberValue(log.ngQty),
+    numberValue(log.testQty),
   ]]);
-  sheet.getRange(row, layout.testQty).setFormula(buildTotalQuantityFormula(row, layout));
+  sheet.getRange(row, layout.totalQty).setFormula(buildTotalQuantityFormula(row, layout));
 
   sheet.getRange(row, layout.theoreticalImpulse).setValue(numberValue(log.machineSpeed));
   sheet.getRange(row, layout.cavityQty).setValue(numberValue(log.cavityQty));
@@ -536,7 +539,8 @@ function repairOeeFormulas() {
   const book = getWorkbook();
   const machineByName = getMachineMap();
   let sheetCount = 0;
-  let formulaCount = 0;
+  let testValueCount = 0;
+  let totalFormulaCount = 0;
 
   book.getSheets().forEach(function(sheet) {
     const machine = machineByName[normalizeSheetName(sheet.getName())];
@@ -546,9 +550,13 @@ function repairOeeFormulas() {
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
     const width = layout.partNo - layout.productName + 1;
     const identityValues = sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, width).getDisplayValues();
-    const totalRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.testQty, rowCount, 1);
+    const quantityRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.goodQty, rowCount, 3);
+    const quantityValues = quantityRange.getValues();
+    const quantityFormulas = quantityRange.getFormulas();
+    const totalRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.totalQty, rowCount, 1);
     const totalFormulas = totalRange.getFormulas();
-    let changed = false;
+    let quantityChanged = false;
+    let totalChanged = false;
 
     sheetCount++;
     for (let index = 0; index < rowCount; index++) {
@@ -557,20 +565,29 @@ function repairOeeFormulas() {
       const partNo = String(identityValues[index][width - 1] || "").trim();
       if (!productName || !partNo) continue;
 
+      if (quantityFormulas[index][2]) {
+        quantityFormulas[index][2] = "";
+        testValueCount++;
+        quantityChanged = true;
+      }
+
       const expectedFormula = buildTotalQuantityFormula(row, layout);
       if (totalFormulas[index][0] !== expectedFormula) {
         totalFormulas[index][0] = expectedFormula;
-        formulaCount++;
-        changed = true;
+        totalFormulaCount++;
+        totalChanged = true;
       }
     }
 
-    if (changed) {
+    if (quantityChanged) {
+      quantityRange.setValues(quantityValues);
+    }
+    if (totalChanged) {
       totalRange.setFormulas(totalFormulas);
     }
   });
 
-  return { sheets: sheetCount, formulas: formulaCount };
+  return { sheets: sheetCount, testValues: testValueCount, totalFormulas: totalFormulaCount };
 }
 
 function minutesToSheetSlots(value, minutesPerSlot) {
@@ -599,7 +616,17 @@ function buildNormalSlotFormula(row, layout, workSlots) {
 }
 
 function buildTotalQuantityFormula(row, layout) {
-  return "=" + columnToLetter(layout.goodQty) + row + "+" + columnToLetter(layout.ngQty) + row;
+  return [
+    "=",
+    columnToLetter(layout.goodQty),
+    row,
+    "+",
+    columnToLetter(layout.ngQty),
+    row,
+    "+",
+    columnToLetter(layout.testQty),
+    row,
+  ].join("");
 }
 
 function columnToLetter(column) {
