@@ -136,6 +136,12 @@ const shiftLabel = (shift: string) => {
 const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const normalizeText = (value: unknown) => String(value ?? "").trim().toLowerCase();
+const normalizeShiftCode = (value: unknown) => {
+  const text = normalizeText(value);
+  if (["白", "day", "a", "็ฝ", "เนยเธ"].includes(text)) return "day";
+  if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return "night";
+  return text;
+};
 
 function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
   return Array.from(new Set(items.map((item) => item[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -315,13 +321,13 @@ function App() {
         (log) =>
           log.id !== editingLog?.id &&
           log.date === draft.date &&
-          log.shift === draft.shift &&
+          normalizeShiftCode(log.shift) === normalizeShiftCode(draft.shift) &&
           log.machineId === draft.machineId &&
           normalizeText(log.partNo) === normalizeText(draft.partNo),
       ) ?? null
     );
   }, [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, editingLog?.id]);
-  const duplicateEntryKey = duplicateEntry ? `${draft.date}::${draft.shift}::${draft.machineId}::${normalizeText(draft.partNo)}` : "";
+  const duplicateEntryKey = duplicateEntry ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}` : "";
   const duplicateEntryMessage = duplicateEntry
     ? `วันที่ ${draft.date} กะ ${shiftLabel(draft.shift)} เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
     : "";

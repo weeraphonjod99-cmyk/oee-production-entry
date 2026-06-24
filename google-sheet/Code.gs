@@ -160,6 +160,7 @@ function appendLog(payload) {
     updatedAt: payload.updatedAt || new Date().toISOString(),
     source: "google-sheet",
   });
+  assertNoDuplicateOeeLog(log, "", true);
   appendFormattedOeeRow(log);
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   sheet.appendRow(LOG_HEADERS.map((header) => log[header] == null ? "" : log[header]));
@@ -182,6 +183,7 @@ function upsertLog(payload) {
     updatedAt: payload.updatedAt || new Date().toISOString(),
     source: "google-sheet",
   });
+  assertNoDuplicateOeeLog(log, payload.id, false);
 
   if (rowIndex >= 0) {
     sheet.getRange(rowIndex + 1, 1, 1, LOG_HEADERS.length).setValues([
@@ -196,6 +198,63 @@ function upsertLog(payload) {
     return log[header] == null ? "" : log[header];
   }));
   return log;
+}
+
+function assertNoDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
+  const duplicate = findDuplicateOeeLog(log, ignoredId, includeMachineSheet);
+  if (!duplicate) return;
+  throw new Error(
+    "รายการซ้ำ: วันที่ " +
+      formatLegacyDate(log.date) +
+      " กะ " +
+      toOriginalShift(log.shift) +
+      " เครื่อง " +
+      (log.machineName || duplicate.machineName || "") +
+      " Part No. " +
+      (log.partNo || duplicate.partNo || "") +
+      " มีการบันทึกแล้ว"
+  );
+}
+
+function findDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
+  const wantedKey = buildOeeLogKey(log);
+  const logSheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
+  const rows = logSheet.getDataRange().getValues();
+  if (rows.length > 1) {
+    const headers = rows[0];
+    for (let index = 1; index < rows.length; index++) {
+      const row = rows[index];
+      if (!row.some(function(cell) { return cell !== ""; })) continue;
+      const existing = rowToObject(headers, row);
+      if (String(existing.id || "") === String(ignoredId || "")) continue;
+      if (buildOeeLogKey(existing) === wantedKey) return existing;
+    }
+  }
+
+  if (!includeMachineSheet) return null;
+  const book = getWorkbook();
+  const machineSheet = findOeeMachineSheet(book, log.machineName);
+  if (!machineSheet || machineSheet.getLastRow() < OEE_FIRST_DATA_ROW) return null;
+  const layout = getOeeLayout(machineSheet);
+  const rowCount = machineSheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+  const sourceWidth = layout.hasStep ? layout.step : layout.partNo;
+  const values = machineSheet.getRange(OEE_FIRST_DATA_ROW, 1, rowCount, sourceWidth).getValues();
+  for (let index = 0; index < values.length; index++) {
+    const row = values[index];
+    const productName = String(row[layout.productName - 1] || "").trim();
+    const partNo = String(row[layout.partNo - 1] || "").trim();
+    if (!productName || !partNo) continue;
+    const existing = {
+      date: formatLegacyDate(row[layout.date - 1]),
+      shift: toOriginalShift(row[layout.shift - 1]),
+      machineName: log.machineName,
+      productName: productName,
+      partNo: partNo,
+      step: layout.hasStep ? String(row[layout.step - 1] || "-").trim() || "-" : "-",
+    };
+    if (buildOeeLogKey(existing) === wantedKey) return existing;
+  }
+  return null;
 }
 
 function listAppUsers() {
