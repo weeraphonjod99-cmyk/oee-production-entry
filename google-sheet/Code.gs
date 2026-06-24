@@ -109,6 +109,9 @@ function doGet(e) {
         spreadsheetUrl: book.getUrl(),
       });
     }
+    if (action === "repairOeeFormulas") {
+      return jsonResponse({ ok: true, result: repairOeeFormulas() });
+    }
     return jsonResponse({ ok: true, service: "oee-production-entry" });
   } catch (error) {
     return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) });
@@ -519,14 +522,55 @@ function writeOeeInputRow(sheet, layout, row, log) {
 
   sheet.getRange(row, layout.normalSlot).setFormula(buildNormalSlotFormula(row, layout, workSlots));
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
-  sheet.getRange(row, layout.goodQty, 1, 3).setValues([[
+  sheet.getRange(row, layout.goodQty, 1, 2).setValues([[
     numberValue(log.goodQty),
     numberValue(log.ngQty),
-    numberValue(log.testQty),
   ]]);
+  sheet.getRange(row, layout.testQty).setFormula(buildTotalQuantityFormula(row, layout));
 
   sheet.getRange(row, layout.theoreticalImpulse).setValue(numberValue(log.machineSpeed));
   sheet.getRange(row, layout.cavityQty).setValue(numberValue(log.cavityQty));
+}
+
+function repairOeeFormulas() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  let sheetCount = 0;
+  let formulaCount = 0;
+
+  book.getSheets().forEach(function(sheet) {
+    const machine = machineByName[normalizeSheetName(sheet.getName())];
+    if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
+
+    const layout = getOeeLayout(sheet);
+    const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+    const width = layout.partNo - layout.productName + 1;
+    const identityValues = sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, width).getDisplayValues();
+    const totalRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.testQty, rowCount, 1);
+    const totalFormulas = totalRange.getFormulas();
+    let changed = false;
+
+    sheetCount++;
+    for (let index = 0; index < rowCount; index++) {
+      const row = OEE_FIRST_DATA_ROW + index;
+      const productName = String(identityValues[index][0] || "").trim();
+      const partNo = String(identityValues[index][width - 1] || "").trim();
+      if (!productName || !partNo) continue;
+
+      const expectedFormula = buildTotalQuantityFormula(row, layout);
+      if (totalFormulas[index][0] !== expectedFormula) {
+        totalFormulas[index][0] = expectedFormula;
+        formulaCount++;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      totalRange.setFormulas(totalFormulas);
+    }
+  });
+
+  return { sheets: sheetCount, formulas: formulaCount };
 }
 
 function minutesToSheetSlots(value, minutesPerSlot) {
@@ -552,6 +596,10 @@ function buildNormalSlotFormula(row, layout, workSlots) {
     parts.push(columnToLetter(column) + row);
   }
   return "=" + workSlots + "-" + parts.join("-");
+}
+
+function buildTotalQuantityFormula(row, layout) {
+  return "=" + columnToLetter(layout.goodQty) + row + "+" + columnToLetter(layout.ngQty) + row;
 }
 
 function columnToLetter(column) {
