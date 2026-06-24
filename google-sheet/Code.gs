@@ -47,6 +47,29 @@ const LOG_HEADERS = [
   "source",
 ];
 
+const LOG_NUMBER_HEADERS = [
+  "workMinutes",
+  "timeSlots",
+  "minutesPerSlot",
+  "machineSpeed",
+  "cavityQty",
+  "normalMinutes",
+  "changeoverMinutes",
+  "inspectionMinutes",
+  "equipmentRepairMinutes",
+  "moldRepairMinutes",
+  "materialChangeMinutes",
+  "emergencyStopMinutes",
+  "meetingMinutes",
+  "plannedStopMinutes",
+  "goodQty",
+  "ngQty",
+  "testQty",
+];
+
+const MACHINE_NUMBER_HEADERS = ["capacityUnits", "capacityMinutes", "rowCount"];
+const PRODUCT_NUMBER_HEADERS = ["sampleGoodQty", "sampleNgQty", "sampleTestQty"];
+
 const MACHINE_HEADERS = [
   "id",
   "name",
@@ -115,6 +138,9 @@ function doGet(e) {
     if (action === "repairOeeFormulas") {
       return jsonResponse({ ok: true, result: repairOeeFormulas() });
     }
+    if (action === "repairSheetTypes") {
+      return jsonResponse({ ok: true, result: repairSheetTypes() });
+    }
     return jsonResponse({ ok: true, service: "oee-production-entry" });
   } catch (error) {
     return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) });
@@ -170,7 +196,7 @@ function appendLog(payload) {
   assertNoDuplicateOeeLog(log, "", true);
   appendFormattedOeeRow(log);
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
-  sheet.appendRow(LOG_HEADERS.map((header) => log[header] == null ? "" : log[header]));
+  writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
   return log;
 }
 
@@ -196,17 +222,11 @@ function upsertLog(payload) {
   assertNoDuplicateOeeLog(log, payload.id, false);
 
   if (rowIndex >= 0) {
-    sheet.getRange(rowIndex + 1, 1, 1, LOG_HEADERS.length).setValues([
-      LOG_HEADERS.map(function(header) {
-        return log[header] == null ? "" : log[header];
-      }),
-    ]);
+    writeSerializedLogRow(sheet, rowIndex + 1, log);
     return log;
   }
 
-  sheet.appendRow(LOG_HEADERS.map(function(header) {
-    return log[header] == null ? "" : log[header];
-  }));
+  writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
   return log;
 }
 
@@ -224,6 +244,40 @@ function assertNoDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
       (log.partNo || duplicate.partNo || "") +
       " มีการบันทึกแล้ว"
   );
+}
+
+function writeSerializedLogRow(sheet, row, log) {
+  ensureRowExists(sheet, row);
+  applyTypedRowFormats(sheet, row, LOG_HEADERS, LOG_NUMBER_HEADERS);
+  sheet.getRange(row, 1, 1, LOG_HEADERS.length).setValues([
+    LOG_HEADERS.map(function(header) {
+      return serializeTypedValue(header, log[header], LOG_NUMBER_HEADERS);
+    }),
+  ]);
+}
+
+function serializeTypedValue(header, value, numberHeaders) {
+  if (numberHeaders.indexOf(header) >= 0) {
+    return numberValue(value);
+  }
+  if (header === "shift") {
+    return String(toOriginalShift(value) || "");
+  }
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, "Asia/Bangkok", "yyyy-MM-dd");
+  }
+  return value == null ? "" : String(value);
+}
+
+function applyTypedRowFormats(sheet, row, headers, numberHeaders) {
+  headers.forEach(function(header, index) {
+    const range = sheet.getRange(row, index + 1);
+    if (numberHeaders.indexOf(header) >= 0) {
+      range.setNumberFormat("0.##");
+    } else {
+      range.setNumberFormat("@");
+    }
+  });
 }
 
 function findDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
@@ -586,16 +640,18 @@ function writeOeeInputRow(sheet, layout, row, log) {
   const workSlots = roundNumber(workMinutes / minutesPerSlot);
 
   sheet.getRange(row, layout.sequence).setFormula("=ROW()-ROW($A$3)");
-  sheet.getRange(row, layout.date).setValue(parseSheetDate(log.date));
-  sheet.getRange(row, layout.shift).setValue(toOriginalShift(log.shift));
-  sheet.getRange(row, layout.productName).setValue(log.productName || "");
-  sheet.getRange(row, layout.partNo).setValue(log.partNo || "");
+  sheet.getRange(row, layout.date).setNumberFormat("yyyy-mm-dd").setValue(parseSheetDate(log.date));
+  sheet.getRange(row, layout.shift).setNumberFormat("@").setValue(String(toOriginalShift(log.shift) || ""));
+  sheet.getRange(row, layout.productName).setNumberFormat("@").setValue(String(log.productName || ""));
+  sheet.getRange(row, layout.partNo).setNumberFormat("@").setValue(String(log.partNo || ""));
   if (layout.hasStep) {
-    sheet.getRange(row, layout.step).setValue(log.step || "-");
+    sheet.getRange(row, layout.step).setNumberFormat("@").setValue(String(log.step || "-"));
   }
 
   sheet.getRange(row, layout.normalSlot).setFormula(buildNormalSlotFormula(row, layout, workSlots));
+  sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setNumberFormat("0.##");
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
+  sheet.getRange(row, layout.goodQty, 1, 3).setNumberFormat("0.##");
   sheet.getRange(row, layout.goodQty, 1, 3).setValues([[
     numberValue(log.goodQty),
     numberValue(log.ngQty),
@@ -603,8 +659,8 @@ function writeOeeInputRow(sheet, layout, row, log) {
   ]]);
   sheet.getRange(row, layout.totalQty).setFormula(buildTotalQuantityFormula(row, layout));
 
-  sheet.getRange(row, layout.theoreticalImpulse).setValue(numberValue(log.machineSpeed));
-  sheet.getRange(row, layout.cavityQty).setValue(numberValue(log.cavityQty));
+  sheet.getRange(row, layout.theoreticalImpulse).setNumberFormat("0.##").setValue(numberValue(log.machineSpeed));
+  sheet.getRange(row, layout.cavityQty).setNumberFormat("0.##").setValue(numberValue(log.cavityQty));
 }
 
 function repairOeeFormulas() {
@@ -674,6 +730,55 @@ function repairOeeFormulas() {
   });
 
   return { sheets: sheetCount, testValues: testValueCount, totalFormulas: totalFormulaCount };
+}
+
+function repairSheetTypes() {
+  const book = getWorkbook();
+  let typedRows = 0;
+  let typedSheets = 0;
+
+  typedRows += rewriteTypedDataRows(ensureSheet(LOG_SHEET, LOG_HEADERS), LOG_HEADERS, LOG_NUMBER_HEADERS);
+  typedSheets++;
+  typedRows += rewriteTypedDataRows(ensureSheet(MACHINE_SHEET, MACHINE_HEADERS), MACHINE_HEADERS, MACHINE_NUMBER_HEADERS);
+  typedSheets++;
+  typedRows += rewriteTypedDataRows(ensureSheet(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS), PRODUCT_MASTER_HEADERS, PRODUCT_NUMBER_HEADERS);
+  typedSheets++;
+
+  const machineByName = getMachineMap();
+  book.getSheets().forEach(function(sheet) {
+    const machine = machineByName[normalizeSheetName(sheet.getName())];
+    if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
+    const layout = getOeeLayout(sheet);
+    const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.date, rowCount, 1).setNumberFormat("yyyy-mm-dd");
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.shift, rowCount, 1).setNumberFormat("@");
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, 1).setNumberFormat("@");
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.partNo, rowCount, 1).setNumberFormat("@");
+    if (layout.hasStep) {
+      sheet.getRange(OEE_FIRST_DATA_ROW, layout.step, rowCount, 1).setNumberFormat("@");
+    }
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.downtimeStart, rowCount, 8).setNumberFormat("0.##");
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.goodQty, rowCount, 3).setNumberFormat("0.##");
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.theoreticalImpulse, rowCount, 1).setNumberFormat("0.##");
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.cavityQty, rowCount, 1).setNumberFormat("0.##");
+    typedSheets++;
+  });
+
+  return { sheets: typedSheets, rows: typedRows };
+}
+
+function rewriteTypedDataRows(sheet, headers, numberHeaders) {
+  applySheetTypeFormats(sheet, headers, numberHeaders);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return 0;
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  const rewritten = values.map(function(row) {
+    return headers.map(function(header, index) {
+      return serializeTypedValue(header, row[index], numberHeaders);
+    });
+  });
+  sheet.getRange(2, 1, rewritten.length, headers.length).setValues(rewritten);
+  return rewritten.length;
 }
 
 function getLoggedTestValueMap() {
@@ -771,8 +876,9 @@ function parseSheetDate(value) {
 
 function toOriginalShift(value) {
   const text = String(value || "").trim();
-  if (text === "白" || text === "็ฝ" || text.toLowerCase() === "day" || text.toUpperCase() === "A") return "白";
-  if (text === "夜" || text === "ๅค\u009c" || text.toLowerCase() === "night" || text.toUpperCase() === "B") return "夜";
+  const lower = text.toLowerCase();
+  if (text === "白" || text === "็ฝ" || lower === "day" || text.toUpperCase() === "A" || lower.indexOf("day") >= 0 || text.indexOf("เช้า") >= 0 || text.indexOf("กลางวัน") >= 0) return "白";
+  if (text === "夜" || text === "ๅค\u009c" || lower === "night" || text.toUpperCase() === "B" || lower.indexOf("night") >= 0 || text.indexOf("ดึก") >= 0 || text.indexOf("กลางคืน") >= 0) return "夜";
   return text;
 }
 
@@ -1015,6 +1121,7 @@ function migrateHeaders(sheet, headers) {
 function importCsvSheet(name, headers, url) {
   const sheet = ensureSheet(name, headers);
   if (sheet.getLastRow() > 1) {
+    applySheetTypeFormats(sheet, headers, getNumberHeadersForSheet(name));
     formatHeader(sheet, headers.length);
     return;
   }
@@ -1025,12 +1132,33 @@ function importCsvSheet(name, headers, url) {
 
   const normalizedRows = rows.map((row, index) => {
     if (index === 0) return headers;
-    return headers.map((_, columnIndex) => row[columnIndex] == null ? "" : row[columnIndex]);
+    return headers.map((header, columnIndex) => serializeTypedValue(header, row[columnIndex], getNumberHeadersForSheet(name)));
   });
 
   sheet.clearContents();
+  applySheetTypeFormats(sheet, headers, getNumberHeadersForSheet(name), normalizedRows.length);
   sheet.getRange(1, 1, normalizedRows.length, headers.length).setValues(normalizedRows);
   formatHeader(sheet, headers.length);
+}
+
+function getNumberHeadersForSheet(name) {
+  if (name === LOG_SHEET) return LOG_NUMBER_HEADERS;
+  if (name === MACHINE_SHEET) return MACHINE_NUMBER_HEADERS;
+  if (name === PRODUCT_MASTER_SHEET) return PRODUCT_NUMBER_HEADERS;
+  return [];
+}
+
+function applySheetTypeFormats(sheet, headers, numberHeaders, rowCount) {
+  const rows = rowCount || Math.max(sheet.getMaxRows(), 2);
+  sheet.getRange(1, 1, rows, headers.length).clearDataValidations();
+  headers.forEach(function(header, index) {
+    const range = sheet.getRange(1, index + 1, rows, 1);
+    if (numberHeaders.indexOf(header) >= 0) {
+      range.setNumberFormat("0.##");
+    } else {
+      range.setNumberFormat("@");
+    }
+  });
 }
 
 function setupDowntimeCatalog() {
