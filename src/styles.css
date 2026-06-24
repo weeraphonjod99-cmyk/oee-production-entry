@@ -58,6 +58,15 @@ button {
   width: 100%;
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #eef2ef;
+  color: #405066;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .login-brand,
 .login-heading {
   align-items: center;
@@ -435,11 +444,34 @@ textarea:focus {
   padding: 14px;
 }
 
+.runtime-lock-row {
+  align-items: center;
+  border-bottom: 1px solid #d7ecdf;
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.runtime-lock-row div {
+  display: grid;
+  gap: 3px;
+}
+
+.runtime-lock-button {
+  min-height: 36px;
+}
+
 .runtime-panel div,
 .runtime-panel label,
 .summary-block {
   display: grid;
   gap: 4px;
+}
+
+.runtime-panel .runtime-lock-row {
+  display: flex;
 }
 
 .runtime-panel span,
@@ -483,6 +515,40 @@ textarea:focus {
 
 .downtime-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.downtime-label-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.downtime-label-row b {
+  background: #e7f5ec;
+  border: 1px solid #cbe7d5;
+  border-radius: 999px;
+  color: #177245;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.downtime-slot-input {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.downtime-slot-input b {
+  color: #061635;
+  white-space: nowrap;
+}
+
+.downtime-grid small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .form-actions {
@@ -1265,6 +1331,16 @@ td:nth-child(9) {
 
   .runtime-panel {
     padding: 12px;
+  }
+
+  .runtime-lock-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .runtime-lock-button {
+    justify-content: center;
+    width: 100%;
   }
 
   .runtime-input-row {

@@ -234,15 +234,16 @@ function copyOeeTemplateRow(sheet, templateRow, targetRow) {
 }
 
 function writeOeeInputRow(sheet, layout, row, log) {
+  const minutesPerSlot = numberValue(log.minutesPerSlot) || OEE_MINUTES_PER_SLOT;
   const downtimeSlots = [
-    minutesToSheetSlots(log.changeoverMinutes),
-    minutesToSheetSlots(log.inspectionMinutes),
-    minutesToSheetSlots(log.equipmentRepairMinutes),
-    minutesToSheetSlots(log.moldRepairMinutes),
-    minutesToSheetSlots(log.materialChangeMinutes),
-    minutesToSheetSlots(log.emergencyStopMinutes),
-    minutesToSheetSlots(log.meetingMinutes),
-    minutesToSheetSlots(log.plannedStopMinutes),
+    minutesToSheetSlots(log.changeoverMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.inspectionMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.equipmentRepairMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.moldRepairMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.materialChangeMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.emergencyStopMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.meetingMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.plannedStopMinutes, minutesPerSlot),
   ];
   const workMinutes = Number(log.workMinutes || 0) || (Number(log.normalMinutes || 0) + sumValues([
     log.changeoverMinutes,
@@ -254,7 +255,7 @@ function writeOeeInputRow(sheet, layout, row, log) {
     log.meetingMinutes,
     log.plannedStopMinutes,
   ]));
-  const workSlots = roundNumber(workMinutes / OEE_MINUTES_PER_SLOT);
+  const workSlots = roundNumber(workMinutes / minutesPerSlot);
 
   sheet.getRange(row, layout.sequence).setFormula("=ROW()-ROW($A$3)");
   sheet.getRange(row, layout.date).setValue(parseSheetDate(log.date));
@@ -278,8 +279,8 @@ function writeOeeInputRow(sheet, layout, row, log) {
   }
 }
 
-function minutesToSheetSlots(value) {
-  return roundNumber(numberValue(value) / OEE_MINUTES_PER_SLOT);
+function minutesToSheetSlots(value, minutesPerSlot) {
+  return roundNumber(numberValue(value) / (numberValue(minutesPerSlot) || OEE_MINUTES_PER_SLOT));
 }
 
 function numberValue(value) {

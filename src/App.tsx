@@ -6,6 +6,7 @@ import {
   Gauge,
   History,
   KeyRound,
+  Lock,
   LockKeyhole,
   LogOut,
   Save,
@@ -13,6 +14,7 @@ import {
   Share2,
   TableProperties,
   Trash2,
+  Unlock,
   UserPlus,
   UserRound,
   Wifi,
@@ -57,7 +59,25 @@ type Filters = {
 
 type ProductFieldKey = "productName" | "partNo" | "step";
 
-const today = new Date().toISOString().slice(0, 10);
+const getTodayInputValue = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const downtimeExcelCodes = {
+  changeoverMinutes: "B",
+  inspectionMinutes: "C",
+  equipmentRepairMinutes: "D",
+  moldRepairMinutes: "E",
+  materialChangeMinutes: "F",
+  emergencyStopMinutes: "G",
+  meetingMinutes: "H",
+  plannedStopMinutes: "X",
+} as const;
+
 const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
 const orderedShiftOptions = Array.from(new Set(["白", "夜", ...shiftOptions]));
@@ -71,10 +91,15 @@ const roundNumber = (value: number) => Number(value.toFixed(2));
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? roundNumber(workMinutes / minutesPerSlot) : 0;
 
+const minutesToSlots = (minutes: number, minutesPerSlot: number) =>
+  minutesPerSlot > 0 ? roundNumber(minutes / minutesPerSlot) : 0;
+
+const slotsToMinutes = (slots: number, minutesPerSlot: number) => roundNumber(slots * minutesPerSlot);
+
 function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
   const minutesPerSlot = defaultMinutesPerSlot;
   return {
-    date: today,
+    date: getTodayInputValue(),
     shift: orderedShiftOptions[0] ?? "白",
     machineId: machine.id,
     productName: product.productName,
@@ -130,6 +155,7 @@ function App() {
   const [historySearch, setHistorySearch] = useState("");
   const [filters, setFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
+  const [runtimeLocked, setRuntimeLocked] = useState(true);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -145,6 +171,17 @@ function App() {
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("entry");
   }, [session, tab]);
+
+  useEffect(() => {
+    const syncDate = () => {
+      const currentDate = getTodayInputValue();
+      setDraft((prev) => (prev.date === currentDate ? prev : { ...prev, date: currentDate }));
+    };
+
+    syncDate();
+    const timer = window.setInterval(syncDate, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const machineProducts = useMemo(
@@ -258,6 +295,20 @@ function App() {
       ...prev,
       minutesPerSlot,
       workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
+      ...Object.fromEntries(
+        downtimeFields.map((field) => [
+          field.key,
+          slotsToMinutes(minutesToSlots(Number(prev[field.key] || 0), prev.minutesPerSlot), minutesPerSlot),
+        ]),
+      ),
+    }));
+  };
+
+  const updateDowntimeSlots = (key: keyof typeof downtimeExcelCodes, value: string) => {
+    const slots = toPositiveNumber(value);
+    setDraft((prev) => ({
+      ...prev,
+      [key]: slotsToMinutes(slots, prev.minutesPerSlot),
     }));
   };
 
@@ -405,7 +456,7 @@ function App() {
               <div className="form-grid">
                 <label>
                   วันที่
-                  <input value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} type="date" />
+                  <input disabled value={draft.date} type="date" />
                 </label>
                 <label>
                   กะ
@@ -485,10 +536,21 @@ function App() {
               </div>
 
               <div className="runtime-panel">
+                <div className="runtime-lock-row">
+                  <div>
+                    <span>ตั้งค่าเวลา / ช่อง Excel</span>
+                    <strong>{runtimeLocked ? "ล็อกตัวเลขแล้ว" : "ปลดล็อกเพื่อปรับตั้ง"}</strong>
+                  </div>
+                  <button className="ghost-button runtime-lock-button" onClick={() => setRuntimeLocked((locked) => !locked)} type="button">
+                    {runtimeLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                    {runtimeLocked ? "ปลดล็อก" : "ล็อก"}
+                  </button>
+                </div>
                 <label className="runtime-input-block">
                   <span>เวลาตามกะ</span>
                   <div className="runtime-input-row">
                     <input
+                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateWorkMinutes(event.target.value)}
                       type="number"
@@ -501,6 +563,7 @@ function App() {
                   <span>จำนวนช่องเวลา</span>
                   <div className="runtime-input-row">
                     <input
+                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateTimeSlots(event.target.value)}
                       step="0.01"
@@ -514,6 +577,7 @@ function App() {
                   <span>นาที/ช่อง</span>
                   <div className="runtime-input-row">
                     <input
+                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => updateMinutesPerSlot(event.target.value)}
                       step="0.01"
@@ -527,6 +591,7 @@ function App() {
                   <span>ความเร็วเครื่องจักร</span>
                   <div className="runtime-input-row">
                     <input
+                      disabled={runtimeLocked}
                       min="0"
                       onChange={(event) => handleNumber("machineSpeed", event.target.value)}
                       step="0.01"
@@ -572,13 +637,21 @@ function App() {
               <div className="downtime-grid">
                 {downtimeFields.map((field) => (
                   <label key={field.key}>
-                    {field.label}
-                    <input
-                      value={draft[field.key]}
-                      onChange={(event) => handleNumber(field.key, event.target.value)}
-                      min="0"
-                      type="number"
-                    />
+                    <span className="downtime-label-row">
+                      <span>{field.label}</span>
+                      <b>Excel {downtimeExcelCodes[field.key]}</b>
+                    </span>
+                    <div className="downtime-slot-input">
+                      <input
+                        value={minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot)}
+                        onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
+                        min="0"
+                        step="0.01"
+                        type="number"
+                      />
+                      <b>ช่อง</b>
+                    </div>
+                    <small>{formatRate(Number(draft[field.key] || 0))} นาที</small>
                   </label>
                 ))}
               </div>
