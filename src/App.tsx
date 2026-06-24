@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CheckCircle2,
   ClipboardList,
   Database,
   Download,
@@ -237,6 +238,7 @@ function App() {
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
   const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
+  const [successDialog, setSuccessDialog] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -465,12 +467,12 @@ function App() {
     try {
       const saved = remoteEnabled ? (shouldUpdate ? await updateRemoteLog(log) : await appendRemoteLog(log)) : log;
       const next = shouldUpdate ? upsertLocalLog(saved) : appendLocalLog(saved);
+      const successMessage = shouldUpdate
+        ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
+        : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`;
       setLocalLogs(next);
-      setStatus(
-        shouldUpdate
-          ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
-          : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`,
-      );
+      setStatus(successMessage);
+      setSuccessDialog({ title: "บันทึกเสร็จแล้ว", message: successMessage });
       resetDraft();
     } catch (error) {
       const localLog = { ...log, source: "local" as const };
@@ -906,6 +908,21 @@ function App() {
 
         {tab === "users" && <UsersAdmin currentUsername={session.username} />}
       </main>
+
+      {successDialog && (
+        <div className="success-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="success-dialog-title">
+          <div className="success-modal">
+            <div className="success-modal-icon">
+              <CheckCircle2 size={30} />
+            </div>
+            <h2 id="success-dialog-title">{successDialog.title}</h2>
+            <p>{successDialog.message}</p>
+            <button className="primary-button" type="button" autoFocus onClick={() => setSuccessDialog(null)}>
+              ยืนยัน
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

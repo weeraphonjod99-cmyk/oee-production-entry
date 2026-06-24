@@ -646,6 +646,62 @@ textarea:focus {
   color: #b42318;
 }
 
+.success-modal-backdrop {
+  background: rgba(6, 22, 53, 0.42);
+  display: grid;
+  inset: 0;
+  padding: 20px;
+  place-items: center;
+  position: fixed;
+  z-index: 1000;
+}
+
+.success-modal {
+  background: #ffffff;
+  border: 1px solid #abefc6;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(6, 22, 53, 0.24);
+  display: grid;
+  gap: 12px;
+  max-width: 100%;
+  padding: 24px;
+  text-align: center;
+  width: 420px;
+}
+
+.success-modal-icon {
+  align-items: center;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 999px;
+  color: #067647;
+  display: inline-flex;
+  height: 58px;
+  justify-content: center;
+  justify-self: center;
+  width: 58px;
+}
+
+.success-modal h2 {
+  color: #067647;
+  font-size: 24px;
+  margin: 0;
+}
+
+.success-modal p {
+  color: #344054;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.success-modal .primary-button {
+  justify-content: center;
+  margin-top: 8px;
+  width: 100%;
+}
+
 .entry-summary {
   display: grid;
   gap: 14px;
