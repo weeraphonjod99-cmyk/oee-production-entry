@@ -309,20 +309,21 @@ function App() {
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
   const duplicateEntry = useMemo(() => {
-    if (!draft.date || !draft.shift || !draft.machineId) return null;
+    if (!draft.date || !draft.shift || !draft.machineId || !draft.partNo.trim()) return null;
     return (
       allLogs.find(
         (log) =>
           log.id !== editingLog?.id &&
           log.date === draft.date &&
           log.shift === draft.shift &&
-          log.machineId === draft.machineId,
+          log.machineId === draft.machineId &&
+          normalizeText(log.partNo) === normalizeText(draft.partNo),
       ) ?? null
     );
-  }, [allLogs, draft.date, draft.machineId, draft.shift, editingLog?.id]);
-  const duplicateEntryKey = duplicateEntry ? `${draft.date}::${draft.shift}::${draft.machineId}` : "";
+  }, [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, editingLog?.id]);
+  const duplicateEntryKey = duplicateEntry ? `${draft.date}::${draft.shift}::${draft.machineId}::${normalizeText(draft.partNo)}` : "";
   const duplicateEntryMessage = duplicateEntry
-    ? `วันที่ ${draft.date} กะ ${shiftLabel(draft.shift)} เครื่อง ${duplicateEntry.machineName} มีการบันทึกแล้ว ห้ามบันทึกซ้ำใน 1 วัน`
+    ? `วันที่ ${draft.date} กะ ${shiftLabel(draft.shift)} เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
     : "";
 
   useEffect(() => {
