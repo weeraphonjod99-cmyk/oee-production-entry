@@ -527,7 +527,7 @@ function writeOeeInputRow(sheet, layout, row, log) {
   sheet.getRange(row, layout.goodQty, 1, 3).setValues([[
     numberValue(log.goodQty),
     numberValue(log.ngQty),
-    numberValue(log.testQty),
+    numberValue(log.testQty) > 0 ? numberValue(log.testQty) : "",
   ]]);
   sheet.getRange(row, layout.totalQty).setFormula(buildTotalQuantityFormula(row, layout));
 
@@ -538,6 +538,7 @@ function writeOeeInputRow(sheet, layout, row, log) {
 function repairOeeFormulas() {
   const book = getWorkbook();
   const machineByName = getMachineMap();
+  const loggedTestValues = getLoggedTestValueMap();
   let sheetCount = 0;
   let testValueCount = 0;
   let totalFormulaCount = 0;
@@ -550,12 +551,14 @@ function repairOeeFormulas() {
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
     const width = layout.partNo - layout.productName + 1;
     const identityValues = sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, width).getDisplayValues();
-    const quantityRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.goodQty, rowCount, 3);
-    const quantityValues = quantityRange.getValues();
-    const quantityFormulas = quantityRange.getFormulas();
+    const sourceWidth = layout.hasStep ? layout.step : layout.partNo;
+    const sourceValues = sheet.getRange(OEE_FIRST_DATA_ROW, 1, rowCount, sourceWidth).getValues();
+    const testRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.testQty, rowCount, 1);
+    const testValues = testRange.getValues();
+    const testFormulas = testRange.getFormulas();
     const totalRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.totalQty, rowCount, 1);
     const totalFormulas = totalRange.getFormulas();
-    let quantityChanged = false;
+    let testChanged = false;
     let totalChanged = false;
 
     sheetCount++;
@@ -565,10 +568,21 @@ function repairOeeFormulas() {
       const partNo = String(identityValues[index][width - 1] || "").trim();
       if (!productName || !partNo) continue;
 
-      if (quantityFormulas[index][2]) {
-        quantityFormulas[index][2] = "";
+      const loggedTest = loggedTestValues[
+        buildOeeLogKey({
+          date: formatLegacyDate(sourceValues[index][layout.date - 1]),
+          shift: toOriginalShift(sourceValues[index][layout.shift - 1]),
+          machineName: machine.name,
+          productName: productName,
+          partNo: partNo,
+          step: layout.hasStep ? String(sourceValues[index][layout.step - 1] || "-").trim() || "-" : "-",
+        })
+      ];
+      const nextTestValue = numberValue(loggedTest) > 0 ? numberValue(loggedTest) : "";
+      if (testFormulas[index][0] || testValues[index][0] !== nextTestValue) {
+        testValues[index][0] = nextTestValue;
         testValueCount++;
-        quantityChanged = true;
+        testChanged = true;
       }
 
       const expectedFormula = buildTotalQuantityFormula(row, layout);
@@ -579,8 +593,8 @@ function repairOeeFormulas() {
       }
     }
 
-    if (quantityChanged) {
-      quantityRange.setValues(quantityValues);
+    if (testChanged) {
+      testRange.setValues(testValues);
     }
     if (totalChanged) {
       totalRange.setFormulas(totalFormulas);
@@ -588,6 +602,34 @@ function repairOeeFormulas() {
   });
 
   return { sheets: sheetCount, testValues: testValueCount, totalFormulas: totalFormulaCount };
+}
+
+function getLoggedTestValueMap() {
+  const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
+  const rows = sheet.getDataRange().getValues();
+  const map = {};
+  if (rows.length <= 1) return map;
+
+  const headers = rows[0];
+  rows.slice(1).forEach(function(row) {
+    if (!row.some(function(cell) { return cell !== ""; })) return;
+    const log = rowToObject(headers, row);
+    const testQty = numberValue(log.testQty);
+    if (testQty <= 0) return;
+    map[buildOeeLogKey(log)] = testQty;
+  });
+  return map;
+}
+
+function buildOeeLogKey(log) {
+  return [
+    formatLegacyDate(log.date),
+    toOriginalShift(log.shift),
+    normalizeSheetName(log.machineName),
+    normalizeLookup(log.productName),
+    normalizeLookup(log.partNo),
+    normalizeLookup(log.step || "-"),
+  ].join("::");
 }
 
 function minutesToSheetSlots(value, minutesPerSlot) {
