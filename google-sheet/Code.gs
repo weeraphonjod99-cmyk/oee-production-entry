@@ -13,6 +13,7 @@ const OEE_FIRST_DATA_ROW = 4;
 const OEE_MINUTES_PER_SLOT = 5;
 const OEE_ENTRY_DATE_HEADER = "วันที่กรอกยอด\nEntry Date";
 const OEE_ENTRY_TIME_HEADER = "เวลากรอก\nEntry Time";
+const OEE_TEST_HEADER = "งาน\nทดสอบ\n/Test";
 
 const LOG_HEADERS = [
   "id",
@@ -148,6 +149,9 @@ function doGet(e) {
     }
     if (action === "migrateOeeEntryTimestampColumns") {
       return jsonResponse({ ok: true, result: migrateOeeEntryTimestampColumns() });
+    }
+    if (action === "migrateOeeTestColumns") {
+      return jsonResponse({ ok: true, result: migrateOeeTestColumns() });
     }
     return jsonResponse({ ok: true, service: "oee-production-entry" });
   } catch (error) {
@@ -519,6 +523,7 @@ function appendFormattedOeeRow(log) {
   }
 
   ensureOeeEntryTimestampColumns(sheet);
+  ensureOeeTestColumn(sheet);
   const layout = getOeeLayout(sheet);
   const targetRow = Math.max(sheet.getLastRow() + 1, OEE_FIRST_DATA_ROW);
   ensureRowExists(sheet, targetRow);
@@ -554,6 +559,7 @@ function getOeeLayout(sheet) {
   const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
   const offset = hasEntryTimestamp ? 2 : 0;
   const hasStep = String(headers[5 + offset] || "").toLowerCase().indexOf("step") >= 0;
+  const detected = detectOeeOutputColumns(headers);
   return hasStep
     ? {
         hasStep: true,
@@ -569,12 +575,12 @@ function getOeeLayout(sheet) {
         normalSlot: 7 + offset,
         downtimeStart: 8 + offset,
         normalMinutes: 16 + offset,
-        goodQty: 25 + offset,
-        ngQty: 26 + offset,
-        testQty: 27 + offset,
-        totalQty: 28 + offset,
-        theoreticalImpulse: 29 + offset,
-        cavityQty: 30 + offset,
+        goodQty: detected.goodQty || 25 + offset,
+        ngQty: detected.ngQty || 26 + offset,
+        testQty: detected.testQty || 27 + offset,
+        totalQty: detected.totalQty || 28 + offset,
+        theoreticalImpulse: detected.theoreticalImpulse || 29 + offset,
+        cavityQty: detected.cavityQty || 30 + offset,
       }
     : {
         hasStep: false,
@@ -589,13 +595,35 @@ function getOeeLayout(sheet) {
         normalSlot: 6 + offset,
         downtimeStart: 7 + offset,
         normalMinutes: 15 + offset,
-        goodQty: 24 + offset,
-        ngQty: 25 + offset,
-        testQty: 26 + offset,
-        totalQty: 27 + offset,
-        theoreticalImpulse: 28 + offset,
-        cavityQty: 29 + offset,
+        goodQty: detected.goodQty || 24 + offset,
+        ngQty: detected.ngQty || 25 + offset,
+        testQty: detected.testQty || 26 + offset,
+        totalQty: detected.totalQty || 27 + offset,
+        theoreticalImpulse: detected.theoreticalImpulse || 28 + offset,
+        cavityQty: detected.cavityQty || 29 + offset,
       };
+}
+
+function detectOeeOutputColumns(headers) {
+  const result = {};
+  headers.forEach(function(header, index) {
+    const text = normalizeHeaderText(header);
+    const column = index + 1;
+    if (!result.goodQty && text.indexOf("good") >= 0) result.goodQty = column;
+    if (!result.ngQty && (text.indexOf("ng") >= 0 || text.indexOf("不合格") >= 0)) result.ngQty = column;
+    if (!result.testQty && (text.indexOf("test") >= 0 || text.indexOf("ทดสอบ") >= 0)) result.testQty = column;
+    if (!result.totalQty && text.indexOf("total") >= 0 && text.indexOf("quantity") >= 0) result.totalQty = column;
+    if (!result.theoreticalImpulse && (text.indexOf("theoretical") >= 0 || text.indexOf("impulse") >= 0)) result.theoreticalImpulse = column;
+    if (!result.cavityQty && (text.indexOf("cavity") >= 0 || text.indexOf("cavities") >= 0)) result.cavityQty = column;
+  });
+  return result;
+}
+
+function normalizeHeaderText(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function isOeeEntryTimestampHeader(entryDateHeader, entryTimeHeader) {
@@ -647,6 +675,59 @@ function migrateOeeEntryTimestampColumns() {
     if (ensureOeeEntryTimestampColumns(sheet)) inserted++;
   });
   return { sheets: sheets, inserted: inserted };
+}
+
+function ensureOeeTestColumn(sheet) {
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 80)).getDisplayValues()[0];
+  const detected = detectOeeOutputColumns(headers);
+  if (detected.testQty) return false;
+  if (!detected.ngQty || !detected.totalQty || detected.ngQty >= detected.totalQty) return false;
+
+  sheet.insertColumnAfter(detected.ngQty);
+  const testColumn = detected.ngQty + 1;
+  const headerRange = sheet.getRange(OEE_HEADER_ROW, testColumn);
+  sheet.getRange(OEE_HEADER_ROW, detected.ngQty).copyTo(headerRange, { contentsOnly: false });
+  headerRange
+    .setValue(OEE_TEST_HEADER)
+    .setBackground("#fbbc04")
+    .setFontColor("#d00000")
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setWrap(true);
+  sheet.setColumnWidth(testColumn, Math.max(sheet.getColumnWidth(detected.ngQty), 72));
+  if (sheet.getLastRow() >= OEE_FIRST_DATA_ROW) {
+    const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+    sheet.getRange(OEE_FIRST_DATA_ROW, testColumn, rowCount, 1).clearContent().setNumberFormat("0.##");
+  }
+  return true;
+}
+
+function migrateOeeTestColumns() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  let sheets = 0;
+  let inserted = 0;
+  let totalFormulas = 0;
+  book.getSheets().forEach(function(sheet) {
+    const machine = machineByName[normalizeSheetName(sheet.getName())];
+    if (!machine || sheet.getLastRow() < OEE_HEADER_ROW) return;
+    sheets++;
+    ensureOeeEntryTimestampColumns(sheet);
+    if (ensureOeeTestColumn(sheet)) inserted++;
+    const layout = getOeeLayout(sheet);
+    if (sheet.getLastRow() >= OEE_FIRST_DATA_ROW) {
+      const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+      const formulas = [];
+      for (let index = 0; index < rowCount; index++) {
+        formulas.push([buildTotalQuantityFormula(OEE_FIRST_DATA_ROW + index, layout)]);
+      }
+      sheet.getRange(OEE_FIRST_DATA_ROW, layout.totalQty, rowCount, 1).setFormulas(formulas);
+      sheet.getRange(OEE_FIRST_DATA_ROW, layout.goodQty, rowCount, 3).setNumberFormat("0.##");
+      totalFormulas += rowCount;
+    }
+  });
+  return { sheets: sheets, inserted: inserted, totalFormulas: totalFormulas };
 }
 
 function ensureRowExists(sheet, row) {
@@ -735,12 +816,12 @@ function writeOeeInputRow(sheet, layout, row, log) {
   sheet.getRange(row, layout.normalSlot).setFormula(buildNormalSlotFormula(row, layout, workSlots));
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setNumberFormat("0.##");
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
-  sheet.getRange(row, layout.goodQty, 1, 3).setNumberFormat("0.##");
-  sheet.getRange(row, layout.goodQty, 1, 3).setValues([[
-    numberValue(log.goodQty),
-    numberValue(log.ngQty),
-    numberValue(log.testQty) > 0 ? numberValue(log.testQty) : "",
-  ]]);
+  sheet.getRange(row, layout.goodQty).setNumberFormat("0.##").setValue(numberValue(log.goodQty));
+  sheet.getRange(row, layout.ngQty).setNumberFormat("0.##").setValue(numberValue(log.ngQty));
+  sheet
+    .getRange(row, layout.testQty)
+    .setNumberFormat("0.##")
+    .setValue(numberValue(log.testQty) > 0 ? numberValue(log.testQty) : "");
   sheet.getRange(row, layout.totalQty).setFormula(buildTotalQuantityFormula(row, layout));
 
   sheet.getRange(row, layout.theoreticalImpulse).setNumberFormat("0.##").setValue(numberValue(log.machineSpeed));
@@ -758,6 +839,8 @@ function repairOeeFormulas() {
   book.getSheets().forEach(function(sheet) {
     const machine = machineByName[normalizeSheetName(sheet.getName())];
     if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
+    ensureOeeEntryTimestampColumns(sheet);
+    ensureOeeTestColumn(sheet);
 
     const layout = getOeeLayout(sheet);
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
@@ -833,6 +916,7 @@ function repairSheetTypes() {
     const machine = machineByName[normalizeSheetName(sheet.getName())];
     if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
     ensureOeeEntryTimestampColumns(sheet);
+    ensureOeeTestColumn(sheet);
     const layout = getOeeLayout(sheet);
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
     if (layout.entryDate) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryDate, rowCount, 1).setNumberFormat("yyyy-mm-dd");
@@ -1184,6 +1268,7 @@ function setupProductionWorkbook() {
   setupDowntimeCatalog();
   ensureUsersSheet();
   migrateOeeEntryTimestampColumns();
+  migrateOeeTestColumns();
   return sheet.getParent();
 }
 
