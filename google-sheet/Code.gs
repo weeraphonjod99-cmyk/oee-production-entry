@@ -5,6 +5,20 @@ const MACHINE_SHEET = "machines";
 const PRODUCT_MASTER_SHEET = "product_master";
 const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 const USER_SHEET = "app_users";
+const PD_EXTERNAL_SHEETS = [
+  {
+    id: "1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j",
+    label: "PD 1",
+    url: "https://docs.google.com/spreadsheets/d/1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j/edit",
+  },
+  {
+    id: "1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq",
+    label: "PD 2",
+    url: "https://docs.google.com/spreadsheets/d/1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq/edit",
+  },
+];
+const PD_MAX_ROWS_PER_SHEET = 300;
+const PD_MAX_COLUMNS_PER_SHEET = 40;
 
 const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
 const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/product_master.csv";
@@ -131,6 +145,9 @@ function doGet(e) {
     if (action === "logs") {
       const limit = Number(e.parameter.limit || 500);
       return jsonResponse({ ok: true, logs: getLogs(limit) });
+    }
+    if (action === "pdSheets") {
+      return jsonResponse({ ok: true, sources: getPdExternalSheets() });
     }
     if (action === "setup") {
       const book = setupProductionWorkbook();
@@ -1356,6 +1373,74 @@ function getNumberHeadersForSheet(name) {
   if (name === MACHINE_SHEET) return MACHINE_NUMBER_HEADERS;
   if (name === PRODUCT_MASTER_SHEET) return PRODUCT_NUMBER_HEADERS;
   return [];
+}
+
+function getPdExternalSheets() {
+  return PD_EXTERNAL_SHEETS.map(function(source) {
+    try {
+      const url = "https://docs.google.com/spreadsheets/d/" + source.id + "/export?format=csv&gid=0";
+      const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      const statusCode = response.getResponseCode();
+      if (statusCode < 200 || statusCode >= 300) {
+        throw new Error("อ่านไฟล์ไม่ได้ HTTP " + statusCode + " กรุณาแชร์ Google Sheet เป็น Anyone with the link can view หรือแชร์ให้บัญชี Apps Script");
+      }
+      const rows = Utilities.parseCsv(response.getContentText());
+      const normalized = trimPdValues(rows);
+      const headers = normalized.length ? normalized[0].map(function(value, index) {
+        return value || "Column " + (index + 1);
+      }) : [];
+      return {
+        ok: true,
+        id: source.id,
+        label: source.label,
+        name: source.label,
+        url: source.url,
+        fetchedAt: new Date().toISOString(),
+        sheets: [
+          {
+            name: "Sheet1",
+            headers: headers,
+            rows: normalized.slice(1, PD_MAX_ROWS_PER_SHEET),
+            rowCount: Math.max(normalized.length - 1, 0),
+            columnCount: headers.length,
+            truncated: normalized.length > PD_MAX_ROWS_PER_SHEET,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        id: source.id,
+        label: source.label,
+        name: source.label,
+        url: source.url,
+        fetchedAt: new Date().toISOString(),
+        error: String(error && error.message ? error.message : error),
+        sheets: [],
+      };
+    }
+  });
+}
+
+function trimPdValues(values) {
+  const lastColumnIndex = values.reduce(function(maxIndex, row) {
+    for (let index = row.length - 1; index >= 0; index--) {
+      if (String(row[index] || "").trim()) return Math.max(maxIndex, index);
+    }
+    return maxIndex;
+  }, -1);
+  if (lastColumnIndex < 0) return [];
+  return values
+    .map(function(row) {
+      return row.slice(0, lastColumnIndex + 1).map(function(value) {
+        return String(value || "").trim();
+      });
+    })
+    .filter(function(row) {
+      return row.some(function(value) {
+        return value;
+      });
+    });
 }
 
 function applySheetTypeFormats(sheet, headers, numberHeaders, rowCount) {

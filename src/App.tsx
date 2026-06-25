@@ -24,7 +24,16 @@ import {
 } from "lucide-react";
 import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { machines, products, seedLogs } from "./data/oeeMasterData.generated";
-import { appendRemoteLog, fetchProductDefaults, fetchRemoteLogs, remoteEnabled, updateRemoteLog, type ProductDefaults } from "./lib/api";
+import {
+  appendRemoteLog,
+  fetchPdSheets,
+  fetchProductDefaults,
+  fetchRemoteLogs,
+  remoteEnabled,
+  updateRemoteLog,
+  type PdWorkbook,
+  type ProductDefaults,
+} from "./lib/api";
 import {
   canAccessTab,
   changePassword,
@@ -50,7 +59,7 @@ import {
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
 
-type TabId = "entry" | "dashboard" | "reports" | "history" | "master" | "users";
+type TabId = "entry" | "dashboard" | "reports" | "pd" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -622,6 +631,10 @@ function App() {
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
   const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
   const [saving, setSaving] = useState(false);
+  const [pdSheets, setPdSheets] = useState<PdWorkbook[]>([]);
+  const [pdLoading, setPdLoading] = useState(false);
+  const [pdError, setPdError] = useState("");
+  const [pdUpdatedAt, setPdUpdatedAt] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [historySearch, setHistorySearch] = useState("");
   const deferredProductSearch = useDeferredValue(productSearch);
@@ -652,6 +665,36 @@ function App() {
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("entry");
   }, [session, tab]);
+
+  const loadPdSheets = async (silent = false) => {
+    if (!remoteEnabled) {
+      setPdError("ยังไม่ได้ตั้งค่า Google Sheet API");
+      return;
+    }
+    if (!silent) setPdLoading(true);
+    try {
+      const sources = await fetchPdSheets();
+      setPdSheets(sources);
+      setPdUpdatedAt(new Date().toLocaleString("th-TH"));
+      setPdError("");
+      setStatus(`อัปเดตข้อมูล PD แล้ว (${sources.length} ไฟล์)`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "โหลดข้อมูล PD ไม่สำเร็จ";
+      setPdError(message);
+      setStatus(message);
+    } finally {
+      if (!silent) setPdLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab !== "pd") return;
+    void loadPdSheets();
+    const timer = window.setInterval(() => {
+      void loadPdSheets(true);
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [tab]);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const machineProducts = useMemo(
@@ -1077,6 +1120,9 @@ function App() {
           <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")} type="button">
             <FileText size={18} /> Reports
           </button>
+          <button className={tab === "pd" ? "active" : ""} onClick={() => setTab("pd")} type="button">
+            <TableProperties size={18} /> PD Sheets
+          </button>
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ
           </button>
@@ -1449,6 +1495,16 @@ function App() {
             onDownloadPdf={downloadPdfReport}
             onUseLatest={useLatestReportDate}
             setFilters={setReportFilters}
+          />
+        )}
+
+        {tab === "pd" && (
+          <PdSheetsView
+            error={pdError}
+            loading={pdLoading}
+            onRefresh={() => void loadPdSheets()}
+            sources={pdSheets}
+            updatedAt={pdUpdatedAt}
           />
         )}
 
@@ -1882,6 +1938,124 @@ function FilterEmptyNotice({
         <button onClick={onClearDates} type="button">
           ล้างวันที่
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PdSheetsView({
+  error,
+  loading,
+  onRefresh,
+  sources,
+  updatedAt,
+}: {
+  error: string;
+  loading: boolean;
+  onRefresh: () => void;
+  sources: PdWorkbook[];
+  updatedAt: string;
+}) {
+  const totalSheets = sources.reduce((sum, source) => sum + source.sheets.length, 0);
+  const totalRows = sources.reduce(
+    (sum, source) => sum + source.sheets.reduce((sheetSum, sheet) => sheetSum + sheet.rowCount, 0),
+    0,
+  );
+
+  return (
+    <section className="pd-layout">
+      <div className="report-toolbar analysis-panel">
+        <div>
+          <p className="eyebrow">PD Google Sheets</p>
+          <h2>ข้อมูล PD จาก Google Sheet</h2>
+          <p>ระบบจะรีเฟรชอัตโนมัติทุก 60 วินาทีเมื่อเปิดหน้านี้</p>
+          {updatedAt && <p>อัปเดตล่าสุด: {updatedAt}</p>}
+        </div>
+        <button className="primary-button" disabled={loading} onClick={onRefresh} type="button">
+          <TableProperties size={18} /> {loading ? "กำลังโหลด" : "รีเฟรชข้อมูล"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="duplicate-warning" role="alert">
+          <AlertTriangle size={18} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="kpi-grid">
+        <Kpi label="Files" value={formatNumber(sources.length)} tone="blue" />
+        <Kpi label="Worksheets" value={formatNumber(totalSheets)} tone="green" />
+        <Kpi label="Rows" value={formatNumber(totalRows)} tone="amber" />
+        <Kpi label="Auto refresh" value="60 วินาที" tone="neutral" />
+      </div>
+
+      {sources.length === 0 && !loading && <p className="empty-text">ยังไม่มีข้อมูล PD ให้แสดง</p>}
+
+      {sources.map((source) => (
+        <div className="analysis-panel pd-source" key={source.id}>
+          <div className="pd-source-heading">
+            <div>
+              <p className="eyebrow">{source.label}</p>
+              <h2>{source.name}</h2>
+              <a href={source.url} rel="noreferrer" target="_blank">
+                เปิด Google Sheet
+              </a>
+            </div>
+            <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "พร้อมใช้งาน" : "อ่านไม่ได้"}</span>
+          </div>
+          {source.error && (
+            <div className="duplicate-warning" role="alert">
+              <AlertTriangle size={18} />
+              <span>{source.error}</span>
+            </div>
+          )}
+          {source.sheets.map((sheet) => (
+            <PdWorksheetTable key={`${source.id}-${sheet.name}`} sheet={sheet} />
+          ))}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function PdWorksheetTable({ sheet }: { sheet: PdWorkbook["sheets"][number] }) {
+  return (
+    <div className="pd-sheet-block">
+      <div className="report-table-heading">
+        <h2>{sheet.name}</h2>
+        <span>
+          {formatNumber(sheet.rowCount)} rows / {formatNumber(sheet.columnCount)} cols
+        </span>
+      </div>
+      {sheet.truncated && <p className="pd-note">แสดงข้อมูลบางส่วนเพื่อให้โหลดเร็ว หากมีข้อมูลเพิ่ม ระบบจะอ่านใหม่ตอนรีเฟรช</p>}
+      <div className="data-table-wrap pd-table">
+        <table>
+          <thead>
+            <tr>
+              {sheet.headers.map((header, index) => (
+                <th key={`${header}-${index}`}>{header || `Column ${index + 1}`}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sheet.rows.length === 0 ? (
+              <tr>
+                <td className="empty-cell" colSpan={Math.max(sheet.headers.length, 1)}>
+                  ไม่มีข้อมูลในชีตนี้
+                </td>
+              </tr>
+            ) : (
+              sheet.rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {sheet.headers.map((_, columnIndex) => (
+                    <td key={columnIndex}>{row[columnIndex] || ""}</td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

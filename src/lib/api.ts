@@ -10,6 +10,26 @@ export type ProductDefaults = {
   minutesPerSlot?: number;
 };
 
+export type PdWorksheet = {
+  name: string;
+  headers: string[];
+  rows: string[][];
+  rowCount: number;
+  columnCount: number;
+  truncated: boolean;
+};
+
+export type PdWorkbook = {
+  ok: boolean;
+  id: string;
+  label: string;
+  name: string;
+  url: string;
+  fetchedAt: string;
+  error?: string;
+  sheets: PdWorksheet[];
+};
+
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
   try {
@@ -30,6 +50,19 @@ export async function fetchRemoteLogs(limit = 3000): Promise<ProductionLog[]> {
     throw new Error(data.error || "โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.logs) ? data.logs : [];
+}
+
+export async function fetchPdSheets(): Promise<PdWorkbook[]> {
+  if (!remoteEnabled) return [];
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "pdSheets");
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดข้อมูล PD จาก Google Sheet ไม่สำเร็จ");
+  }
+  return Array.isArray(data.sources) ? data.sources : [];
 }
 
 export async function appendRemoteLog(log: ProductionLog): Promise<ProductionLog> {

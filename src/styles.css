@@ -849,6 +849,7 @@ textarea:focus {
 
 .dashboard-layout,
 .reports-layout,
+.pd-layout,
 .table-view {
   display: grid;
   gap: 16px;
@@ -940,6 +941,72 @@ textarea:focus {
 .report-downtime-item strong {
   color: #061635;
   font-size: 18px;
+}
+
+.pd-source {
+  display: grid;
+  gap: 14px;
+}
+
+.pd-source-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.pd-source-heading h2 {
+  margin-bottom: 4px;
+}
+
+.pd-source-heading a {
+  color: #177245;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.pd-status {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+}
+
+.pd-status.ok {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.pd-status.error {
+  background: #fff3f0;
+  color: #b42318;
+}
+
+.pd-sheet-block {
+  border: 1px solid #e2e8e2;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pd-note {
+  background: #fff8e6;
+  border-bottom: 1px solid #f6d58b;
+  color: #7a4d00;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.pd-table {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.pd-table table {
+  min-width: 720px;
 }
 
 .downtime-insight-panel {
