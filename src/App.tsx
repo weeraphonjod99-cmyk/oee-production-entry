@@ -1962,6 +1962,7 @@ function ReportsView({
         <Kpi label="Run Time" value={`${formatNumber(summary.run)} นาที`} tone="neutral" />
       </div>
       <OeeSummaryChart summary={summary} />
+      <DowntimeInsightPanel rows={downtimeStats} summary={summary} />
 
       <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
       <ReportRowsTable rows={machineRows} title="สรุปตามเครื่องจักร" />
@@ -1980,6 +1981,68 @@ function ReportsView({
       </div>
       <DowntimeStatsTable rows={downtimeStats} />
     </section>
+  );
+}
+
+function DowntimeInsightPanel({ rows, summary }: { rows: DowntimeStatRow[]; summary: ReturnType<typeof summarize> }) {
+  const activeRows = rows.filter((row) => row.minutes > 0 || row.count > 0);
+  const topRows = activeRows.slice(0, 5);
+  const topIssue = activeRows[0];
+  const topThreeMinutes = activeRows.slice(0, 3).reduce((sum, row) => sum + row.minutes, 0);
+  const topThreePercent = summary.downtime > 0 ? topThreeMinutes / summary.downtime : 0;
+  const maxMinutes = Math.max(...topRows.map((row) => row.minutes), 1);
+  const downtimeShare = summary.run + summary.downtime > 0 ? summary.downtime / (summary.run + summary.downtime) : 0;
+  const insightText = topIssue
+    ? `ควรโฟกัส ${topIssue.shortLabel} ก่อน เพราะใช้เวลา ${formatNumber(topIssue.minutes)} นาที (${formatPercent(topIssue.percent)})`
+    : "ยังไม่มี Downtime ตามตัวกรองนี้";
+
+  return (
+    <div className="analysis-panel downtime-insight-panel">
+      <div className="report-table-heading compact-heading">
+        <h2>วิเคราะห์การหยุดเครื่อง</h2>
+        <span>สรุปสั้น</span>
+      </div>
+      <div className="downtime-insight-grid">
+        <div className="downtime-insight-card focus">
+          <span>ปัญหาหลัก</span>
+          <strong>{topIssue?.shortLabel ?? "-"}</strong>
+          <p>{insightText}</p>
+        </div>
+        <div className="downtime-insight-card">
+          <span>Downtime รวม</span>
+          <strong>{formatNumber(summary.downtime)} นาที</strong>
+          <p>คิดเป็น {formatPercent(downtimeShare)} ของเวลาทั้งหมด</p>
+        </div>
+        <div className="downtime-insight-card">
+          <span>Top 3</span>
+          <strong>{formatPercent(topThreePercent)}</strong>
+          <p>ของเวลาหยุดทั้งหมด</p>
+        </div>
+        <div className="downtime-insight-card">
+          <span>จำนวนปัญหา</span>
+          <strong>{formatNumber(activeRows.length)}</strong>
+          <p>หัวข้อที่เกิด downtime</p>
+        </div>
+      </div>
+      <div className="downtime-insight-bars">
+        {topRows.length === 0 ? (
+          <p className="empty-text">ไม่มีข้อมูล Downtime ตามตัวกรองนี้</p>
+        ) : (
+          topRows.map((row) => (
+            <div className="downtime-insight-bar" key={row.key}>
+              <div>
+                <span>{row.shortLabel}</span>
+                <b>{formatNumber(row.minutes)} นาที</b>
+              </div>
+              <div className="downtime-insight-track">
+                <i style={{ width: `${Math.max((row.minutes / maxMinutes) * 100, 4)}%` }} />
+              </div>
+              <em>{formatPercent(row.percent)}</em>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
