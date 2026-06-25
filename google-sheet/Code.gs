@@ -252,6 +252,8 @@ function assertNoDuplicateOeeLog(log, ignoredId, includeMachineSheet) {
       (log.machineName || duplicate.machineName || "") +
       " Part No. " +
       (log.partNo || duplicate.partNo || "") +
+      " Step " +
+      (log.step || duplicate.step || "-") +
       " มีการบันทึกแล้ว"
   );
 }
@@ -900,6 +902,7 @@ function buildDuplicateOeeLogKey(log) {
     toOriginalShift(log.shift),
     normalizeSheetName(log.machineName),
     normalizeLookup(log.partNo),
+    normalizeLookup(log.step || "-"),
   ].join("::");
 }
 

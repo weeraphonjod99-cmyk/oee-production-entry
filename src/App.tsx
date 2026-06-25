@@ -673,13 +673,16 @@ function App() {
           log.date === draft.date &&
           normalizeShiftCode(log.shift) === normalizeShiftCode(draft.shift) &&
           log.machineId === draft.machineId &&
-          normalizeText(log.partNo) === normalizeText(draft.partNo),
+          normalizeText(log.partNo) === normalizeText(draft.partNo) &&
+          normalizeText(log.step || "-") === normalizeText(draft.step || "-"),
       ) ?? null
     );
-  }, [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, editingLog?.id]);
-  const duplicateEntryKey = duplicateEntry ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}` : "";
+  }, [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, draft.step, editingLog?.id]);
+  const duplicateEntryKey = duplicateEntry
+    ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}::${normalizeText(draft.step || "-")}`
+    : "";
   const duplicateEntryMessage = duplicateEntry
-    ? `วันที่ผลิต ${draft.date} กะ ${shiftLabel(draft.shift)} (${shiftWindowLabel(draft.date, draft.shift)}) เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
+    ? `วันที่ผลิต ${draft.date} กะ ${shiftLabel(draft.shift)} (${shiftWindowLabel(draft.date, draft.shift)}) เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} Step ${duplicateEntry.step || "-"} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
     : "";
 
   useEffect(() => {
