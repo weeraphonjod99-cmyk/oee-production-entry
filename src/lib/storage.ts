@@ -34,6 +34,7 @@ export function upsertLocalLog(log: ProductionLog) {
 export function exportLogsCsv(logs: ProductionLog[]) {
   const headers = [
     "recordDate",
+    "recordTime",
     "date",
     "shift",
     "shiftStartAt",

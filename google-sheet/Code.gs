@@ -11,10 +11,13 @@ const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99
 const OEE_HEADER_ROW = 3;
 const OEE_FIRST_DATA_ROW = 4;
 const OEE_MINUTES_PER_SLOT = 5;
+const OEE_ENTRY_DATE_HEADER = "วันที่กรอกยอด\nEntry Date";
+const OEE_ENTRY_TIME_HEADER = "เวลากรอก\nEntry Time";
 
 const LOG_HEADERS = [
   "id",
   "recordDate",
+  "recordTime",
   "date",
   "shift",
   "shiftStartAt",
@@ -143,6 +146,9 @@ function doGet(e) {
     if (action === "repairSheetTypes") {
       return jsonResponse({ ok: true, result: repairSheetTypes() });
     }
+    if (action === "migrateOeeEntryTimestampColumns") {
+      return jsonResponse({ ok: true, result: migrateOeeEntryTimestampColumns() });
+    }
     return jsonResponse({ ok: true, service: "oee-production-entry" });
   } catch (error) {
     return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) });
@@ -189,6 +195,7 @@ function appendLog(payload) {
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
     recordDate: formatRecordDate(payload.recordDate) || todayBangkok(now),
+    recordTime: formatRecordTime(payload.recordTime) || timeBangkok(now),
     shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
     shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
     createdAt: payload.createdAt || now.toISOString(),
@@ -215,6 +222,7 @@ function upsertLog(payload) {
   });
   const log = Object.assign({}, payload, {
     recordDate: formatRecordDate(payload.recordDate) || todayBangkok(new Date()),
+    recordTime: formatRecordTime(payload.recordTime) || timeBangkok(new Date()),
     shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
     shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
     createdAt: payload.createdAt || new Date().toISOString(),
@@ -508,6 +516,7 @@ function appendFormattedOeeRow(log) {
     throw new Error("Machine sheet not found: " + log.machineName);
   }
 
+  ensureOeeEntryTimestampColumns(sheet);
   const layout = getOeeLayout(sheet);
   const targetRow = Math.max(sheet.getLastRow() + 1, OEE_FIRST_DATA_ROW);
   ensureRowExists(sheet, targetRow);
@@ -540,43 +549,102 @@ function normalizeSheetName(value) {
 
 function getOeeLayout(sheet) {
   const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 60)).getDisplayValues()[0];
-  const hasStep = String(headers[5] || "").toLowerCase().indexOf("step") >= 0;
+  const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
+  const offset = hasEntryTimestamp ? 2 : 0;
+  const hasStep = String(headers[5 + offset] || "").toLowerCase().indexOf("step") >= 0;
   return hasStep
     ? {
         hasStep: true,
+        hasEntryTimestamp: hasEntryTimestamp,
         sequence: 1,
-        date: 2,
-        shift: 3,
-        productName: 4,
-        partNo: 5,
-        step: 6,
-        normalSlot: 7,
-        downtimeStart: 8,
-        normalMinutes: 16,
-        goodQty: 25,
-        ngQty: 26,
-        testQty: 27,
-        totalQty: 28,
-        theoreticalImpulse: 29,
-        cavityQty: 30,
+        entryDate: hasEntryTimestamp ? 2 : 0,
+        entryTime: hasEntryTimestamp ? 3 : 0,
+        date: 2 + offset,
+        shift: 3 + offset,
+        productName: 4 + offset,
+        partNo: 5 + offset,
+        step: 6 + offset,
+        normalSlot: 7 + offset,
+        downtimeStart: 8 + offset,
+        normalMinutes: 16 + offset,
+        goodQty: 25 + offset,
+        ngQty: 26 + offset,
+        testQty: 27 + offset,
+        totalQty: 28 + offset,
+        theoreticalImpulse: 29 + offset,
+        cavityQty: 30 + offset,
       }
     : {
         hasStep: false,
+        hasEntryTimestamp: hasEntryTimestamp,
         sequence: 1,
-        date: 2,
-        shift: 3,
-        productName: 4,
-        partNo: 5,
-        normalSlot: 6,
-        downtimeStart: 7,
-        normalMinutes: 15,
-        goodQty: 24,
-        ngQty: 25,
-        testQty: 26,
-        totalQty: 27,
-        theoreticalImpulse: 28,
-        cavityQty: 29,
+        entryDate: hasEntryTimestamp ? 2 : 0,
+        entryTime: hasEntryTimestamp ? 3 : 0,
+        date: 2 + offset,
+        shift: 3 + offset,
+        productName: 4 + offset,
+        partNo: 5 + offset,
+        normalSlot: 6 + offset,
+        downtimeStart: 7 + offset,
+        normalMinutes: 15 + offset,
+        goodQty: 24 + offset,
+        ngQty: 25 + offset,
+        testQty: 26 + offset,
+        totalQty: 27 + offset,
+        theoreticalImpulse: 28 + offset,
+        cavityQty: 29 + offset,
       };
+}
+
+function isOeeEntryTimestampHeader(entryDateHeader, entryTimeHeader) {
+  const dateText = String(entryDateHeader || "").toLowerCase();
+  const timeText = String(entryTimeHeader || "").toLowerCase();
+  return (
+    dateText.indexOf("กรอกยอด") >= 0 ||
+    dateText.indexOf("entry date") >= 0 ||
+    timeText.indexOf("เวลากรอก") >= 0 ||
+    timeText.indexOf("entry time") >= 0
+  );
+}
+
+function ensureOeeEntryTimestampColumns(sheet) {
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 60)).getDisplayValues()[0];
+  if (isOeeEntryTimestampHeader(headers[1], headers[2])) return false;
+
+  sheet.insertColumnsAfter(1, 2);
+  const headerRange = sheet.getRange(OEE_HEADER_ROW, 2, 1, 2);
+  const styleSource = sheet.getRange(OEE_HEADER_ROW, 4, 1, 1);
+  styleSource.copyTo(headerRange, { contentsOnly: false });
+  headerRange.setValues([[OEE_ENTRY_DATE_HEADER, OEE_ENTRY_TIME_HEADER]]);
+  headerRange
+    .setBackground("#fbbc04")
+    .setFontColor("#000000")
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setWrap(true);
+  sheet.setColumnWidth(2, 105);
+  sheet.setColumnWidth(3, 90);
+  if (sheet.getLastRow() >= OEE_FIRST_DATA_ROW) {
+    const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+    sheet.getRange(OEE_FIRST_DATA_ROW, 2, rowCount, 1).setNumberFormat("yyyy-mm-dd");
+    sheet.getRange(OEE_FIRST_DATA_ROW, 3, rowCount, 1).setNumberFormat("@");
+  }
+  return true;
+}
+
+function migrateOeeEntryTimestampColumns() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  let sheets = 0;
+  let inserted = 0;
+  book.getSheets().forEach(function(sheet) {
+    const machine = machineByName[normalizeSheetName(sheet.getName())];
+    if (!machine || sheet.getLastRow() < OEE_HEADER_ROW) return;
+    sheets++;
+    if (ensureOeeEntryTimestampColumns(sheet)) inserted++;
+  });
+  return { sheets: sheets, inserted: inserted };
 }
 
 function ensureRowExists(sheet, row) {
@@ -642,6 +710,18 @@ function writeOeeInputRow(sheet, layout, row, log) {
   const workSlots = roundNumber(workMinutes / minutesPerSlot);
 
   sheet.getRange(row, layout.sequence).setFormula("=ROW()-ROW($A$3)");
+  if (layout.entryDate) {
+    sheet
+      .getRange(row, layout.entryDate)
+      .setNumberFormat("yyyy-mm-dd")
+      .setValue(parseSheetDate(formatRecordDate(log.recordDate) || todayBangkok(new Date())));
+  }
+  if (layout.entryTime) {
+    sheet
+      .getRange(row, layout.entryTime)
+      .setNumberFormat("@")
+      .setValue(formatRecordTime(log.recordTime) || timeBangkok(new Date()));
+  }
   sheet.getRange(row, layout.date).setNumberFormat("yyyy-mm-dd").setValue(parseSheetDate(log.date));
   sheet.getRange(row, layout.shift).setNumberFormat("@").setValue(String(toOriginalShift(log.shift) || ""));
   sheet.getRange(row, layout.productName).setNumberFormat("@").setValue(String(log.productName || ""));
@@ -750,8 +830,11 @@ function repairSheetTypes() {
   book.getSheets().forEach(function(sheet) {
     const machine = machineByName[normalizeSheetName(sheet.getName())];
     if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
+    ensureOeeEntryTimestampColumns(sheet);
     const layout = getOeeLayout(sheet);
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
+    if (layout.entryDate) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryDate, rowCount, 1).setNumberFormat("yyyy-mm-dd");
+    if (layout.entryTime) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryTime, rowCount, 1).setNumberFormat("@");
     sheet.getRange(OEE_FIRST_DATA_ROW, layout.date, rowCount, 1).setNumberFormat("yyyy-mm-dd");
     sheet.getRange(OEE_FIRST_DATA_ROW, layout.shift, rowCount, 1).setNumberFormat("@");
     sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, 1).setNumberFormat("@");
@@ -947,7 +1030,8 @@ function getLegacyOeeLogs() {
 
       logs.push({
         id: "legacy-" + machine.id + "-" + sourceRow,
-        recordDate: "",
+        recordDate: layout.entryDate ? formatRecordDate(row[layout.entryDate - 1]) : "",
+        recordTime: layout.entryTime ? formatRecordTime(row[layout.entryTime - 1]) : "",
         date: date,
         shift: toOriginalShift(row[layout.shift - 1]),
         shiftStartAt: getShiftStartAt(date, row[layout.shift - 1]),
@@ -1039,8 +1123,32 @@ function formatRecordDate(value) {
   return formatLegacyDate(value);
 }
 
+function formatRecordTime(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, "Asia/Bangkok", "HH:mm:ss");
+  }
+  const text = String(value || "").trim();
+  const isoTime = text.match(/T(\d{2}:\d{2}(?::\d{2})?)/);
+  if (isoTime) return normalizeTimeText(isoTime[1]);
+  const time = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (time) return normalizeTimeText(time[1] + ":" + time[2] + ":" + (time[3] || "00"));
+  return "";
+}
+
+function normalizeTimeText(value) {
+  const parts = String(value || "").split(":");
+  const hour = String(Number(parts[0]) || 0).padStart(2, "0");
+  const minute = String(Number(parts[1]) || 0).padStart(2, "0");
+  const second = String(Number(parts[2]) || 0).padStart(2, "0");
+  return hour + ":" + minute + ":" + second;
+}
+
 function todayBangkok(value) {
   return Utilities.formatDate(value || new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+}
+
+function timeBangkok(value) {
+  return Utilities.formatDate(value || new Date(), "Asia/Bangkok", "HH:mm:ss");
 }
 
 function addDaysToLegacyDate(date, days) {
@@ -1072,6 +1180,7 @@ function setupProductionWorkbook() {
   importCsvSheet(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS, PRODUCT_MASTER_CSV_URL);
   setupDowntimeCatalog();
   ensureUsersSheet();
+  migrateOeeEntryTimestampColumns();
   return sheet.getParent();
 }
 

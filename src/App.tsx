@@ -69,8 +69,19 @@ const getTodayInputValue = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getCurrentTimeInputValue = () => {
+  const now = new Date();
+  return [
+    String(now.getHours()).padStart(2, "0"),
+    String(now.getMinutes()).padStart(2, "0"),
+    String(now.getSeconds()).padStart(2, "0"),
+  ].join(":");
+};
+
 const getRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => log?.recordDate || "";
 const getDraftRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => getRecordDate(log) || getTodayInputValue();
+const getRecordTime = (log?: Pick<ProductionLog, "recordTime"> | null) => log?.recordTime || "";
+const getDraftRecordTime = (log?: Pick<ProductionLog, "recordTime"> | null) => getRecordTime(log) || getCurrentTimeInputValue();
 
 const downtimeExcelCodes = {
   changeoverMinutes: "B",
@@ -109,6 +120,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
   return {
     date: getTodayInputValue(),
     recordDate: getTodayInputValue(),
+    recordTime: getCurrentTimeInputValue(),
     shift: SHIFT_DAY,
     shiftStartAt: shiftStartAt(getTodayInputValue(), SHIFT_DAY),
     shiftEndAt: shiftEndAt(getTodayInputValue(), SHIFT_DAY),
@@ -321,6 +333,7 @@ const detailRowsHtml = (logs: ProductionLog[]) =>
             <tr>
               <td>${index + 1}</td>
               <td>${escapeHtml(getRecordDate(log))}</td>
+              <td>${escapeHtml(getRecordTime(log))}</td>
               <td>${escapeHtml(log.date)}</td>
               <td><strong>${escapeHtml(shiftLabel(log.shift))}</strong><small>${escapeHtml(shiftWindowLabel(log.date, log.shift))}</small></td>
               <td>${escapeHtml(log.machineName)}</td>
@@ -332,7 +345,7 @@ const detailRowsHtml = (logs: ProductionLog[]) =>
             </tr>`,
         )
         .join("")
-    : `<tr><td colspan="10" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
+    : `<tr><td colspan="11" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
 function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
   const reportWindow = window.open("", "_blank", "width=1100,height=820");
@@ -436,7 +449,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
         </div>
         <h2>รายละเอียดรายการผลิต</h2>
         <table>
-          <thead><tr><th>No.</th><th>Record date</th><th>Production date</th><th>Shift time</th><th>Machine</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Downtime</th></tr></thead>
+          <thead><tr><th>No.</th><th>Entry date</th><th>Entry time</th><th>Production date</th><th>Shift time</th><th>Machine</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Downtime</th></tr></thead>
           <tbody>${detailRowsHtml(logs)}</tbody>
         </table>
         <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ OEE Production Entry</footer>
@@ -518,6 +531,7 @@ const inferMachineSpeed = (
 
 const draftFromLog = (log: ProductionLog): EntryDraft => ({
   recordDate: getDraftRecordDate(log),
+  recordTime: getDraftRecordTime(log),
   date: log.date || getTodayInputValue(),
   shift: log.shift,
   shiftStartAt: log.shiftStartAt || shiftStartAt(log.date || getTodayInputValue(), log.shift),
@@ -841,9 +855,11 @@ function App() {
     }
     const savedDate = draft.date || getTodayInputValue();
     const savedRecordDate = shouldUpdate ? getDraftRecordDate(editingLog) : getTodayInputValue();
+    const savedRecordTime = shouldUpdate ? getDraftRecordTime(editingLog) : getCurrentTimeInputValue();
     const log: ProductionLog = {
       ...draft,
       recordDate: savedRecordDate,
+      recordTime: savedRecordTime,
       date: savedDate,
       shiftStartAt: shiftStartAt(savedDate, draft.shift),
       shiftEndAt: shiftEndAt(savedDate, draft.shift),
@@ -1027,6 +1043,10 @@ function App() {
                 <label>
                   <span className="label-text">วันที่กรอกยอด</span>
                   <input readOnly value={draft.recordDate || getTodayInputValue()} type="date" />
+                </label>
+                <label>
+                  <span className="label-text">เวลากรอก</span>
+                  <input readOnly step="1" value={draft.recordTime || getCurrentTimeInputValue()} type="time" />
                 </label>
                 <label>
                   <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
@@ -2205,6 +2225,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
           <tr>
             <th>Action</th>
             <th>Entry Date</th>
+            <th>Entry Time</th>
             <th>Production Date</th>
             <th>Shift</th>
             <th>Shift Time</th>
@@ -2227,6 +2248,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
                 </button>
               </td>
               <td>{getRecordDate(log)}</td>
+              <td>{getRecordTime(log)}</td>
               <td>{log.date}</td>
               <td>{shiftLabel(log.shift)}</td>
               <td>{shiftWindowLabel(log.date, log.shift)}</td>
