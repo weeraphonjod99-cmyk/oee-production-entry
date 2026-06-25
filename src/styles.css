@@ -983,6 +983,48 @@ textarea:focus {
   color: #b42318;
 }
 
+.pd-access-notice {
+  align-items: flex-start;
+  background: #fff8e6;
+  border: 1px solid #f6d58b;
+  border-radius: 8px;
+  color: #7a4d00;
+  display: flex;
+  gap: 10px;
+  line-height: 1.45;
+  padding: 12px 14px;
+}
+
+.pd-access-notice svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.pd-access-notice strong,
+.pd-access-notice p,
+.pd-access-notice small {
+  display: block;
+}
+
+.pd-access-notice strong {
+  color: #7a4d00;
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.pd-access-notice p {
+  color: #7a4d00;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.pd-access-notice small {
+  color: #936100;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .pd-sheet-block {
   border: 1px solid #e2e8e2;
   border-radius: 8px;

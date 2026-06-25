@@ -2004,18 +2004,27 @@ function PdSheetsView({
             </div>
             <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "พร้อมใช้งาน" : "อ่านไม่ได้"}</span>
           </div>
-          {source.error && (
-            <div className="duplicate-warning" role="alert">
-              <AlertTriangle size={18} />
-              <span>{source.error}</span>
-            </div>
-          )}
+          {source.error && <PdAccessNotice source={source} />}
           {source.sheets.map((sheet) => (
             <PdWorksheetTable key={`${source.id}-${sheet.name}`} sheet={sheet} />
           ))}
         </div>
       ))}
     </section>
+  );
+}
+
+function PdAccessNotice({ source }: { source: PdWorkbook }) {
+  return (
+    <div className="pd-access-notice" role="status">
+      <AlertTriangle size={20} />
+      <div>
+        <strong>ยังดึงข้อมูลจากไฟล์นี้ไม่ได้</strong>
+        <p>{source.error}</p>
+        {source.shareEmail && <p>อีเมลที่ใช้แชร์ให้ Apps Script: {source.shareEmail}</p>}
+        {source.technicalError && <small>รายละเอียดระบบ: {source.technicalError}</small>}
+      </div>
+    </div>
   );
 }
 

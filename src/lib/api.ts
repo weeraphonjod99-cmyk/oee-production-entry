@@ -27,6 +27,8 @@ export type PdWorkbook = {
   url: string;
   fetchedAt: string;
   error?: string;
+  shareEmail?: string;
+  technicalError?: string;
   sheets: PdWorksheet[];
 };
 

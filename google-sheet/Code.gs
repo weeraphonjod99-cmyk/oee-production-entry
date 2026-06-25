@@ -1382,7 +1382,7 @@ function getPdExternalSheets() {
       const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
       const statusCode = response.getResponseCode();
       if (statusCode < 200 || statusCode >= 300) {
-        throw new Error("อ่านไฟล์ไม่ได้ HTTP " + statusCode + " กรุณาแชร์ Google Sheet เป็น Anyone with the link can view หรือแชร์ให้บัญชี Apps Script");
+        throw new Error("HTTP " + statusCode);
       }
       const rows = Utilities.parseCsv(response.getContentText());
       const normalized = trimPdValues(rows);
@@ -1415,7 +1415,8 @@ function getPdExternalSheets() {
         name: source.label,
         url: source.url,
         fetchedAt: new Date().toISOString(),
-        error: String(error && error.message ? error.message : error),
+        error: "ยังอ่านไฟล์ PD ไม่ได้ กรุณากดปุ่ม เปิด Google Sheet แล้วตั้งค่า Share เป็น Anyone with the link can view จากนั้นกลับมากดรีเฟรชข้อมูล",
+        technicalError: String(error && error.message ? error.message : error),
         sheets: [],
       };
     }
