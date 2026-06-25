@@ -634,6 +634,7 @@ function App() {
   const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
   const [successDialog, setSuccessDialog] = useState<{ title: string; message: string } | null>(null);
   const [problemDialog, setProblemDialog] = useState<{ title: string; message: string } | null>(null);
+  const [confirmSaveDialog, setConfirmSaveDialog] = useState<{ title: string; message: string } | null>(null);
   const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
 
@@ -899,8 +900,28 @@ function App() {
     setStatus(`กำลังแก้ไขรายการ ${log.machineName} วันที่ ${log.date}`);
   };
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const getMissingSaveFields = () =>
+    [
+      { label: "Good quantity / จำนวนงานดี", value: draft.goodQty },
+      { label: "ความเร็วเครื่องจักร", value: draft.machineSpeed },
+      { label: "จำนวนคาวิตี้", value: draft.cavityQty },
+    ]
+      .filter((field) => Number(field.value || 0) <= 0)
+      .map((field) => field.label);
+
+  const showMissingSaveFields = (missingFields: string[]) => {
+    const message = `กรุณากรอก ${missingFields.join(", ")} ให้มากกว่า 0 ก่อนบันทึก`;
+    setStatus(message);
+    setProblemDialog({ title: "กรอกข้อมูลไม่ครบ", message });
+  };
+
+  const saveDraft = async () => {
+    setConfirmSaveDialog(null);
+    const missingFields = getMissingSaveFields();
+    if (missingFields.length > 0) {
+      showMissingSaveFields(missingFields);
+      return;
+    }
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
     const shouldUpdate = Boolean(editingLog);
     if (duplicateEntryMessage) {
@@ -945,6 +966,25 @@ function App() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const missingFields = getMissingSaveFields();
+    if (missingFields.length > 0) {
+      showMissingSaveFields(missingFields);
+      return;
+    }
+    if (duplicateEntryMessage) {
+      setStatus(duplicateEntryMessage);
+      setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
+      return;
+    }
+    const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
+    setConfirmSaveDialog({
+      title: "ยืนยันก่อนบันทึก",
+      message: `ต้องการบันทึกยอด ${machine.name} วันที่ผลิต ${draft.date || getTodayInputValue()} กะ ${shiftLabel(draft.shift)} Part No. ${draft.partNo || "-"} Good ${formatNumber(draft.goodQty)} ใช่หรือไม่`,
+    });
   };
 
   const clearLocal = () => {
@@ -1245,7 +1285,7 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>ความเร็วเครื่องจักร</span>
+                  <span>ความเร็วเครื่องจักร <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1258,7 +1298,7 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>จำนวนคาวิตี้</span>
+                  <span>จำนวนคาวิตี้ <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1286,7 +1326,7 @@ function App() {
               </div>
               <div className="form-grid three">
                 <label>
-                  <span className="label-text">Good quantity</span>
+                  <span className="label-text">Good quantity <RequiredMark /></span>
                   <input value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
@@ -1454,6 +1494,26 @@ function App() {
 
         {tab === "users" && <UsersAdmin currentUsername={session.username} />}
       </main>
+
+      {confirmSaveDialog && (
+        <div className="confirm-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-save-dialog-title">
+          <div className="confirm-modal">
+            <div className="confirm-modal-icon">
+              <AlertTriangle size={30} />
+            </div>
+            <h2 id="confirm-save-dialog-title">{confirmSaveDialog.title}</h2>
+            <p>{confirmSaveDialog.message}</p>
+            <div className="modal-actions">
+              <button className="primary-button" type="button" autoFocus disabled={saving} onClick={() => void saveDraft()}>
+                ยืนยันบันทึก
+              </button>
+              <button className="ghost-button" type="button" disabled={saving} onClick={() => setConfirmSaveDialog(null)}>
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {successDialog && (
         <div className="success-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="success-dialog-title">

@@ -667,7 +667,8 @@ textarea:focus {
   padding: 12px 14px;
 }
 
-.success-modal-backdrop {
+.success-modal-backdrop,
+.confirm-modal-backdrop {
   background: rgba(6, 22, 53, 0.42);
   display: grid;
   inset: 0;
@@ -687,7 +688,8 @@ textarea:focus {
   z-index: 1000;
 }
 
-.success-modal {
+.success-modal,
+.confirm-modal {
   background: #ffffff;
   border: 1px solid #abefc6;
   border-radius: 8px;
@@ -698,6 +700,10 @@ textarea:focus {
   padding: 24px;
   text-align: center;
   width: 420px;
+}
+
+.confirm-modal {
+  border-color: #f6d58b;
 }
 
 .problem-modal {
@@ -713,7 +719,8 @@ textarea:focus {
   width: 420px;
 }
 
-.success-modal-icon {
+.success-modal-icon,
+.confirm-modal-icon {
   align-items: center;
   background: #ecfdf3;
   border: 1px solid #abefc6;
@@ -724,6 +731,12 @@ textarea:focus {
   justify-content: center;
   justify-self: center;
   width: 58px;
+}
+
+.confirm-modal-icon {
+  background: #fff8e6;
+  border-color: #f6d58b;
+  color: #b54708;
 }
 
 .problem-modal-icon {
@@ -739,10 +752,15 @@ textarea:focus {
   width: 58px;
 }
 
-.success-modal h2 {
+.success-modal h2,
+.confirm-modal h2 {
   color: #067647;
   font-size: 24px;
   margin: 0;
+}
+
+.confirm-modal h2 {
+  color: #b54708;
 }
 
 .problem-modal h2 {
@@ -751,7 +769,8 @@ textarea:focus {
   margin: 0;
 }
 
-.success-modal p {
+.success-modal p,
+.confirm-modal p {
   color: #344054;
   font-size: 15px;
   font-weight: 700;
@@ -770,6 +789,19 @@ textarea:focus {
 .success-modal .primary-button {
   justify-content: center;
   margin-top: 8px;
+  width: 100%;
+}
+
+.modal-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 8px;
+}
+
+.modal-actions .primary-button,
+.modal-actions .ghost-button {
+  justify-content: center;
   width: 100%;
 }
 
