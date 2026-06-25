@@ -225,6 +225,15 @@ type ReportRow = {
   detail: string;
 };
 
+type DowntimeStatRow = {
+  count: number;
+  key: string;
+  label: string;
+  minutes: number;
+  percent: number;
+  shortLabel: string;
+};
+
 const emptyReportRow = (label: string, detail = ""): ReportRow => ({
   good: 0,
   ng: 0,
@@ -252,6 +261,22 @@ function aggregateReportRows(logs: ProductionLog[], keyFor: (log: ProductionLog)
     map.set(key, current);
   });
   return [...map.values()].sort((a, b) => b.total - a.total || b.downtime - a.downtime || a.label.localeCompare(b.label));
+}
+
+function getDowntimeStats(logs: ProductionLog[]): DowntimeStatRow[] {
+  const totalMinutes = logs.reduce((sum, log) => sum + totalDowntime(log), 0);
+  return downtimeFields
+    .map((field) => {
+      const minutes = logs.reduce((sum, log) => sum + Number(log[field.key] || 0), 0);
+      const count = logs.reduce((sum, log) => sum + (Number(log[field.key] || 0) > 0 ? 1 : 0), 0);
+      return {
+        ...field,
+        count,
+        minutes,
+        percent: totalMinutes > 0 ? minutes / totalMinutes : 0,
+      };
+    })
+    .sort((a, b) => b.minutes - a.minutes || b.count - a.count || a.label.localeCompare(b.label));
 }
 
 const escapeHtml = (value: unknown) =>
@@ -324,6 +349,23 @@ const tableRowsHtml = (rows: ReportRow[]) =>
         .join("")
     : `<tr><td colspan="9" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
+const downtimeStatsRowsHtml = (rows: DowntimeStatRow[]) =>
+  rows.filter((row) => row.minutes > 0 || row.count > 0).length
+    ? rows
+        .filter((row) => row.minutes > 0 || row.count > 0)
+        .map(
+          (row, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td><strong>${escapeHtml(row.label)}</strong><small>${escapeHtml(row.shortLabel)}</small></td>
+              <td class="number">${formatNumber(row.minutes)} นาที</td>
+              <td class="number">${formatNumber(row.count)} ครั้ง</td>
+              <td class="number">${formatPercent(row.percent)}</td>
+            </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="5" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
+
 const detailRowsHtml = (logs: ProductionLog[]) =>
   logs.length
     ? logs
@@ -352,7 +394,9 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
   if (!reportWindow) return false;
 
   const summary = summarize(logs);
+  const oee = summary.availability * summary.quality;
   const downtimeRows = groupDowntime(logs);
+  const downtimeStats = getDowntimeStats(logs);
   const shiftRows = aggregateReportRows(
     logs,
     (log) => shiftLabel(log.shift),
@@ -380,7 +424,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
           p { margin: 0; }
           .muted { color: #667085; font-size: 12px; font-weight: 700; }
           .meta { display: grid; gap: 4px; min-width: 270px; text-align: right; }
-          .kpis { display: grid; gap: 8px; grid-template-columns: repeat(6, 1fr); margin: 16px 0; }
+          .kpis { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin: 16px 0; }
           .kpi { border: 1px solid #d7dfd8; border-top: 4px solid #177245; padding: 10px; }
           .kpi.red { border-top-color: #dc2626; }
           .kpi.amber { border-top-color: #d97706; }
@@ -421,6 +465,8 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
           <div class="kpi blue"><span>Total quantity</span><strong>${formatNumber(summary.total)}</strong></div>
           <div class="kpi red"><span>Downtime</span><strong>${formatNumber(summary.downtime)} นาที</strong></div>
           <div class="kpi"><span>Quality</span><strong>${formatPercent(summary.quality)}</strong></div>
+          <div class="kpi"><span>OEE</span><strong>${formatPercent(oee)}</strong></div>
+          <div class="kpi amber"><span>Availability</span><strong>${formatPercent(summary.availability)}</strong></div>
         </section>
 
         <h2>สรุปตามกะและช่วงเวลาทำงาน</h2>
@@ -447,6 +493,12 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
             .map((item) => `<div class="downtime-item"><span>${escapeHtml(item.shortLabel)}</span><b>${formatNumber(item.minutes)} นาที</b></div>`)
             .join("")}
         </div>
+
+        <h2>สถิติการหยุดเครื่อง</h2>
+        <table>
+          <thead><tr><th>No.</th><th>Downtime issue</th><th>Total stop time</th><th>Count</th><th>Share</th></tr></thead>
+          <tbody>${downtimeStatsRowsHtml(downtimeStats)}</tbody>
+        </table>
         <h2>รายละเอียดรายการผลิต</h2>
         <table>
           <thead><tr><th>No.</th><th>Entry date</th><th>Entry time</th><th>Production date</th><th>Shift time</th><th>Machine</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Downtime</th></tr></thead>
@@ -1795,6 +1847,7 @@ function ReportsView({
   setFilters: (filters: Filters) => void;
 }) {
   const summary = summarize(logs);
+  const oee = summary.availability * summary.quality;
   const shiftRows = aggregateReportRows(
     logs,
     (log) => shiftLabel(log.shift),
@@ -1807,6 +1860,7 @@ function ReportsView({
     (log) => `Step ${log.step || "-"} | ${log.machineName} | ${shiftWindowLabel(log.date, log.shift)}`,
   );
   const downtimeRows = groupDowntime(logs);
+  const downtimeStats = getDowntimeStats(logs);
 
   return (
     <section className="reports-layout">
@@ -1841,6 +1895,14 @@ function ReportsView({
         <Kpi label="Records" value={formatNumber(logs.length)} tone="neutral" />
       </div>
 
+      <div className="kpi-grid report-oee-kpis">
+        <Kpi label="OEE" value={formatPercent(oee)} tone="green" />
+        <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
+        <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
+        <Kpi label="Run Time" value={`${formatNumber(summary.run)} นาที`} tone="neutral" />
+      </div>
+      <OeeSummaryChart summary={summary} />
+
       <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
       <ReportRowsTable rows={machineRows} title="สรุปตามเครื่องจักร" />
       <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No." />
@@ -1856,7 +1918,53 @@ function ReportsView({
           ))}
         </div>
       </div>
+      <DowntimeStatsTable rows={downtimeStats} />
     </section>
+  );
+}
+
+function DowntimeStatsTable({ rows }: { rows: DowntimeStatRow[] }) {
+  const visibleRows = rows.filter((row) => row.minutes > 0 || row.count > 0);
+  return (
+    <div className="data-table-wrap report-table">
+      <div className="report-table-heading">
+        <h2>สถิติการหยุดเครื่อง</h2>
+        <span>{formatNumber(visibleRows.length)} ปัญหา</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>ปัญหาการหยุดเครื่อง</th>
+            <th>เวลาหยุดรวม</th>
+            <th>จำนวนครั้ง</th>
+            <th>สัดส่วน</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.length === 0 ? (
+            <tr>
+              <td className="empty-cell" colSpan={5}>
+                ไม่มีข้อมูลตามตัวกรองนี้
+              </td>
+            </tr>
+          ) : (
+            visibleRows.map((row, index) => (
+              <tr key={row.key}>
+                <td>{index + 1}</td>
+                <td>
+                  <strong>{row.label}</strong>
+                  <small>{row.shortLabel}</small>
+                </td>
+                <td>{formatNumber(row.minutes)} นาที</td>
+                <td>{formatNumber(row.count)} ครั้ง</td>
+                <td>{formatPercent(row.percent)}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
