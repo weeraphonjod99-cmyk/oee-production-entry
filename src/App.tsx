@@ -1956,9 +1956,39 @@ function PdSheetsView({
   sources: PdWorkbook[];
   updatedAt: string;
 }) {
+  const [pdView, setPdView] = useState<"summary" | "search" | "tables">("summary");
+  const [pdQuery, setPdQuery] = useState("");
+  const [pdSourceFilter, setPdSourceFilter] = useState("");
   const totalSheets = sources.reduce((sum, source) => sum + source.sheets.length, 0);
   const totalRows = sources.reduce(
     (sum, source) => sum + source.sheets.reduce((sheetSum, sheet) => sheetSum + sheet.rowCount, 0),
+    0,
+  );
+  const flatRows = useMemo(
+    () =>
+      sources.flatMap((source) =>
+        source.sheets.flatMap((sheet) =>
+          sheet.rows.map((row, rowIndex) => ({
+            row,
+            rowIndex,
+            sheet,
+            source,
+            text: [source.label, source.name, sheet.name, ...sheet.headers, ...row].join(" ").toLowerCase(),
+          })),
+        ),
+      ),
+    [sources],
+  );
+  const visibleSearchRows = useMemo(() => {
+    const query = pdQuery.trim().toLowerCase();
+    return flatRows
+      .filter((item) => (!pdSourceFilter || item.source.id === pdSourceFilter) && (!query || item.text.includes(query)))
+      .slice(0, 120);
+  }, [flatRows, pdQuery, pdSourceFilter]);
+  const readySources = sources.filter((source) => source.ok);
+  const blockedSources = sources.filter((source) => !source.ok);
+  const totalColumns = sources.reduce(
+    (sum, source) => sum + source.sheets.reduce((sheetSum, sheet) => sheetSum + sheet.headers.length, 0),
     0,
   );
 
@@ -1992,7 +2022,89 @@ function PdSheetsView({
 
       {sources.length === 0 && !loading && <p className="empty-text">ยังไม่มีข้อมูล PD ให้แสดง</p>}
 
-      {sources.map((source) => (
+      <div className="pd-view-tabs">
+        {[
+          { id: "summary", label: "สรุป" },
+          { id: "search", label: "ค้นหา" },
+          { id: "tables", label: "ตารางข้อมูล" },
+        ].map((item) => (
+          <button
+            className={pdView === item.id ? "active" : ""}
+            key={item.id}
+            onClick={() => setPdView(item.id as typeof pdView)}
+            type="button"
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {pdView === "summary" && (
+        <div className="pd-summary-grid">
+          <div className="analysis-panel pd-analysis-card">
+            <p className="eyebrow">PD Analysis</p>
+            <h2>ภาพรวมข้อมูล</h2>
+            <div className="pd-mini-stats">
+              <div>
+                <span>พร้อมใช้</span>
+                <strong>{formatNumber(readySources.length)} ไฟล์</strong>
+              </div>
+              <div>
+                <span>ต้องแก้สิทธิ์</span>
+                <strong>{formatNumber(blockedSources.length)} ไฟล์</strong>
+              </div>
+              <div>
+                <span>คอลัมน์</span>
+                <strong>{formatNumber(totalColumns)}</strong>
+              </div>
+            </div>
+            <p className="pd-analysis-note">
+              เมื่อแชร์ไฟล์เป็น Anyone with the link can view แล้ว หน้า PD จะสรุปและค้นหาข้อมูลใหม่อัตโนมัติ
+            </p>
+          </div>
+          <div className="analysis-panel pd-source-menu">
+            <div className="report-table-heading compact-heading">
+              <h2>เมนูไฟล์ PD</h2>
+              <span>{formatNumber(sources.length)} ไฟล์</span>
+            </div>
+            {sources.map((source) => (
+              <PdSourceCard key={source.id} source={source} onOpenTables={() => setPdView("tables")} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {pdView === "search" && (
+        <div className="analysis-panel pd-search-panel">
+          <div className="report-table-heading compact-heading">
+            <h2>ค้นหาข้อมูล PD</h2>
+            <span>{formatNumber(visibleSearchRows.length)} รายการ</span>
+          </div>
+          <div className="pd-search-controls">
+            <div className="input-with-icon">
+              <Search size={16} />
+              <input
+                autoFocus
+                onChange={(event) => setPdQuery(event.target.value)}
+                placeholder="ค้นหา Part No., รุ่น, วันที่, ข้อความในตาราง"
+                type="search"
+                value={pdQuery}
+              />
+            </div>
+            <select onChange={(event) => setPdSourceFilter(event.target.value)} value={pdSourceFilter}>
+              <option value="">ทุกไฟล์ PD</option>
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.label} - {source.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <PdSearchResults rows={visibleSearchRows} />
+        </div>
+      )}
+
+      {pdView === "tables" && sources.map((source) => (
         <div className="analysis-panel pd-source" key={source.id}>
           <div className="pd-source-heading">
             <div>
@@ -2011,6 +2123,67 @@ function PdSheetsView({
         </div>
       ))}
     </section>
+  );
+}
+
+function PdSourceCard({ onOpenTables, source }: { onOpenTables: () => void; source: PdWorkbook }) {
+  const rows = source.sheets.reduce((sum, sheet) => sum + sheet.rowCount, 0);
+  return (
+    <div className="pd-source-card">
+      <div>
+        <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "พร้อมใช้" : "ต้องแชร์ไฟล์"}</span>
+        <strong>{source.name}</strong>
+        <small>
+          {formatNumber(source.sheets.length)} sheets / {formatNumber(rows)} rows
+        </small>
+      </div>
+      <div>
+        <a href={source.url} rel="noreferrer" target="_blank">
+          เปิดไฟล์
+        </a>
+        <button onClick={onOpenTables} type="button">
+          ดูตาราง
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PdSearchResults({
+  rows,
+}: {
+  rows: Array<{
+    row: string[];
+    rowIndex: number;
+    sheet: PdWorkbook["sheets"][number];
+    source: PdWorkbook;
+  }>;
+}) {
+  if (!rows.length) {
+    return <p className="empty-text">ไม่พบข้อมูลตามคำค้น หรือไฟล์ PD ยังไม่ได้เปิดสิทธิ์ให้อ่าน</p>;
+  }
+
+  return (
+    <div className="pd-search-results">
+      {rows.map((item) => (
+        <div className="pd-search-result" key={`${item.source.id}-${item.sheet.name}-${item.rowIndex}`}>
+          <div>
+            <strong>
+              {item.source.label} / {item.sheet.name}
+            </strong>
+            <span>แถว {formatNumber(item.rowIndex + 2)}</span>
+          </div>
+          <dl>
+            {item.sheet.headers.slice(0, 8).map((header, index) => (
+              <div key={`${header}-${index}`}>
+                <dt>{header || `Column ${index + 1}`}</dt>
+                <dd>{item.row[index] || "-"}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </div>
   );
 }
 
