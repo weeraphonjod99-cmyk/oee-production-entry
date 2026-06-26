@@ -948,6 +948,26 @@ textarea:focus {
   gap: 14px;
 }
 
+.visually-hidden {
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+
+.pd-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.pd-toolbar-actions button {
+  justify-content: center;
+}
+
 .pd-view-tabs {
   background: #ffffff;
   border: 1px solid #dfe5dd;
@@ -1014,6 +1034,45 @@ textarea:focus {
 .pd-mini-stats strong {
   color: #061635;
   font-size: 22px;
+}
+
+.pd-target-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+}
+
+.pd-target-summary > div {
+  background: #fff8e6;
+  border: 1px solid #f6d58b;
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.pd-target-summary span,
+.pd-target-summary small {
+  color: #7a4d00;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pd-target-summary strong {
+  color: #061635;
+  font-size: 24px;
+}
+
+.pd-target-summary p {
+  color: #405066;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.pd-target-summary b {
+  color: #b54708;
 }
 
 .pd-analysis-note {
@@ -1886,6 +1945,7 @@ td:nth-child(10) {
   .downtime-insight-bar,
   .pd-summary-grid,
   .pd-mini-stats,
+  .pd-target-summary,
   .pd-search-controls {
     grid-template-columns: 1fr;
   }
@@ -1898,6 +1958,14 @@ td:nth-child(10) {
 
   .pd-source-card > div:last-child {
     justify-content: stretch;
+  }
+
+  .pd-toolbar-actions {
+    justify-content: stretch;
+  }
+
+  .pd-toolbar-actions button {
+    flex: 1 1 160px;
   }
 
   .bar-row {
