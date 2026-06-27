@@ -1,6 +1,13 @@
 # OEE Production Entry
 
-เว็บแอพสำหรับกรอกยอดผลิตจาก master data ใน `OEE-2026.xlsx`
+เว็บแอพสำหรับกรอกยอดผลิตจาก master data ใน `OEE-2026.xlsx` และดู dashboard กำลังผลิตรายเครื่อง โดยเก็บข้อมูลจริงผ่าน Google Sheet / Apps Script
+
+## Features
+
+- กรอกยอดผลิต Good, NG, Test, เวลาหยุด และเวลาทำงานตามเครื่อง/รุ่น/กะ
+- Dashboard แสดง OEE, Availability, Quality, Downtime, trend และอัตราใช้กำลังผลิตรายเครื่อง
+- ตาราง utilization รายเครื่องคำนวณ Target, Actual, Gap และ Utilization % จากสูตรเดียวกับ KPI sheet
+- เก็บข้อมูลลง Google Sheet ผ่าน Apps Script; ถ้ายังไม่ตั้งค่า URL จะใช้ localStorage สำหรับทดลองในเครื่อง
 
 ## Run local
 
@@ -14,6 +21,13 @@ pnpm dev
 ```
 
 แล้วเปิด `http://127.0.0.1:5173/`
+
+ทดสอบไฟล์สำหรับ GitHub Pages:
+
+```powershell
+pnpm build
+pnpm preview
+```
 
 ## Google Sheet
 

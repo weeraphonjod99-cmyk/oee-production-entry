@@ -1496,6 +1496,73 @@ textarea:focus {
   grid-template-columns: minmax(0, 1fr) minmax(360px, 0.75fr);
 }
 
+.capacity-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.capacity-table table {
+  min-width: 980px;
+}
+
+.capacity-table td strong {
+  color: #061635;
+  font-weight: 900;
+}
+
+.muted-cell {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.gap-positive {
+  color: #177245;
+  font-weight: 900;
+}
+
+.gap-negative {
+  color: #b42318;
+  font-weight: 900;
+}
+
+.capacity-utilization {
+  display: grid;
+  gap: 7px;
+  min-width: 150px;
+}
+
+.capacity-utilization strong {
+  color: #061635;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.capacity-utilization-track {
+  background: #eef1ee;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.capacity-utilization-track i {
+  display: block;
+  height: 100%;
+}
+
+.capacity-utilization.good .capacity-utilization-track i {
+  background: #16a34a;
+}
+
+.capacity-utilization.warn .capacity-utilization-track i {
+  background: #d97706;
+}
+
+.capacity-utilization.risk .capacity-utilization-track i {
+  background: #dc2626;
+}
+
 .analysis-panel {
   min-width: 0;
   padding: 16px;

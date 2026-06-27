@@ -56,6 +56,7 @@ import {
   groupDowntime,
   summarize,
   totalDowntime,
+  totalOutput,
 } from "./lib/metrics";
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
@@ -754,6 +755,18 @@ const inferMachineSpeed = (
 
   return machine.capacityMinutes > 0 ? roundNumber(Number(product.sampleGoodQty || 0) / machine.capacityMinutes) : 0;
 };
+
+const getLogWorkMinutes = (log: ProductionLog) =>
+  Number(log.workMinutes || 0) || Number(log.normalMinutes || 0) + totalDowntime(log);
+
+const getSpeedPcsPerMinute = (log: ProductionLog) => {
+  const machineSpeed = Number(log.machineSpeed || 0);
+  const cavityQty = Number(log.cavityQty || 1) || 1;
+  if (machineSpeed <= 0) return 0;
+  return machineSpeed >= 1000 ? machineSpeed / 480 : machineSpeed * cavityQty;
+};
+
+const getLogTargetQty = (log: ProductionLog) => roundNumber(getLogWorkMinutes(log) * getSpeedPcsPerMinute(log));
 
 const draftFromLog = (log: ProductionLog): EntryDraft => ({
   recordDate: getDraftRecordDate(log),
@@ -1640,6 +1653,7 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
+            <MachineCapacityDashboard logs={dashboardLogs} />
             <PartNoSummary logs={dashboardLogs} />
             <OeeSummaryChart summary={summary} />
             <div className="analytics-grid">
@@ -2936,6 +2950,137 @@ function DowntimeChart({ items }: { items: ReturnType<typeof groupDowntime> }) {
             <b>{formatNumber(item.minutes)}</b>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+type MachineCapacityRow = {
+  actualOutput: number;
+  availability: number;
+  count: number;
+  downtime: number;
+  firstDate: string;
+  gapQty: number;
+  lastDate: string;
+  machine: Pick<Machine, "id" | "name">;
+  normalMinutes: number;
+  targetQty: number;
+  utilization: number;
+  workMinutes: number;
+};
+
+function buildMachineCapacityRows(logs: ProductionLog[]): MachineCapacityRow[] {
+  const rows = logs.reduce((map, log) => {
+    const machine = machines.find((item) => item.id === log.machineId) ?? { id: log.machineId, name: log.machineName || log.machineId };
+    const current =
+      map.get(log.machineId) ??
+      {
+        actualOutput: 0,
+        count: 0,
+        downtime: 0,
+        firstDate: log.date,
+        gapQty: 0,
+        lastDate: log.date,
+        machine,
+        normalMinutes: 0,
+        targetQty: 0,
+        workMinutes: 0,
+      };
+    const workMinutes = getLogWorkMinutes(log);
+    const targetQty = getLogTargetQty(log);
+    current.actualOutput += totalOutput(log);
+    current.count += 1;
+    current.downtime += totalDowntime(log);
+    current.firstDate = current.firstDate ? (log.date < current.firstDate ? log.date : current.firstDate) : log.date;
+    current.lastDate = current.lastDate ? (log.date > current.lastDate ? log.date : current.lastDate) : log.date;
+    current.normalMinutes += Number(log.normalMinutes || 0);
+    current.targetQty += targetQty;
+    current.workMinutes += workMinutes;
+    map.set(log.machineId, current);
+    return map;
+  }, new Map<string, Omit<MachineCapacityRow, "availability" | "gapQty" | "utilization">>());
+
+  const machineOrder = new Map(machines.map((machine, index) => [machine.id, index]));
+  return [...rows.values()]
+    .map((row) => ({
+      ...row,
+      availability: row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0,
+      gapQty: row.actualOutput - row.targetQty,
+      utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
+    }))
+    .sort(
+      (a, b) =>
+        (machineOrder.get(a.machine.id) ?? Number.MAX_SAFE_INTEGER) -
+          (machineOrder.get(b.machine.id) ?? Number.MAX_SAFE_INTEGER) ||
+        a.machine.name.localeCompare(b.machine.name),
+    );
+}
+
+function MachineCapacityDashboard({ logs }: { logs: ProductionLog[] }) {
+  const rows = useMemo(() => buildMachineCapacityRows(logs), [logs]);
+  return (
+    <div className="analysis-panel capacity-panel">
+      <div className="report-table-heading compact-heading">
+        <h2>อัตราใช้กำลังผลิตรายเครื่อง</h2>
+        <span>{formatNumber(rows.length)} เครื่อง</span>
+      </div>
+      <div className="data-table-wrap capacity-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>Dates</th>
+              <th>Logs</th>
+              <th>Work min</th>
+              <th>Target</th>
+              <th>Actual</th>
+              <th>Gap</th>
+              <th>Utilization</th>
+              <th>Availability</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td className="empty-cell" colSpan={9}>
+                  ไม่มีข้อมูลตามตัวกรองนี้
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => {
+                const utilizationTone = row.utilization >= 1 ? "good" : row.utilization >= 0.85 ? "warn" : "risk";
+                const utilizationWidth = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
+                return (
+                  <tr key={row.machine.id}>
+                    <td>
+                      <strong>{row.machine.name}</strong>
+                    </td>
+                    <td>
+                      <span className="muted-cell">
+                        {row.firstDate === row.lastDate ? row.firstDate : `${row.firstDate} - ${row.lastDate}`}
+                      </span>
+                    </td>
+                    <td>{formatNumber(row.count)}</td>
+                    <td>{formatNumber(row.workMinutes)}</td>
+                    <td>{formatNumber(row.targetQty)}</td>
+                    <td>{formatNumber(row.actualOutput)}</td>
+                    <td className={row.gapQty >= 0 ? "gap-positive" : "gap-negative"}>{formatNumber(row.gapQty)}</td>
+                    <td>
+                      <div className={`capacity-utilization ${utilizationTone}`}>
+                        <strong>{formatPercent(row.utilization)}</strong>
+                        <div className="capacity-utilization-track">
+                          <i style={{ width: utilizationWidth }} />
+                        </div>
+                      </div>
+                    </td>
+                    <td>{formatPercent(row.availability)}</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

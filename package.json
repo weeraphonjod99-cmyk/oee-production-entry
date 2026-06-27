@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc -b && vite build --outDir docs",
-    "preview": "vite preview --host 127.0.0.1 --port 4173"
+    "preview": "vite preview --outDir docs --host 127.0.0.1 --port 4173"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",
