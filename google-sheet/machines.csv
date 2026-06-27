@@ -1,39 +1,45 @@
-id,name,capacityUnits,capacityMinutes,hasStep,rowCount
-"1-ocp-80t","1# OCP-80T","60","300","false","199"
-"2-mhs-80t","2# MHS-80T","132","660","false","215"
-"3-ocp-110t","3# OCP-110T","96","480","false","240"
-"4-sn1-110t","4# SN1-110T","132","660","false","179"
-"5-ocp-110t","5# OCP-110T","132","660","false","215"
-"6-std-150t","6# STD-150T","60","300","false","231"
-"7-gtx-300t","7# GTX-300T","132","660","true","281"
-"8-gtx-500t","8# GTX-500T","24","120","true","333"
-"9-ocp-110t","9# OCP-110T","33","165","true","215"
-"10-ocp-260-t","10# OCP-260 T","132","660","true","231"
-"11-200t","11# 200T","96","480","true","233"
-"12-200t","12# 200T","122","610","true","21"
-"bending-1","Bending #1","132","660","true","158"
-"bending-2","Bending #2","156","780","true","61"
-"sw4-nms","SW4 NMS","97","485","false","582"
-"sw5-cu","SW5 CU","77","385","false","581"
-"sw6-nlc","SW6 NLC","26","130","false","571"
-"sw7-lc-600","SW7 LC 600","97","485","false","549"
-"sw8-door-lc","SW8 Door LC","36","180","false","521"
-"riveting","Riveting","48","240","false","21"
-"tapping","Tapping","97","485","false","576"
-"1-arc-stack","#1 Arc ·Stack","30","150","false","34"
-"2-arc-stack","#2 Arc ·Stack","96","480","false","22"
-"3-cut-chamber","#3 Cut Chamber","117","585","false","4"
-"4-gv2","#4 GV2","132","660","false","216"
-"5-arc-chute","#5 Arc Chute","96","480","false","361"
-"6-arc-chute","#6 Arc Chute","96","480","false","109"
-"7-arc-chute","#7 Arc Chute","132","660","false","62"
-"8-arc-chute","#8 Arc Chute","96","480","false","95"
-"rv1","RV1","109","545","true","84"
-"rv2","RV2","26","130","true","120"
-"1-rw","#1 RW","157","785","false","133"
-"2-rw","#2 RW","97","485","false","134"
-"3-rw","#3 RW","132","660","false","18"
-"sw1-spot","SW1# spot","84","420","true","661"
-"sw-2-spot","SW#2 Spot","97","485","false","460"
-"sw-3-spot","SW#3 Spot","96","480","false","74"
-"8-rubber-cap","#8 Rubber Cap","132","660","false","107"
+﻿id,name,capacityUnits,capacityMinutes,hasStep,rowCount
+1-ocp-80t,1# OCP-80T,38,190,false,208
+2-mhs-80t,2# MHS-80T,98,490,false,226
+3-ocp-110t,3# OCP-110T,72,360,false,251
+4-sn1-110t,4# SN1-110T,42,210,false,189
+5-ocp-110t,5# OCP-110T,85,425,false,225
+6-std-150t,6# STD-150T,66,330,false,187
+7-gtx-300t,7# GTX-300T,36,180,true,287
+8-gtx-500t,8# GTX-500T,96,480,true,346
+9-ocp-110t,9# OCP-110T,112,560,true,230
+10-ocp-260-t,10# OCP-260 T,82,410,true,240
+11-200t,11# 200T,60,300,true,247
+12-200t,12# 200T,17,85,true,36
+bending-1,Bending #1,67,335,true,168
+bending-2,Bending #2,77,385,true,65
+sw4-nms,SW4 NMS,42,210,false,53
+sw5-cu,SW5 CU,73,365,false,5
+sw6-nlc,SW6 NLC,42,210,false,27
+sw7-lc-600,SW7 LC 600,56,280,false,69
+sw8-door-lc,SW8 Door LC,34,170,false,33
+riveting,Riveting,23,115,false,21
+tapping,Tapping,55,275,false,77
+1-arc-stack,#1 Arc ·Stack,15,75,false,34
+2-arc-stack,#2 Arc ·Stack,40,200,false,22
+3-cut-chamber,#3 Cut Chamber,46,230,false,5
+4-gv2,#4 GV2,86,430,false,222
+5-arc-chute,#5 Arc Chute,82,410,false,14
+6-arc-chute,#6 Arc Chute,81,405,false,113
+7-arc-chute,#7 Arc Chute,84,420,false,67
+8-arc-chute,#8 Arc Chute,85,425,false,100
+rv1,RV1,58,290,true,91
+rv2,RV2,82,410,true,127
+1-rw,#1 RW,1,5,false,144
+2-rw,#2 RW,58,290,false,139
+3-rw,#3 RW,57,285,false,18
+sw1-spot,SW1# spot,68,340,true,33
+sw-2-spot,SW#2 Spot,80,400,false,130
+sw-3-spot,SW#3 Spot,54,270,false,77
+8-rubber-cap,#8 Rubber Cap,48,240,false,111
+c1,C1,67,335,false,66
+c2,C2,126,630,false,100
+c3,C3,77,385,false,53
+c4,C4,101,505,false,60
+c5,C5,76,380,false,62
+c6,C6,100,500,false,59

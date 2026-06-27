@@ -1,4 +1,4 @@
-export type ShiftCode = "白" | "夜" | "A" | "B" | string;
+export type ShiftCode = "白" | "夜" | "D" | "N" | "A" | "B" | string;
 
 export type Machine = {
   id: string;

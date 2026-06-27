@@ -171,8 +171,8 @@ const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)
 const normalizeText = (value: unknown) => String(value ?? "").trim().toLowerCase();
 const normalizeShiftCode = (value: unknown) => {
   const text = normalizeText(value);
-  if (["白", "day", "a", "็ฝ", "เนยเธ"].includes(text)) return SHIFT_DAY;
-  if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return SHIFT_NIGHT;
+  if (["白", "day", "a", "d", "็ฝ", "เนยเธ"].includes(text)) return SHIFT_DAY;
+  if (["夜", "night", "b", "n", "ๅค", "เน…เธ\u009c"].includes(text)) return SHIFT_NIGHT;
   return text;
 };
 
