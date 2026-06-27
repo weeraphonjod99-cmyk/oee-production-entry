@@ -1,4 +1,4 @@
-﻿import {
+import {
   BarChart3,
   AlertTriangle,
   CheckCircle2,
@@ -160,8 +160,8 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
 
 const shiftLabel = (shift: string) => {
   const normalized = normalizeShiftCode(shift);
-  if (normalized === SHIFT_DAY) return "เธเธฐเน€เธเนเธฒ / Day";
-  if (normalized === SHIFT_NIGHT) return "เธเธฐเธ”เธถเธ / Night";
+  if (normalized === SHIFT_DAY) return "กะเช้า / Day";
+  if (normalized === SHIFT_NIGHT) return "กะดึก / Night";
   return shift;
 };
 
@@ -170,8 +170,8 @@ const makeLogId = () => `log-${Date.now()}-${Math.random().toString(16).slice(2)
 const normalizeText = (value: unknown) => String(value ?? "").trim().toLowerCase();
 const normalizeShiftCode = (value: unknown) => {
   const text = normalizeText(value);
-  if (["็ฝ", "day", "a", "เนยเธ", "เน€เธยเธขยเน€เธย"].includes(text)) return SHIFT_DAY;
-  if (["ๅค", "night", "b", "เน…เธย", "เน€เธโ€ฆเน€เธย\u009c"].includes(text)) return SHIFT_NIGHT;
+  if (["白", "day", "a", "็ฝ", "เนยเธ"].includes(text)) return SHIFT_DAY;
+  if (["夜", "night", "b", "ๅค", "เน…เธ\u009c"].includes(text)) return SHIFT_NIGHT;
   return text;
 };
 
@@ -195,7 +195,7 @@ const getShiftSchedule = (productionDate: string, shift: string) => {
     return {
       endDate,
       endTime: "08:00",
-      label: "เธเธฐเธ”เธถเธ",
+      label: "กะดึก",
       rangeLabel: `${date} 20:00 - ${endDate} 08:00`,
       startDate: date,
       startTime: "20:00",
@@ -204,7 +204,7 @@ const getShiftSchedule = (productionDate: string, shift: string) => {
   return {
     endDate: date,
     endTime: "20:00",
-    label: "เธเธฐเน€เธเนเธฒ",
+    label: "กะเช้า",
     rangeLabel: `${date} 08:00 - ${date} 20:00`,
     startDate: date,
     startTime: "08:00",
@@ -300,88 +300,87 @@ function getDowntimeStats(logs: ProductionLog[]): DowntimeStatRow[] {
 
 const normalizeCell = (value: unknown) => String(value ?? "").trim();
 
-function trimMatrix(values: unknown[][]) {
-  const rows = values.map((row) => row.map(normalizeCell));
-  const lastColumnIndex = rows.reduce((maxIndex, row) => {
-    for (let index = row.length - 1; index >= 0; index--) {
-      if (row[index]) return Math.max(maxIndex, index);
-    }
-    return maxIndex;
-  }, -1);
-  if (lastColumnIndex < 0) return [];
-  return rows
-    .map((row) => row.slice(0, lastColumnIndex + 1))
+const trimMatrix = (matrix: unknown[][]) =>
+  matrix
+    .map((row) => row.map(normalizeCell))
     .filter((row) => row.some(Boolean));
-}
 
-function detectHeaderRow(rows: string[][]) {
-  const keywords = ["item", "part", "part no", "step", "target", "m/c", "pcs", "min"];
+const detectHeaderRow = (rows: string[][]) => {
+  const keywords = ["part", "part no", "part name", "product", "step", "target", "m/c", "machine", "pcs"];
   let bestIndex = 0;
   let bestScore = -1;
-  rows.slice(0, 30).forEach((row, index) => {
-    const text = row.join(" ").toLowerCase();
-    const keywordScore = keywords.reduce((score, keyword) => score + (text.includes(keyword) ? 2 : 0), 0);
-    const filledScore = Math.min(row.filter(Boolean).length, 8);
-    const score = keywordScore + filledScore;
+  rows.slice(0, 12).forEach((row, index) => {
+    const joined = row.join(" ").toLowerCase();
+    const score = keywords.reduce((sum, keyword) => sum + (joined.includes(keyword) ? 1 : 0), 0) + row.filter(Boolean).length / 20;
     if (score > bestScore) {
-      bestScore = score;
       bestIndex = index;
+      bestScore = score;
     }
   });
   return bestIndex;
-}
+};
 
-function matrixToPdWorksheet(name: string, matrix: unknown[][]): PdWorkbook["sheets"][number] {
+const matrixToPdWorksheet = (name: string, matrix: unknown[][]): PdWorkbook["sheets"][number] => {
   const rows = trimMatrix(matrix);
+  if (!rows.length) {
+    return { columnCount: 0, headers: [], name, rowCount: 0, rows: [], truncated: false };
+  }
   const headerIndex = detectHeaderRow(rows);
-  const headers = (rows[headerIndex] ?? []).map((header, index) => header || `Column ${index + 1}`);
-  const dataRows = rows.slice(headerIndex + 1).filter((row) => row.some(Boolean));
+  const headerRow = rows[headerIndex] ?? [];
+  const columnCount = Math.max(...rows.map((row) => row.length), headerRow.length);
+  const headers = Array.from({ length: columnCount }, (_, index) => headerRow[index] || `Column ${index + 1}`);
+  const dataRows = rows
+    .slice(headerIndex + 1)
+    .map((row) => Array.from({ length: columnCount }, (_, index) => row[index] || ""))
+    .filter((row) => row.some(Boolean));
+
   return {
-    columnCount: headers.length,
+    columnCount,
     headers,
     name,
     rowCount: dataRows.length,
     rows: dataRows.slice(0, 500),
     truncated: dataRows.length > 500,
   };
-}
+};
 
-function parseCsvText(text: string) {
+const parseCsvText = (text: string) => {
   const rows: string[][] = [];
-  let cell = "";
+  let field = "";
   let row: string[] = [];
   let quoted = false;
-  for (let index = 0; index < text.length; index++) {
+  for (let index = 0; index < text.length; index += 1) {
     const char = text[index];
     const next = text[index + 1];
     if (char === '"' && quoted && next === '"') {
-      cell += '"';
-      index++;
+      field += '"';
+      index += 1;
     } else if (char === '"') {
       quoted = !quoted;
     } else if (char === "," && !quoted) {
-      row.push(cell);
-      cell = "";
+      row.push(field);
+      field = "";
     } else if ((char === "\n" || char === "\r") && !quoted) {
-      if (char === "\r" && next === "\n") index++;
-      row.push(cell);
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(field);
       rows.push(row);
       row = [];
-      cell = "";
+      field = "";
     } else {
-      cell += char;
+      field += char;
     }
   }
-  row.push(cell);
+  row.push(field);
   rows.push(row);
   return rows;
-}
+};
 
 async function readPdUploadFile(file: File): Promise<PdWorkbook> {
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const lowerName = file.name.toLowerCase();
   let sheets: PdWorkbook["sheets"];
-  if (extension === "csv" || extension === "txt") {
-    sheets = [matrixToPdWorksheet(file.name.replace(/\.[^.]+$/, "") || "CSV", parseCsvText(await file.text()))];
+  if (lowerName.endsWith(".csv") || lowerName.endsWith(".txt")) {
+    const text = await file.text();
+    sheets = [matrixToPdWorksheet("Sheet 1", parseCsvText(text))];
   } else {
     const XLSX = (await import(/* @vite-ignore */ XLSX_MODULE_URL)) as XlsxModule;
     const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
@@ -395,7 +394,7 @@ async function readPdUploadFile(file: File): Promise<PdWorkbook> {
   return {
     fetchedAt: new Date().toISOString(),
     id: `upload-${file.name}-${file.lastModified}-${Date.now()}`,
-    label: "เธเธณเน€เธเนเธฒ",
+    label: "นำเข้า",
     name: file.name,
     ok: true,
     sheets,
@@ -403,54 +402,54 @@ async function readPdUploadFile(file: File): Promise<PdWorkbook> {
   };
 }
 
-const parseNumericCell = (value: string) => {
-  const normalized = value.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
-  return normalized ? Number(normalized[0]) : 0;
+const parseNumericCell = (value: unknown) => {
+  const cleaned = String(value ?? "").replace(/,/g, "").trim();
+  if (!cleaned) return 0;
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : 0;
 };
 
-function headerIndex(headers: string[], patterns: string[]) {
-  return headers.findIndex((header) => {
-    const text = header.toLowerCase().replace(/\s+/g, " ");
-    return patterns.some((pattern) => text.includes(pattern));
-  });
-}
+const headerIndex = (headers: string[], patterns: RegExp[]) =>
+  headers.findIndex((header) => patterns.some((pattern) => pattern.test(header.toLowerCase())));
 
 function summarizePdCapacity(sources: PdWorkbook[]) {
-  const partNos = new Set<string>();
-  const machines = new Set<string>();
-  const targetRows: Array<{ label: string; target: number }> = [];
+  const partSet = new Set<string>();
+  const machineSet = new Set<string>();
+  const topTargets: Array<{ label: string; target: number }> = [];
   let targetTotal = 0;
   let targetCount = 0;
 
   sources.forEach((source) => {
     source.sheets.forEach((sheet) => {
-      const partIndex = headerIndex(sheet.headers, ["part no", "part no.", "part"]);
-      const nameIndex = headerIndex(sheet.headers, ["part name", "part name.", "name"]);
-      const machineIndex = headerIndex(sheet.headers, ["m/c no", "m/c no.", "machine", "m/c"]);
-      const targetIndex = headerIndex(sheet.headers, ["target"]);
+      const partIndex = headerIndex(sheet.headers, [/part\s*no/, /part no/, /พาร์ท/, /ชิ้นงาน/]);
+      const partNameIndex = headerIndex(sheet.headers, [/part\s*name/, /product/, /รุ่น/, /ชื่อ/]);
+      const machineIndex = headerIndex(sheet.headers, [/m\/c/, /machine/, /เครื่อง/]);
+      const targetIndex = headerIndex(sheet.headers, [/target/, /เป้า/]);
+
       sheet.rows.forEach((row) => {
         const partNo = partIndex >= 0 ? row[partIndex] : "";
-        const partName = nameIndex >= 0 ? row[nameIndex] : "";
+        const partName = partNameIndex >= 0 ? row[partNameIndex] : "";
         const machine = machineIndex >= 0 ? row[machineIndex] : "";
-        const target = targetIndex >= 0 ? parseNumericCell(row[targetIndex] || "") : 0;
-        if (partNo) partNos.add(partNo);
-        if (machine) machines.add(machine);
+        const target = targetIndex >= 0 ? parseNumericCell(row[targetIndex]) : 0;
+
+        if (partNo) partSet.add(partNo);
+        if (machine) machineSet.add(machine);
         if (target > 0) {
           targetTotal += target;
-          targetCount++;
-          targetRows.push({ label: partName || partNo || "-", target });
+          targetCount += 1;
+          topTargets.push({ label: `${partName || partNo || source.name}${machine ? ` / ${machine}` : ""}`, target });
         }
       });
     });
   });
 
   return {
-    machineCount: machines.size,
-    partCount: partNos.size,
-    targetAverage: targetCount ? targetTotal / targetCount : 0,
+    machineCount: machineSet.size,
+    partCount: partSet.size,
+    targetAverage: targetCount > 0 ? Math.round(targetTotal / targetCount) : 0,
     targetCount,
     targetTotal,
-    topTargets: targetRows.sort((a, b) => b.target - a.target).slice(0, 5),
+    topTargets: topTargets.sort((a, b) => b.target - a.target).slice(0, 5),
   };
 }
 
@@ -462,19 +461,19 @@ const escapeHtml = (value: unknown) =>
     .replace(/"/g, "&quot;");
 
 const reportRangeLabel = (filters: Filters) => {
-  if (filters.from && filters.to) return `${filters.from} เธ–เธถเธ ${filters.to}`;
-  if (filters.from) return `เธ•เธฑเนเธเนเธ•เน ${filters.from}`;
-  if (filters.to) return `เธ–เธถเธ ${filters.to}`;
-  return "เธ—เธฑเนเธเธซเธกเธ”";
+  if (filters.from && filters.to) return `${filters.from} ถึง ${filters.to}`;
+  if (filters.from) return `ตั้งแต่ ${filters.from}`;
+  if (filters.to) return `ถึง ${filters.to}`;
+  return "ทั้งหมด";
 };
 
 const reportMachineLabel = (filters: Filters) =>
-  filters.machineId ? machines.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "เธ—เธธเธเน€เธเธฃเธทเนเธญเธ";
+  filters.machineId ? machines.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
 
-const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filters.shift) : "เธ—เธธเธเธเธฐ");
+const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filters.shift) : "ทุกกะ");
 
 const shiftRuleLabel = (shift: string) =>
-  normalizeShiftCode(shift) === SHIFT_NIGHT ? "20:00 - 08:00 เธเธญเธเธงเธฑเธเธ–เธฑเธ”เนเธ" : "08:00 - 20:00 เธเธญเธเธงเธฑเธเธ—เธตเนเธเธฅเธดเธ•";
+  normalizeShiftCode(shift) === SHIFT_NIGHT ? "20:00 - 08:00 ของวันถัดไป" : "08:00 - 20:00 ของวันที่ผลิต";
 
 const filterLogsByFilters = (logs: ProductionLog[], filters: Filters, includeDateRange = true) => {
   const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
@@ -500,8 +499,8 @@ const getFilterAvailableDateRange = (logs: ProductionLog[]) => {
 const getFilterEmptyMessage = (visibleLogs: ProductionLog[], filters: Filters, scopeLogs: ProductionLog[]) => {
   if (visibleLogs.length > 0 || (!filters.from && !filters.to)) return "";
   const range = getFilterAvailableDateRange(scopeLogs);
-  if (!range) return "เนเธกเนเธเธเธเนเธญเธกเธนเธฅเธเธญเธเน€เธเธฃเธทเนเธญเธเธซเธฃเธทเธญเธเธฐเธ—เธตเนเน€เธฅเธทเธญเธเนเธเธฃเธฐเธเธ";
-  return `เนเธกเนเธเธเธเนเธญเธกเธนเธฅเนเธเธเนเธงเธเธงเธฑเธเธ—เธตเนเธ—เธตเนเน€เธฅเธทเธญเธ เธกเธตเธเนเธญเธกเธนเธฅเธเธญเธเน€เธเธฃเธทเนเธญเธ/เธเธฐเธเธตเนเธ•เธฑเนเธเนเธ•เน ${range.firstDate} เธ–เธถเธ ${range.lastDate} เธฃเธงเธก ${formatNumber(range.count)} เธฃเธฒเธขเธเธฒเธฃ`;
+  if (!range) return "ไม่พบข้อมูลของเครื่องหรือกะที่เลือกในระบบ";
+  return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${range.firstDate} ถึง ${range.lastDate} รวม ${formatNumber(range.count)} รายการ`;
 };
 
 const tableRowsHtml = (rows: ReportRow[]) =>
@@ -522,7 +521,7 @@ const tableRowsHtml = (rows: ReportRow[]) =>
             </tr>`,
         )
         .join("")
-    : `<tr><td colspan="9" class="empty">เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน</td></tr>`;
+    : `<tr><td colspan="9" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
 const downtimeStatsRowsHtml = (rows: DowntimeStatRow[]) =>
   rows.filter((row) => row.minutes > 0 || row.count > 0).length
@@ -533,13 +532,13 @@ const downtimeStatsRowsHtml = (rows: DowntimeStatRow[]) =>
             <tr>
               <td>${index + 1}</td>
               <td><strong>${escapeHtml(row.label)}</strong><small>${escapeHtml(row.shortLabel)}</small></td>
-              <td class="number">${formatNumber(row.minutes)} เธเธฒเธ—เธต</td>
-              <td class="number">${formatNumber(row.count)} เธเธฃเธฑเนเธ</td>
+              <td class="number">${formatNumber(row.minutes)} นาที</td>
+              <td class="number">${formatNumber(row.count)} ครั้ง</td>
               <td class="number">${formatPercent(row.percent)}</td>
             </tr>`,
         )
         .join("")
-    : `<tr><td colspan="5" class="empty">เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน</td></tr>`;
+    : `<tr><td colspan="5" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
 const detailRowsHtml = (logs: ProductionLog[]) =>
   logs.length
@@ -562,7 +561,7 @@ const detailRowsHtml = (logs: ProductionLog[]) =>
             </tr>`,
         )
         .join("")
-    : `<tr><td colspan="11" class="empty">เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน</td></tr>`;
+    : `<tr><td colspan="11" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
 function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
   const reportWindow = window.open("", "_blank", "width=1100,height=820");
@@ -622,14 +621,14 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
         <header>
           <div>
             <p class="muted">OEE PRODUCTION ENTRY</p>
-            <h1>เธฃเธฒเธขเธเธฒเธเธชเธฃเธธเธเธเธฒเธฃเธเธฃเธญเธเธขเธญเธ”เธเธฅเธดเธ•</h1>
-            <p>เธเนเธงเธเธงเธฑเธเธ—เธตเนเธเธฅเธดเธ•: ${escapeHtml(reportRangeLabel(filters))} | เน€เธเธฃเธทเนเธญเธ: ${escapeHtml(reportMachineLabel(filters))} | เธเธฐ: ${escapeHtml(reportShiftLabel(filters))}</p>
-            <p>เธเธฐเน€เธเนเธฒ 08:00-20:00 เธเธญเธเธงเธฑเธเธ—เธตเนเธเธฅเธดเธ• | เธเธฐเธ”เธถเธ 20:00-08:00 เธเธญเธเธงเธฑเธเธ–เธฑเธ”เนเธ</p>
+            <h1>รายงานสรุปการกรอกยอดผลิต</h1>
+            <p>ช่วงวันที่ผลิต: ${escapeHtml(reportRangeLabel(filters))} | เครื่อง: ${escapeHtml(reportMachineLabel(filters))} | กะ: ${escapeHtml(reportShiftLabel(filters))}</p>
+            <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
           </div>
           <div class="meta">
             <strong>JR Production</strong>
-            <span>เธชเธฃเนเธฒเธเธฃเธฒเธขเธเธฒเธ: ${escapeHtml(generatedAt)}</span>
-            <span>เธเธณเธเธงเธเธฃเธฒเธขเธเธฒเธฃ: ${formatNumber(logs.length)}</span>
+            <span>สร้างรายงาน: ${escapeHtml(generatedAt)}</span>
+            <span>จำนวนรายการ: ${formatNumber(logs.length)}</span>
           </div>
         </header>
 
@@ -638,48 +637,48 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
           <div class="kpi red"><span>NG quantity</span><strong>${formatNumber(summary.ng)}</strong></div>
           <div class="kpi amber"><span>Test quantity</span><strong>${formatNumber(summary.test)}</strong></div>
           <div class="kpi blue"><span>Total quantity</span><strong>${formatNumber(summary.total)}</strong></div>
-          <div class="kpi red"><span>Downtime</span><strong>${formatNumber(summary.downtime)} เธเธฒเธ—เธต</strong></div>
+          <div class="kpi red"><span>Downtime</span><strong>${formatNumber(summary.downtime)} นาที</strong></div>
           <div class="kpi"><span>Quality</span><strong>${formatPercent(summary.quality)}</strong></div>
           <div class="kpi"><span>OEE</span><strong>${formatPercent(oee)}</strong></div>
           <div class="kpi amber"><span>Availability</span><strong>${formatPercent(summary.availability)}</strong></div>
         </section>
 
-        <h2>เธชเธฃเธธเธเธ•เธฒเธกเธเธฐเนเธฅเธฐเธเนเธงเธเน€เธงเธฅเธฒเธ—เธณเธเธฒเธ</h2>
+        <h2>สรุปตามกะและช่วงเวลาทำงาน</h2>
         <table>
           <thead><tr><th>No.</th><th>Shift / Time window</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
           <tbody>${tableRowsHtml(shiftRows)}</tbody>
         </table>
 
-        <h2>เธชเธฃเธธเธเธ•เธฒเธกเน€เธเธฃเธทเนเธญเธเธเธฑเธเธฃ</h2>
+        <h2>สรุปตามเครื่องจักร</h2>
         <table>
           <thead><tr><th>No.</th><th>Machine</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
           <tbody>${tableRowsHtml(machineRows)}</tbody>
         </table>
 
-        <h2>เธชเธฃเธธเธเธ•เธฒเธกเธฃเธธเนเธ / Part No.</h2>
+        <h2>สรุปตามรุ่น / Part No.</h2>
         <table>
           <thead><tr><th>No.</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
           <tbody>${tableRowsHtml(partRows.slice(0, 40))}</tbody>
         </table>
 
-        <h2>Downtime เนเธขเธเธ•เธฒเธกเธซเธฑเธงเธเนเธญ</h2>
+        <h2>Downtime แยกตามหัวข้อ</h2>
         <div class="downtime-grid">
           ${downtimeRows
-            .map((item) => `<div class="downtime-item"><span>${escapeHtml(item.shortLabel)}</span><b>${formatNumber(item.minutes)} เธเธฒเธ—เธต</b></div>`)
+            .map((item) => `<div class="downtime-item"><span>${escapeHtml(item.shortLabel)}</span><b>${formatNumber(item.minutes)} นาที</b></div>`)
             .join("")}
         </div>
 
-        <h2>เธชเธ–เธดเธ•เธดเธเธฒเธฃเธซเธขเธธเธ”เน€เธเธฃเธทเนเธญเธ</h2>
+        <h2>สถิติการหยุดเครื่อง</h2>
         <table>
           <thead><tr><th>No.</th><th>Downtime issue</th><th>Total stop time</th><th>Count</th><th>Share</th></tr></thead>
           <tbody>${downtimeStatsRowsHtml(downtimeStats)}</tbody>
         </table>
-        <h2>เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธฃเธฒเธขเธเธฒเธฃเธเธฅเธดเธ•</h2>
+        <h2>รายละเอียดรายการผลิต</h2>
         <table>
           <thead><tr><th>No.</th><th>Entry date</th><th>Entry time</th><th>Production date</th><th>Shift time</th><th>Machine</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Downtime</th></tr></thead>
           <tbody>${detailRowsHtml(logs)}</tbody>
         </table>
-        <footer>เน€เธญเธเธชเธฒเธฃเธเธตเนเธชเธฃเนเธฒเธเธเธฒเธเธเนเธญเธกเธนเธฅเธ—เธตเนเธ–เธนเธเธเธฃเธญเธเนเธเธฃเธฐเธเธ OEE Production Entry</footer>
+        <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ OEE Production Entry</footer>
         <script>
           window.addEventListener("load", () => {
             window.focus();
@@ -795,7 +794,7 @@ function App() {
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
-  const [status, setStatus] = useState(remoteEnabled ? "เธเธฃเนเธญเธกเน€เธเธทเนเธญเธกเธ•เนเธญ Google Sheet" : "เนเธซเธกเธ”เธ—เธ”เธฅเธญเธเนเธเน€เธเธฃเธทเนเธญเธ");
+  const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
   const [saving, setSaving] = useState(false);
   const [pdSheets, setPdSheets] = useState<PdWorkbook[]>([]);
   const [pdLoading, setPdLoading] = useState(false);
@@ -823,9 +822,9 @@ function App() {
     fetchRemoteLogs()
       .then((logs) => {
         setRemoteLogs(logs);
-        setStatus(`เน€เธเธทเนเธญเธกเธ•เนเธญ Google Sheet เนเธฅเนเธง (${logs.length} records)`);
+        setStatus(`เชื่อมต่อ Google Sheet แล้ว (${logs.length} records)`);
       })
-      .catch((error) => setStatus(error instanceof Error ? error.message : "เน€เธเธทเนเธญเธกเธ•เนเธญ Google Sheet เนเธกเนเธชเธณเน€เธฃเนเธ"));
+      .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"));
   }, []);
 
   useEffect(() => {
@@ -834,7 +833,7 @@ function App() {
 
   const loadPdSheets = async (silent = false) => {
     if (!remoteEnabled) {
-      setPdError("เธขเธฑเธเนเธกเนเนเธ”เนเธ•เธฑเนเธเธเนเธฒ Google Sheet API");
+      setPdError("ยังไม่ได้ตั้งค่า Google Sheet API");
       return;
     }
     if (!silent) setPdLoading(true);
@@ -843,9 +842,9 @@ function App() {
       setPdSheets(sources);
       setPdUpdatedAt(new Date().toLocaleString("th-TH"));
       setPdError("");
-      setStatus(`เธญเธฑเธเน€เธ”เธ•เธเนเธญเธกเธนเธฅ PD เนเธฅเนเธง (${sources.length} เนเธเธฅเน)`);
+      setStatus(`อัปเดตข้อมูล PD แล้ว (${sources.length} ไฟล์)`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅ PD เนเธกเนเธชเธณเน€เธฃเนเธ";
+      const message = error instanceof Error ? error.message : "โหลดข้อมูล PD ไม่สำเร็จ";
       setPdError(message);
       setStatus(message);
     } finally {
@@ -944,7 +943,7 @@ function App() {
     ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}::${normalizeText(draft.step || "-")}`
     : "";
   const duplicateEntryMessage = duplicateEntry
-    ? `เธงเธฑเธเธ—เธตเนเธเธฅเธดเธ• ${draft.date} เธเธฐ ${shiftLabel(draft.shift)} (${shiftWindowLabel(draft.date, draft.shift)}) เน€เธเธฃเธทเนเธญเธ ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} Step ${duplicateEntry.step || "-"} เธกเธตเธเธฒเธฃเธเธฑเธเธ—เธถเธเนเธฅเนเธง เธซเนเธฒเธกเธเธฑเธเธ—เธถเธเธเนเธณ`
+    ? `วันที่ผลิต ${draft.date} กะ ${shiftLabel(draft.shift)} (${shiftWindowLabel(draft.date, draft.shift)}) เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} Step ${duplicateEntry.step || "-"} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
     : "";
 
   useEffect(() => {
@@ -955,7 +954,7 @@ function App() {
     setStatus(duplicateEntryMessage);
     if (warnedDuplicateKey === duplicateEntryKey) return;
     setWarnedDuplicateKey(duplicateEntryKey);
-    setProblemDialog({ title: "เธเธเธฃเธฒเธขเธเธฒเธฃเธเนเธณ", message: duplicateEntryMessage });
+    setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
   }, [duplicateEntryKey, duplicateEntryMessage, warnedDuplicateKey]);
 
   const applyProductToDraft = (product: ProductMaster, logs = allLogs, machine = currentMachine) => ({
@@ -1001,7 +1000,7 @@ function App() {
       productDefaultsCache.current.set(cacheKey, defaults);
       applyDefaults(defaults);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "เนเธซเธฅเธ”เธเธงเธฒเธกเน€เธฃเนเธงเธเธฒเธ Google Sheet เนเธกเนเธชเธณเน€เธฃเนเธ");
+      setStatus(error instanceof Error ? error.message : "โหลดความเร็วจาก Google Sheet ไม่สำเร็จ");
     }
   };
 
@@ -1106,22 +1105,22 @@ function App() {
     setDateManuallyEdited(true);
     setProductSearch("");
     setTab("entry");
-    setStatus(`เธเธณเธฅเธฑเธเนเธเนเนเธเธฃเธฒเธขเธเธฒเธฃ ${log.machineName} เธงเธฑเธเธ—เธตเน ${log.date}`);
+    setStatus(`กำลังแก้ไขรายการ ${log.machineName} วันที่ ${log.date}`);
   };
 
   const getMissingSaveFields = () =>
     [
-      { label: "Good quantity / เธเธณเธเธงเธเธเธฒเธเธ”เธต", value: draft.goodQty },
-      { label: "เธเธงเธฒเธกเน€เธฃเนเธงเน€เธเธฃเธทเนเธญเธเธเธฑเธเธฃ", value: draft.machineSpeed },
-      { label: "เธเธณเธเธงเธเธเธฒเธงเธดเธ•เธตเน", value: draft.cavityQty },
+      { label: "Good quantity / จำนวนงานดี", value: draft.goodQty },
+      { label: "ความเร็วเครื่องจักร", value: draft.machineSpeed },
+      { label: "จำนวนคาวิตี้", value: draft.cavityQty },
     ]
       .filter((field) => Number(field.value || 0) <= 0)
       .map((field) => field.label);
 
   const showMissingSaveFields = (missingFields: string[]) => {
-    const message = `เธเธฃเธธเธ“เธฒเธเธฃเธญเธ ${missingFields.join(", ")} เนเธซเนเธกเธฒเธเธเธงเนเธฒ 0 เธเนเธญเธเธเธฑเธเธ—เธถเธ`;
+    const message = `กรุณากรอก ${missingFields.join(", ")} ให้มากกว่า 0 ก่อนบันทึก`;
     setStatus(message);
-    setProblemDialog({ title: "เธเธฃเธญเธเธเนเธญเธกเธนเธฅเนเธกเนเธเธฃเธ", message });
+    setProblemDialog({ title: "กรอกข้อมูลไม่ครบ", message });
   };
 
   const saveDraft = async () => {
@@ -1135,7 +1134,7 @@ function App() {
     const shouldUpdate = Boolean(editingLog);
     if (duplicateEntryMessage) {
       setStatus(duplicateEntryMessage);
-      setProblemDialog({ title: "เธเธเธฃเธฒเธขเธเธฒเธฃเธเนเธณ", message: duplicateEntryMessage });
+      setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
       return;
     }
     const savedDate = draft.date || getTodayInputValue();
@@ -1161,17 +1160,17 @@ function App() {
       const saved = remoteEnabled ? (shouldUpdate ? await updateRemoteLog(log) : await appendRemoteLog(log)) : log;
       const next = shouldUpdate ? upsertLocalLog(saved) : appendLocalLog(saved);
       const successMessage = shouldUpdate
-        ? `เธเธฑเธเธ—เธถเธเธเธฒเธฃเนเธเนเนเธเนเธฅเนเธง: ${saved.machineName} เธงเธฑเธเธ—เธตเน ${saved.date}`
-        : `เธเธฑเธเธ—เธถเธเธขเธญเธ”เนเธฅเนเธง: ${saved.machineName} เธงเธฑเธเธ—เธตเน ${saved.date} (เธฅเธ Google Sheet เนเธฅเธฐเธเธตเธ•เน€เธเธฃเธทเนเธญเธเนเธฅเนเธง)`;
+        ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
+        : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`;
       setLocalLogs(next);
       setStatus(successMessage);
-      setSuccessDialog({ title: "เธเธฑเธเธ—เธถเธเน€เธชเธฃเนเธเนเธฅเนเธง", message: successMessage });
+      setSuccessDialog({ title: "บันทึกเสร็จแล้ว", message: successMessage });
       resetDraft();
     } catch (error) {
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
-      setStatus(error instanceof Error ? `${error.message} - เน€เธเนเธเธชเธณเธฃเธญเธเนเธเน€เธเธฃเธทเนเธญเธเนเธฅเนเธง` : "เน€เธเนเธเธชเธณเธฃเธญเธเนเธเน€เธเธฃเธทเนเธญเธเนเธฅเนเธง");
+      setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
     } finally {
       setSaving(false);
     }
@@ -1186,20 +1185,20 @@ function App() {
     }
     if (duplicateEntryMessage) {
       setStatus(duplicateEntryMessage);
-      setProblemDialog({ title: "เธเธเธฃเธฒเธขเธเธฒเธฃเธเนเธณ", message: duplicateEntryMessage });
+      setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
       return;
     }
     const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
     setConfirmSaveDialog({
-      title: "เธขเธทเธเธขเธฑเธเธเนเธญเธเธเธฑเธเธ—เธถเธ",
-      message: `เธ•เนเธญเธเธเธฒเธฃเธเธฑเธเธ—เธถเธเธขเธญเธ” ${machine.name} เธงเธฑเธเธ—เธตเนเธเธฅเธดเธ• ${draft.date || getTodayInputValue()} เธเธฐ ${shiftLabel(draft.shift)} Part No. ${draft.partNo || "-"} Good ${formatNumber(draft.goodQty)} เนเธเนเธซเธฃเธทเธญเนเธกเน`,
+      title: "ยืนยันก่อนบันทึก",
+      message: `ต้องการบันทึกยอด ${machine.name} วันที่ผลิต ${draft.date || getTodayInputValue()} กะ ${shiftLabel(draft.shift)} Part No. ${draft.partNo || "-"} Good ${formatNumber(draft.goodQty)} ใช่หรือไม่`,
     });
   };
 
   const clearLocal = () => {
     saveLocalLogs([]);
     setLocalLogs([]);
-    setStatus("เธฅเนเธฒเธเธฃเธฒเธขเธเธฒเธฃเธ—เธ”เธฅเธญเธเนเธเน€เธเธฃเธทเนเธญเธเนเธฅเนเธง");
+    setStatus("ล้างรายการทดลองในเครื่องแล้ว");
   };
 
   const signOut = () => {
@@ -1211,7 +1210,7 @@ function App() {
   const shareApp = async () => {
     const shareData = {
       title: "OEE Production Entry",
-      text: "เน€เธเธดเธ”เธฃเธฐเธเธเธเธฃเธญเธเธขเธญเธ”เธเธฅเธดเธ• OEE",
+      text: "เปิดระบบกรอกยอดผลิต OEE",
       url: productionShareUrl,
     };
 
@@ -1222,10 +1221,10 @@ function App() {
       }
 
       await navigator.clipboard.writeText(productionShareUrl);
-      setStatus("เธเธฑเธ”เธฅเธญเธเธฅเธดเธเธเนเธชเธณเธซเธฃเธฑเธเนเธเธฃเนเนเธฅเนเธง");
+      setStatus("คัดลอกลิงก์สำหรับแชร์แล้ว");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setStatus(`เธฅเธดเธเธเนเธชเธณเธซเธฃเธฑเธเนเธเธฃเน: ${productionShareUrl}`);
+      setStatus(`ลิงก์สำหรับแชร์: ${productionShareUrl}`);
     }
   };
 
@@ -1233,12 +1232,12 @@ function App() {
     const opened = openProductionPdfReport(activeLogs, activeFilters);
     if (!opened) {
       setProblemDialog({
-        title: "เน€เธเธดเธ”เธฃเธฒเธขเธเธฒเธเนเธกเนเนเธ”เน",
-        message: "เน€เธเธฃเธฒเธงเนเน€เธเธญเธฃเนเธเธฅเนเธญเธเธซเธเนเธฒเธ•เนเธฒเธเธฃเธฒเธขเธเธฒเธ เธเธฃเธธเธ“เธฒเธญเธเธธเธเธฒเธ• pop-up เนเธฅเนเธงเธเธ”เธ”เธฒเธงเธเนเนเธซเธฅเธ” PDF เธญเธตเธเธเธฃเธฑเนเธ",
+        title: "เปิดรายงานไม่ได้",
+        message: "เบราว์เซอร์บล็อกหน้าต่างรายงาน กรุณาอนุญาต pop-up แล้วกดดาวน์โหลด PDF อีกครั้ง",
       });
       return;
     }
-    setStatus("เน€เธเธดเธ”เธฃเธฒเธขเธเธฒเธเนเธฅเนเธง เน€เธฅเธทเธญเธ Save as PDF เนเธเธซเธเนเธฒเธ•เนเธฒเธเธเธดเธกเธเน");
+    setStatus("เปิดรายงานแล้ว เลือก Save as PDF ในหน้าต่างพิมพ์");
   };
   const useLatestDashboardDate = () => {
     if (!dashboardAvailableDateRange?.lastDate) return;
@@ -1276,7 +1275,7 @@ function App() {
         </div>
         <nav>
           <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
-            <ClipboardList size={18} /> เธเธฃเธญเธเธขเธญเธ”
+            <ClipboardList size={18} /> กรอกยอด
           </button>
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
@@ -1290,7 +1289,7 @@ function App() {
             <TableProperties size={18} /> PD Sheets
           </button>
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
-            <History size={18} /> เธเธฃเธฐเธงเธฑเธ•เธด
+            <History size={18} /> ประวัติ
           </button>
           {canAccessTab(session, "master") && (
             <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
@@ -1320,7 +1319,7 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Production quantity entry</p>
-            <h1>เธฃเธฐเธเธเธเธฃเธญเธเธขเธญเธ”เธเธฅเธดเธ•เธ•เธฒเธกเธฃเธธเนเธเนเธ Excel</h1>
+            <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel</h1>
           </div>
           <div className="topbar-actions">
             <button className="ghost-button" onClick={shareApp} type="button">
@@ -1343,20 +1342,20 @@ function App() {
             <form className="entry-form" onSubmit={submit}>
               <div className="section-title">
                 <Gauge size={20} />
-                <h2>{editingLog ? "เนเธเนเนเธเธขเธญเธ”เธเธฅเธดเธ•" : "เธเธฃเธญเธเธขเธญเธ”เธเธฅเธดเธ•"}</h2>
+                <h2>{editingLog ? "แก้ไขยอดผลิต" : "กรอกยอดผลิต"}</h2>
               </div>
 
               <div className="form-grid">
                 <label>
-                  <span className="label-text">เธงเธฑเธเธ—เธตเนเธเธฃเธญเธเธขเธญเธ”</span>
+                  <span className="label-text">วันที่กรอกยอด</span>
                   <input readOnly value={draft.recordDate || getTodayInputValue()} type="date" />
                 </label>
                 <label>
-                  <span className="label-text">เน€เธงเธฅเธฒเธเธฃเธญเธ</span>
+                  <span className="label-text">เวลากรอก</span>
                   <input readOnly step="1" value={draft.recordTime || getCurrentTimeInputValue()} type="time" />
                 </label>
                 <label>
-                  <span className="label-text">เธงเธฑเธเธ—เธตเนเธเธฅเธดเธ•เธเธฒเธ <RequiredMark /></span>
+                  <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
                   <input
                     required
                     value={draft.date}
@@ -1368,7 +1367,7 @@ function App() {
                   />
                 </label>
                 <label>
-                  <span className="label-text">เธเธฐ <RequiredMark /></span>
+                  <span className="label-text">กะ <RequiredMark /></span>
                   <select required value={draft.shift} onChange={(event) => setDraft({ ...draft, shift: event.target.value })}>
                     {orderedShiftOptions.map((shift) => (
                       <option key={shift} value={shift}>
@@ -1376,10 +1375,10 @@ function App() {
                       </option>
                     ))}
                   </select>
-                  <small className="field-help">เน€เธงเธฅเธฒเธ—เธณเธเธฒเธ: {shiftWindowLabel(draft.date, draft.shift)}</small>
+                  <small className="field-help">เวลาทำงาน: {shiftWindowLabel(draft.date, draft.shift)}</small>
                 </label>
                 <label>
-                  <span className="label-text">เน€เธเธฃเธทเนเธญเธ / เนเธฅเธเน <RequiredMark /></span>
+                  <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>
                   <select required value={draft.machineId} onChange={(event) => selectMachine(event.target.value)}>
                     {machines.map((machine) => (
                       <option key={machine.id} value={machine.id}>
@@ -1389,7 +1388,7 @@ function App() {
                   </select>
                 </label>
                 <label>
-                  เธเนเธเธซเธฒเธฃเธธเนเธ
+                  ค้นหารุ่น
                   <div className="input-with-icon">
                     <Search size={16} />
                     <input
@@ -1401,7 +1400,7 @@ function App() {
                   </div>
                 </label>
                 <label>
-                  <span className="label-text">เธฃเธธเนเธ <RequiredMark /></span>
+                  <span className="label-text">รุ่น <RequiredMark /></span>
                   <input
                     list="product-name-options"
                     onChange={(event) => updateProductField("productName", event.target.value)}
@@ -1456,7 +1455,7 @@ function App() {
 
               <div className="runtime-panel">
                 <label className="runtime-input-block">
-                  <span>เธเธณเธเธงเธเธเนเธญเธเน€เธงเธฅเธฒ <RequiredMark /></span>
+                  <span>จำนวนช่องเวลา <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1466,11 +1465,11 @@ function App() {
                       type="number"
                       value={draft.timeSlots}
                     />
-                    <b>เธเนเธญเธ</b>
+                    <b>ช่อง</b>
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>เธเธฒเธ—เธต/เธเนเธญเธ <RequiredMark /></span>
+                  <span>นาที/ช่อง <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1480,11 +1479,11 @@ function App() {
                       type="number"
                       value={draft.minutesPerSlot}
                     />
-                    <b>เธเธฒเธ—เธต</b>
+                    <b>นาที</b>
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>เน€เธงเธฅเธฒเธ•เธฒเธกเธเธฐ <RequiredMark /></span>
+                  <span>เวลาตามกะ <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1493,11 +1492,11 @@ function App() {
                       type="number"
                       value={draft.workMinutes}
                     />
-                    <b>เธเธฒเธ—เธต</b>
+                    <b>นาที</b>
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>เธเธงเธฒเธกเน€เธฃเนเธงเน€เธเธฃเธทเนเธญเธเธเธฑเธเธฃ <RequiredMark /></span>
+                  <span>ความเร็วเครื่องจักร <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1506,11 +1505,11 @@ function App() {
                       type="number"
                       value={numberInputValue(draft.machineSpeed)}
                     />
-                    <b>เธเธดเนเธ/เธเธฒเธ—เธต</b>
+                    <b>ชิ้น/นาที</b>
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>เธเธณเธเธงเธเธเธฒเธงเธดเธ•เธตเน <RequiredMark /></span>
+                  <span>จำนวนคาวิตี้ <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -1519,22 +1518,22 @@ function App() {
                       type="number"
                       value={numberInputValue(draft.cavityQty)}
                     />
-                    <b>เธเนเธญเธ</b>
+                    <b>ช่อง</b>
                   </div>
                 </label>
                 <div>
                   <span>Downtime</span>
-                  <strong>{formatNumber(totalDraftDowntime)} เธเธฒเธ—เธต</strong>
+                  <strong>{formatNumber(totalDraftDowntime)} นาที</strong>
                 </div>
                 <div>
                   <span>Normal production</span>
-                  <strong>{formatNumber(computedNormalMinutes)} เธเธฒเธ—เธต</strong>
+                  <strong>{formatNumber(computedNormalMinutes)} นาที</strong>
                 </div>
               </div>
 
               <div className="section-title compact">
                 <TableProperties size={19} />
-                <h2>เธขเธญเธ”เธเธฅเธดเธ•</h2>
+                <h2>ยอดผลิต</h2>
               </div>
               <div className="form-grid three">
                 <label>
@@ -1546,17 +1545,17 @@ function App() {
                   <input value={numberInputValue(draft.ngQty)} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
-                  <span className="label-text">Test / เธ•เธฃเธงเธเธเธดเนเธเธเธฒเธ</span>
+                  <span className="label-text">Test / ตรวจชิ้นงาน</span>
                   <input value={numberInputValue(draft.testQty)} onChange={(event) => handleNumber("testQty", event.target.value)} min="0" type="number" />
                 </label>
               </div>
 
               <div className="section-title compact">
                 <History size={19} />
-                <h2>เน€เธงเธฅเธฒเธซเธขเธธเธ”</h2>
+                <h2>เวลาหยุด</h2>
               </div>
               <p className="slot-help">
-                เธเธฃเธญเธเน€เธเนเธเธเธณเธเธงเธเธเนเธญเธ: 1 เธเนเธญเธ = {formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} เธเธฒเธ—เธต เธเนเธฒเน€เธฃเธดเนเธกเธ•เนเธ 0 เนเธฅเธฐเนเธเนเนเธเนเธ”เน
+                กรอกเป็นจำนวนช่อง: 1 ช่อง = {formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้
               </p>
               <div className="downtime-grid">
                 {downtimeFields.map((field) => (
@@ -1573,50 +1572,50 @@ function App() {
                         step="1"
                         type="number"
                       />
-                      <b>เธเนเธญเธ</b>
+                      <b>ช่อง</b>
                     </div>
-                    <small>{formatRate(Number(draft[field.key] || 0))} เธเธฒเธ—เธต</small>
+                    <small>{formatRate(Number(draft[field.key] || 0))} นาที</small>
                   </label>
                 ))}
               </div>
 
               <label>
-                เธซเธกเธฒเธขเน€เธซเธ•เธธ
+                หมายเหตุ
                 <textarea value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} rows={3} />
               </label>
 
               <div className="form-actions">
                 <button className="primary-button" disabled={saving || Boolean(duplicateEntry)} type="submit">
-                  <Save size={18} /> {saving ? "เธเธณเธฅเธฑเธเธเธฑเธเธ—เธถเธ" : editingLog ? "เธเธฑเธเธ—เธถเธเธเธฒเธฃเนเธเนเนเธ" : "เธเธฑเธเธ—เธถเธเธขเธญเธ”"}
+                  <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : "บันทึกยอด"}
                 </button>
                 <button className="ghost-button" onClick={resetDraft} type="button">
-                  {editingLog ? "เธขเธเน€เธฅเธดเธเนเธเนเนเธ" : "เธฅเนเธฒเธเธเธญเธฃเนเธก"}
+                  {editingLog ? "ยกเลิกแก้ไข" : "ล้างฟอร์ม"}
                 </button>
               </div>
             </form>
 
             <aside className="entry-summary">
               <div className="summary-block">
-                <span>เน€เธเธฃเธทเนเธญเธเธ—เธตเนเน€เธฅเธทเธญเธ</span>
+                <span>เครื่องที่เลือก</span>
                 <strong>{currentMachine.name}</strong>
-                <p>{currentMachine.hasStep ? "เธกเธต Step เนเธ Excel" : "เนเธกเนเธกเธต Step เนเธ Excel"}</p>
+                <p>{currentMachine.hasStep ? "มี Step ใน Excel" : "ไม่มี Step ใน Excel"}</p>
               </div>
               <div className="summary-block">
-                <span>เธฃเธธเนเธเนเธเน€เธเธฃเธทเนเธญเธเธเธตเน</span>
+                <span>รุ่นในเครื่องนี้</span>
                 <strong>{formatNumber(machineProducts.length)}</strong>
-                <p>เธญเธดเธเธเธฒเธ OEE-2026.xlsx</p>
+                <p>อิงจาก OEE-2026.xlsx</p>
               </div>
               <div className="recent-list">
-                <h3>เธฃเธฒเธขเธเธฒเธฃเธฅเนเธฒเธชเธธเธ”</h3>
+                <h3>รายการล่าสุด</h3>
                 {entryDateLogs.map((log) => (
                   <div className="recent-item" key={log.id}>
                     <b>{log.machineName}</b>
                     <span>
-                      {log.date} ยท {shiftLabel(log.shift)} ยท {shiftWindowLabel(log.date, log.shift)} ยท {log.productName} ยท Good {formatNumber(log.goodQty)} ยท Speed {formatRate(log.machineSpeed ?? 0)}
+                      {log.date} · {shiftLabel(log.shift)} · {shiftWindowLabel(log.date, log.shift)} · {log.productName} · Good {formatNumber(log.goodQty)} · Speed {formatRate(log.machineSpeed ?? 0)}
                     </span>
                   </div>
                 ))}
-                {entryDateLogs.length === 0 && <p className="empty-text">เธขเธฑเธเนเธกเนเธกเธตเธฃเธฒเธขเธเธฒเธฃเธเธญเธเธงเธฑเธเธ—เธตเน {draft.date}</p>}
+                {entryDateLogs.length === 0 && <p className="empty-text">ยังไม่มีรายการของวันที่ {draft.date}</p>}
               </div>
             </aside>
           </section>
@@ -1629,7 +1628,7 @@ function App() {
               <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
               <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
               <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
-              <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} เธเธฒเธ—เธต`} tone="red" />
+              <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
               <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
             </div>
             <FiltersBar filters={dashboardFilters} setFilters={setDashboardFilters} />
@@ -1691,12 +1690,12 @@ function App() {
                 <input
                   value={historySearch}
                   onChange={(event) => setHistorySearch(event.target.value)}
-                  placeholder="เธเนเธเธซเธฒเน€เธเธฃเธทเนเธญเธ เธฃเธธเนเธ เธซเธฃเธทเธญ Part No."
+                  placeholder="ค้นหาเครื่อง รุ่น หรือ Part No."
                   type="search"
                 />
               </div>
               <button className="ghost-button danger" onClick={clearLocal} type="button">
-                เธฅเนเธฒเธ local
+                ล้าง local
               </button>
             </div>
             <LogsTable logs={searchedHistory} onEdit={editLog} />
@@ -1727,10 +1726,10 @@ function App() {
             <p>{confirmSaveDialog.message}</p>
             <div className="modal-actions">
               <button className="primary-button" type="button" autoFocus disabled={saving} onClick={() => void saveDraft()}>
-                เธขเธทเธเธขเธฑเธเธเธฑเธเธ—เธถเธ
+                ยืนยันบันทึก
               </button>
               <button className="ghost-button" type="button" disabled={saving} onClick={() => setConfirmSaveDialog(null)}>
-                เธขเธเน€เธฅเธดเธ
+                ยกเลิก
               </button>
             </div>
           </div>
@@ -1746,7 +1745,7 @@ function App() {
             <h2 id="success-dialog-title">{successDialog.title}</h2>
             <p>{successDialog.message}</p>
             <button className="primary-button" type="button" autoFocus onClick={() => setSuccessDialog(null)}>
-              เธขเธทเธเธขเธฑเธ
+              ยืนยัน
             </button>
           </div>
         </div>
@@ -1761,7 +1760,7 @@ function App() {
             <h2 id="problem-dialog-title">{problemDialog.title}</h2>
             <p>{problemDialog.message}</p>
             <button className="ghost-button danger" type="button" autoFocus onClick={() => setProblemDialog(null)}>
-              เธขเธทเธเธขเธฑเธ
+              ยืนยัน
             </button>
           </div>
         </div>
@@ -1799,7 +1798,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         if (active) setUsers(nextUsers);
       })
       .catch((userError) => {
-        if (active) setError(userError instanceof Error ? userError.message : "เนเธซเธฅเธ”เธฃเธฒเธขเธเธทเนเธญเธเธนเนเนเธเนเนเธกเนเธชเธณเน€เธฃเนเธ");
+        if (active) setError(userError instanceof Error ? userError.message : "โหลดรายชื่อผู้ใช้ไม่สำเร็จ");
       });
     return () => {
       active = false;
@@ -1814,10 +1813,10 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
     try {
       const nextUsers = await createUser(form);
       setUsers(nextUsers);
-      setMessage(`เธชเธฃเนเธฒเธเธเธนเนเนเธเน ${form.username.trim().toLowerCase()} เนเธฅเนเธง`);
+      setMessage(`สร้างผู้ใช้ ${form.username.trim().toLowerCase()} แล้ว`);
       setForm(emptyUserForm);
     } catch (userError) {
-      setError(userError instanceof Error ? userError.message : "เธชเธฃเนเธฒเธเธเธนเนเนเธเนเนเธกเนเธชเธณเน€เธฃเนเธ");
+      setError(userError instanceof Error ? userError.message : "สร้างผู้ใช้ไม่สำเร็จ");
     } finally {
       setSavingUser(false);
     }
@@ -1828,9 +1827,9 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
     setError("");
     try {
       setUsers(await deleteUser(username));
-      setMessage(`เธฅเธเธเธนเนเนเธเน ${username} เนเธฅเนเธง`);
+      setMessage(`ลบผู้ใช้ ${username} แล้ว`);
     } catch (userError) {
-      setError(userError instanceof Error ? userError.message : "เธฅเธเธเธนเนเนเธเนเนเธกเนเธชเธณเน€เธฃเนเธ");
+      setError(userError instanceof Error ? userError.message : "ลบผู้ใช้ไม่สำเร็จ");
     }
   };
 
@@ -1839,17 +1838,17 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
     setMessage("");
     setError("");
     if (passwordForm.password !== passwordForm.confirmPassword) {
-      setError("เธฃเธซเธฑเธชเธเนเธฒเธเนเธซเธกเนเนเธฅเธฐเธขเธทเธเธขเธฑเธเธฃเธซเธฑเธชเธเนเธฒเธเนเธกเนเธ•เธฃเธเธเธฑเธ");
+      setError("รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน");
       return;
     }
     setChangingPassword(true);
     try {
       const nextUsers = await changePassword(passwordForm.username, passwordForm.password);
       setUsers(nextUsers);
-      setMessage(`เน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธ ${passwordForm.username} เนเธฅเนเธง`);
+      setMessage(`เปลี่ยนรหัสผ่าน ${passwordForm.username} แล้ว`);
       setPasswordForm(createEmptyPasswordForm(passwordForm.username));
     } catch (passwordError) {
-      setError(passwordError instanceof Error ? passwordError.message : "เน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธเนเธกเนเธชเธณเน€เธฃเนเธ");
+      setError(passwordError instanceof Error ? passwordError.message : "เปลี่ยนรหัสผ่านไม่สำเร็จ");
     } finally {
       setChangingPassword(false);
     }
@@ -1860,7 +1859,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       <form className="user-form" onSubmit={submitUser}>
         <div className="section-title">
           <UserPlus size={20} />
-          <h2>เธชเธฃเนเธฒเธเธเธนเนเนเธเนเธเธฒเธ</h2>
+          <h2>สร้างผู้ใช้งาน</h2>
         </div>
         <div className="form-grid">
           <label>
@@ -1868,18 +1867,18 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             <input
               autoComplete="off"
               onChange={(event) => setForm({ ...form, username: event.target.value })}
-              placeholder="เน€เธเนเธ operator01"
+              placeholder="เช่น operator01"
               required
               type="text"
               value={form.username}
             />
           </label>
           <label>
-            <span className="label-text">เธเธทเนเธญเนเธชเธ”เธเธเธฅ <RequiredMark /></span>
+            <span className="label-text">ชื่อแสดงผล <RequiredMark /></span>
             <input
               autoComplete="off"
               onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-              placeholder="เน€เธเนเธ Line A"
+              placeholder="เช่น Line A"
               required
               type="text"
               value={form.displayName}
@@ -1901,7 +1900,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             <input
               autoComplete="new-password"
               onChange={(event) => setForm({ ...form, password: event.target.value })}
-              placeholder="เธญเธขเนเธฒเธเธเนเธญเธข 6 เธ•เธฑเธง"
+              placeholder="อย่างน้อย 6 ตัว"
               required
               type="password"
               value={form.password}
@@ -1910,7 +1909,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         </div>
         <div className="form-actions">
           <button className="primary-button" disabled={savingUser} type="submit">
-            <Save size={18} /> {savingUser ? "เธเธณเธฅเธฑเธเธชเธฃเนเธฒเธ" : "เธชเธฃเนเธฒเธเธเธนเนเนเธเน"}
+            <Save size={18} /> {savingUser ? "กำลังสร้าง" : "สร้างผู้ใช้"}
           </button>
         </div>
         {message && <p className="form-message success">{message}</p>}
@@ -1920,11 +1919,11 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       <form className="user-form" onSubmit={submitPassword}>
         <div className="section-title">
           <KeyRound size={20} />
-          <h2>เน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธ</h2>
+          <h2>เปลี่ยนรหัสผ่าน</h2>
         </div>
         <div className="form-grid three">
           <label>
-            <span className="label-text">เธเธฑเธเธเธต <RequiredMark /></span>
+            <span className="label-text">บัญชี <RequiredMark /></span>
             <select
               onChange={(event) => setPasswordForm(createEmptyPasswordForm(event.target.value))}
               required
@@ -1938,22 +1937,22 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            <span className="label-text">เธฃเธซเธฑเธชเธเนเธฒเธเนเธซเธกเน <RequiredMark /></span>
+            <span className="label-text">รหัสผ่านใหม่ <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })}
-              placeholder="เธญเธขเนเธฒเธเธเนเธญเธข 6 เธ•เธฑเธง"
+              placeholder="อย่างน้อย 6 ตัว"
               required
               type="password"
               value={passwordForm.password}
             />
           </label>
           <label>
-            <span className="label-text">เธขเธทเธเธขเธฑเธเธฃเธซเธฑเธชเธเนเธฒเธ <RequiredMark /></span>
+            <span className="label-text">ยืนยันรหัสผ่าน <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
-              placeholder="เธเธดเธกเธเนเธเนเธณเธญเธตเธเธเธฃเธฑเนเธ"
+              placeholder="พิมพ์ซ้ำอีกครั้ง"
               required
               type="password"
               value={passwordForm.confirmPassword}
@@ -1962,7 +1961,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         </div>
         <div className="form-actions">
           <button className="primary-button" disabled={changingPassword} type="submit">
-            <Save size={18} /> {changingPassword ? "เธเธณเธฅเธฑเธเธเธฑเธเธ—เธถเธ" : "เธเธฑเธเธ—เธถเธเธฃเธซเธฑเธชเธเนเธฒเธ"}
+            <Save size={18} /> {changingPassword ? "กำลังบันทึก" : "บันทึกรหัสผ่าน"}
           </button>
         </div>
       </form>
@@ -1996,7 +1995,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
                       className="icon-danger-button"
                       disabled={locked}
                       onClick={() => removeUser(user.username)}
-                      title={locked ? "เธเธฑเธเธเธตเธเธตเนเธฅเธเนเธกเนเนเธ”เน" : "เธฅเธเธเธนเนเนเธเน"}
+                      title={locked ? "บัญชีนี้ลบไม่ได้" : "ลบผู้ใช้"}
                       type="button"
                     >
                       <Trash2 size={16} />
@@ -2026,7 +2025,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
       const nextSession = await signIn(username, password);
       onSignedIn(nextSession);
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเนเธกเนเธชเธณเน€เธฃเนเธ");
+      setError(loginError instanceof Error ? loginError.message : "เข้าสู่ระบบไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
@@ -2044,7 +2043,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
         </div>
         <div className="login-heading">
           <LockKeyhole size={22} />
-          <h1>เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ</h1>
+          <h1>เข้าสู่ระบบ</h1>
         </div>
         <label>
           <span className="label-text">Username <RequiredMark /></span>
@@ -2052,7 +2051,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
             autoComplete="username"
             autoFocus
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="admin เธซเธฃเธทเธญ production"
+            placeholder="admin หรือ production"
             required
             type="text"
             value={username}
@@ -2063,7 +2062,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           <input
             autoComplete="current-password"
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="เธฃเธซเธฑเธชเธเนเธฒเธ"
+            placeholder="รหัสผ่าน"
             required
             type="password"
             value={password}
@@ -2071,10 +2070,10 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
         </label>
         {error && <p className="login-error">{error}</p>}
         <button className="primary-button login-button" disabled={loading} type="submit">
-          {loading ? "เธเธณเธฅเธฑเธเธ•เธฃเธงเธเธชเธญเธ" : "เน€เธเนเธฒเนเธเนเธเธฒเธ"}
+          {loading ? "กำลังตรวจสอบ" : "เข้าใช้งาน"}
         </button>
         <p className="login-note">
-          เนเธเนเธชเธณเธซเธฃเธฑเธเธเธฑเธเธซเธเนเธฒเธเธญเน€เธเธทเนเธญเธเธ•เนเธเธเธ GitHub Pages เธซเธฒเธเธ•เนเธญเธเธเธฒเธฃเธเธงเธฒเธกเธเธฅเธญเธ”เธ เธฑเธขเธเธฃเธดเธเธเธงเธฃเธ•เนเธญ backend authentication
+          ใช้สำหรับกันหน้าจอเบื้องต้นบน GitHub Pages หากต้องการความปลอดภัยจริงควรต่อ backend authentication
         </p>
       </form>
     </main>
@@ -2098,11 +2097,11 @@ function FilterEmptyNotice({
       <div>
         {latestDate && (
           <button onClick={onUseLatest} type="button">
-            เนเธเนเธงเธฑเธเธ—เธตเนเธฅเนเธฒเธชเธธเธ” {latestDate}
+            ใช้วันที่ล่าสุด {latestDate}
           </button>
         )}
         <button onClick={onClearDates} type="button">
-          เธฅเนเธฒเธเธงเธฑเธเธ—เธตเน
+          ล้างวันที่
         </button>
       </div>
     </div>
@@ -2167,14 +2166,10 @@ function PdSheetsView({
     setImportError("");
     try {
       const imported = await Promise.all([...files].map(readPdUploadFile));
-      setUploadedSources((prev) => [...imported, ...prev]);
+      setUploadedSources((current) => [...imported, ...current]);
       setPdView("summary");
-    } catch (error) {
-      setImportError(
-        error instanceof Error
-          ? error.message
-          : "เธเธณเน€เธเนเธฒเนเธเธฅเนเนเธกเนเธชเธณเน€เธฃเนเธ เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธเนเนเธเธฅเน .xlsx, .xls เธซเธฃเธทเธญ .csv",
-      );
+    } catch (uploadError) {
+      setImportError(uploadError instanceof Error ? uploadError.message : "นำเข้าไฟล์ไม่สำเร็จ กรุณาลองใช้ไฟล์ .xlsx, .xls หรือ .csv");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -2185,9 +2180,9 @@ function PdSheetsView({
       <div className="report-toolbar analysis-panel">
         <div>
           <p className="eyebrow">PD Google Sheets</p>
-          <h2>เธเนเธญเธกเธนเธฅ PD เธเธฒเธ Google Sheet</h2>
-          <p>เธฃเธฐเธเธเธเธฐเธฃเธตเน€เธเธฃเธเธญเธฑเธ•เนเธเธกเธฑเธ•เธดเธ—เธธเธ 60 เธงเธดเธเธฒเธ—เธตเน€เธกเธทเนเธญเน€เธเธดเธ”เธซเธเนเธฒเธเธตเน</p>
-          {updatedAt && <p>เธญเธฑเธเน€เธ”เธ•เธฅเนเธฒเธชเธธเธ”: {updatedAt}</p>}
+          <h2>ข้อมูล PD จาก Google Sheet</h2>
+          <p>ระบบจะรีเฟรชอัตโนมัติทุก 60 วินาทีเมื่อเปิดหน้านี้</p>
+          {updatedAt && <p>อัปเดตล่าสุด: {updatedAt}</p>}
         </div>
         <div className="pd-toolbar-actions">
           <input
@@ -2224,16 +2219,16 @@ function PdSheetsView({
         <Kpi label="Files" value={formatNumber(allSources.length)} tone="blue" />
         <Kpi label="Worksheets" value={formatNumber(totalSheets)} tone="green" />
         <Kpi label="Rows" value={formatNumber(totalAllRows)} tone="amber" />
-        <Kpi label="Auto refresh" value="60 เธงเธดเธเธฒเธ—เธต" tone="neutral" />
+        <Kpi label="Auto refresh" value="60 วินาที" tone="neutral" />
       </div>
 
-      {allSources.length === 0 && !loading && <p className="empty-text">เธขเธฑเธเนเธกเนเธกเธตเธเนเธญเธกเธนเธฅ PD เนเธซเนเนเธชเธ”เธ</p>}
+      {allSources.length === 0 && !loading && <p className="empty-text">ยังไม่มีข้อมูล PD ให้แสดง</p>}
 
       <div className="pd-view-tabs">
         {[
-          { id: "summary", label: "เธชเธฃเธธเธ" },
-          { id: "search", label: "เธเนเธเธซเธฒ" },
-          { id: "tables", label: "เธ•เธฒเธฃเธฒเธเธเนเธญเธกเธนเธฅ" },
+          { id: "summary", label: "สรุป" },
+          { id: "search", label: "ค้นหา" },
+          { id: "tables", label: "ตารางข้อมูล" },
         ].map((item) => (
           <button
             className={pdView === item.id ? "active" : ""}
@@ -2250,18 +2245,18 @@ function PdSheetsView({
         <div className="pd-summary-grid">
           <div className="analysis-panel pd-analysis-card">
             <p className="eyebrow">PD Analysis</p>
-            <h2>เธ เธฒเธเธฃเธงเธกเธเนเธญเธกเธนเธฅ</h2>
+            <h2>ภาพรวมข้อมูล</h2>
             <div className="pd-mini-stats">
               <div>
-                <span>เธเธฃเนเธญเธกเนเธเน</span>
-                <strong>{formatNumber(readySources.length)} เนเธเธฅเน</strong>
+                <span>พร้อมใช้</span>
+                <strong>{formatNumber(readySources.length)} ไฟล์</strong>
               </div>
               <div>
-                <span>เธ•เนเธญเธเนเธเนเธชเธดเธ—เธเธดเน</span>
-                <strong>{formatNumber(blockedSources.length)} เนเธเธฅเน</strong>
+                <span>ต้องแก้สิทธิ์</span>
+                <strong>{formatNumber(blockedSources.length)} ไฟล์</strong>
               </div>
               <div>
-                <span>เธเธญเธฅเธฑเธกเธเน</span>
+                <span>คอลัมน์</span>
                 <strong>{formatNumber(totalColumns)}</strong>
               </div>
               <div>
@@ -2297,13 +2292,13 @@ function PdSheetsView({
               </div>
             </div>
             <p className="pd-analysis-note">
-              เน€เธกเธทเนเธญเนเธเธฃเนเนเธเธฅเนเน€เธเนเธ Anyone with the link can view เนเธฅเนเธง เธซเธเนเธฒ PD เธเธฐเธชเธฃเธธเธเนเธฅเธฐเธเนเธเธซเธฒเธเนเธญเธกเธนเธฅเนเธซเธกเนเธญเธฑเธ•เนเธเธกเธฑเธ•เธด
+              เมื่อแชร์ไฟล์เป็น Anyone with the link can view แล้ว หน้า PD จะสรุปและค้นหาข้อมูลใหม่อัตโนมัติ
             </p>
           </div>
           <div className="analysis-panel pd-source-menu">
             <div className="report-table-heading compact-heading">
-              <h2>เน€เธกเธเธนเนเธเธฅเน PD</h2>
-              <span>{formatNumber(allSources.length)} เนเธเธฅเน</span>
+              <h2>เมนูไฟล์ PD</h2>
+              <span>{formatNumber(allSources.length)} ไฟล์</span>
             </div>
             {allSources.map((source) => (
               <PdSourceCard key={source.id} source={source} onOpenTables={() => setPdView("tables")} />
@@ -2315,8 +2310,8 @@ function PdSheetsView({
       {pdView === "search" && (
         <div className="analysis-panel pd-search-panel">
           <div className="report-table-heading compact-heading">
-            <h2>เธเนเธเธซเธฒเธเนเธญเธกเธนเธฅ PD</h2>
-            <span>{formatNumber(visibleSearchRows.length)} เธฃเธฒเธขเธเธฒเธฃ</span>
+            <h2>ค้นหาข้อมูล PD</h2>
+            <span>{formatNumber(visibleSearchRows.length)} รายการ</span>
           </div>
           <div className="pd-search-controls">
             <div className="input-with-icon">
@@ -2324,13 +2319,13 @@ function PdSheetsView({
               <input
                 autoFocus
                 onChange={(event) => setPdQuery(event.target.value)}
-                placeholder="เธเนเธเธซเธฒ Part No., เธฃเธธเนเธ, เธงเธฑเธเธ—เธตเน, เธเนเธญเธเธงเธฒเธกเนเธเธ•เธฒเธฃเธฒเธ"
+                placeholder="ค้นหา Part No., รุ่น, วันที่, ข้อความในตาราง"
                 type="search"
                 value={pdQuery}
               />
             </div>
             <select onChange={(event) => setPdSourceFilter(event.target.value)} value={pdSourceFilter}>
-              <option value="">เธ—เธธเธเนเธเธฅเน PD</option>
+              <option value="">ทุกไฟล์ PD</option>
               {allSources.map((source) => (
                 <option key={source.id} value={source.id}>
                   {source.label} - {source.name}
@@ -2350,11 +2345,11 @@ function PdSheetsView({
               <h2>{source.name}</h2>
               {source.url && (
                 <a href={source.url} rel="noreferrer" target="_blank">
-                  เน€เธเธดเธ” Google Sheet
+                  เปิด Google Sheet
                 </a>
               )}
             </div>
-            <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "เธเธฃเนเธญเธกเนเธเนเธเธฒเธ" : "เธญเนเธฒเธเนเธกเนเนเธ”เน"}</span>
+            <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "พร้อมใช้งาน" : "อ่านไม่ได้"}</span>
           </div>
           {source.error && <PdAccessNotice source={source} />}
           {source.sheets.map((sheet) => (
@@ -2371,7 +2366,7 @@ function PdSourceCard({ onOpenTables, source }: { onOpenTables: () => void; sour
   return (
     <div className="pd-source-card">
       <div>
-        <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "เธเธฃเนเธญเธกเนเธเน" : "เธ•เนเธญเธเนเธเธฃเนเนเธเธฅเน"}</span>
+        <span className={source.ok ? "pd-status ok" : "pd-status error"}>{source.ok ? "พร้อมใช้" : "ต้องแชร์ไฟล์"}</span>
         <strong>{source.name}</strong>
         <small>
           {formatNumber(source.sheets.length)} sheets / {formatNumber(rows)} rows
@@ -2380,11 +2375,11 @@ function PdSourceCard({ onOpenTables, source }: { onOpenTables: () => void; sour
       <div>
         {source.url && (
           <a href={source.url} rel="noreferrer" target="_blank">
-            เน€เธเธดเธ”เนเธเธฅเน
+            เปิดไฟล์
           </a>
         )}
         <button onClick={onOpenTables} type="button">
-          เธ”เธนเธ•เธฒเธฃเธฒเธ
+          ดูตาราง
         </button>
       </div>
     </div>
@@ -2402,7 +2397,7 @@ function PdSearchResults({
   }>;
 }) {
   if (!rows.length) {
-    return <p className="empty-text">เนเธกเนเธเธเธเนเธญเธกเธนเธฅเธ•เธฒเธกเธเธณเธเนเธ เธซเธฃเธทเธญเนเธเธฅเน PD เธขเธฑเธเนเธกเนเนเธ”เนเน€เธเธดเธ”เธชเธดเธ—เธเธดเนเนเธซเนเธญเนเธฒเธ</p>;
+    return <p className="empty-text">ไม่พบข้อมูลตามคำค้น หรือไฟล์ PD ยังไม่ได้เปิดสิทธิ์ให้อ่าน</p>;
   }
 
   return (
@@ -2413,7 +2408,7 @@ function PdSearchResults({
             <strong>
               {item.source.label} / {item.sheet.name}
             </strong>
-            <span>เนเธ–เธง {formatNumber(item.rowIndex + 2)}</span>
+            <span>แถว {formatNumber(item.rowIndex + 2)}</span>
           </div>
           <dl>
             {item.sheet.headers.slice(0, 8).map((header, index) => (
@@ -2434,10 +2429,10 @@ function PdAccessNotice({ source }: { source: PdWorkbook }) {
     <div className="pd-access-notice" role="status">
       <AlertTriangle size={20} />
       <div>
-        <strong>เธขเธฑเธเธ”เธถเธเธเนเธญเธกเธนเธฅเธเธฒเธเนเธเธฅเนเธเธตเนเนเธกเนเนเธ”เน</strong>
+        <strong>ยังดึงข้อมูลจากไฟล์นี้ไม่ได้</strong>
         <p>{source.error}</p>
-        {source.shareEmail && <p>เธญเธตเน€เธกเธฅเธ—เธตเนเนเธเนเนเธเธฃเนเนเธซเน Apps Script: {source.shareEmail}</p>}
-        {source.technicalError && <small>เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธฃเธฐเธเธ: {source.technicalError}</small>}
+        {source.shareEmail && <p>อีเมลที่ใช้แชร์ให้ Apps Script: {source.shareEmail}</p>}
+        {source.technicalError && <small>รายละเอียดระบบ: {source.technicalError}</small>}
       </div>
     </div>
   );
@@ -2452,7 +2447,7 @@ function PdWorksheetTable({ sheet }: { sheet: PdWorkbook["sheets"][number] }) {
           {formatNumber(sheet.rowCount)} rows / {formatNumber(sheet.columnCount)} cols
         </span>
       </div>
-      {sheet.truncated && <p className="pd-note">เนเธชเธ”เธเธเนเธญเธกเธนเธฅเธเธฒเธเธชเนเธงเธเน€เธเธทเนเธญเนเธซเนเนเธซเธฅเธ”เน€เธฃเนเธง เธซเธฒเธเธกเธตเธเนเธญเธกเธนเธฅเน€เธเธดเนเธก เธฃเธฐเธเธเธเธฐเธญเนเธฒเธเนเธซเธกเนเธ•เธญเธเธฃเธตเน€เธเธฃเธ</p>}
+      {sheet.truncated && <p className="pd-note">แสดงข้อมูลบางส่วนเพื่อให้โหลดเร็ว หากมีข้อมูลเพิ่ม ระบบจะอ่านใหม่ตอนรีเฟรช</p>}
       <div className="data-table-wrap pd-table">
         <table>
           <thead>
@@ -2466,7 +2461,7 @@ function PdWorksheetTable({ sheet }: { sheet: PdWorkbook["sheets"][number] }) {
             {sheet.rows.length === 0 ? (
               <tr>
                 <td className="empty-cell" colSpan={Math.max(sheet.headers.length, 1)}>
-                  เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเนเธเธเธตเธ•เธเธตเน
+                  ไม่มีข้อมูลในชีตนี้
                 </td>
               </tr>
             ) : (
@@ -2525,12 +2520,12 @@ function ReportsView({
       <div className="report-toolbar analysis-panel">
         <div>
           <p className="eyebrow">Production document</p>
-          <h2>เธชเธฃเธธเธเธเธฒเธฃเธเธฃเธญเธเธขเธญเธ”เธชเธณเธซเธฃเธฑเธเธ”เธฒเธงเธเนเนเธซเธฅเธ” PDF</h2>
-          <p>เธเนเธงเธเธงเธฑเธเธ—เธตเนเธเธฅเธดเธ•: {reportRangeLabel(filters)} | เน€เธเธฃเธทเนเธญเธ: {reportMachineLabel(filters)} | เธเธฐ: {reportShiftLabel(filters)}</p>
-          <p>เธเธฐเน€เธเนเธฒ 08:00-20:00 เธเธญเธเธงเธฑเธเธ—เธตเนเธเธฅเธดเธ• | เธเธฐเธ”เธถเธ 20:00-08:00 เธเธญเธเธงเธฑเธเธ–เธฑเธ”เนเธ</p>
+          <h2>สรุปการกรอกยอดสำหรับดาวน์โหลด PDF</h2>
+          <p>ช่วงวันที่ผลิต: {reportRangeLabel(filters)} | เครื่อง: {reportMachineLabel(filters)} | กะ: {reportShiftLabel(filters)}</p>
+          <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
         </div>
         <button className="primary-button" onClick={onDownloadPdf} type="button">
-          <FileText size={18} /> เธ”เธฒเธงเธเนเนเธซเธฅเธ” PDF
+          <FileText size={18} /> ดาวน์โหลด PDF
         </button>
       </div>
 
@@ -2549,7 +2544,7 @@ function ReportsView({
         <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
         <Kpi label="Test" value={formatNumber(summary.test)} tone="amber" />
         <Kpi label="Total" value={formatNumber(summary.total)} tone="blue" />
-        <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} เธเธฒเธ—เธต`} tone="red" />
+        <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
         <Kpi label="Records" value={formatNumber(logs.length)} tone="neutral" />
       </div>
 
@@ -2557,22 +2552,22 @@ function ReportsView({
         <Kpi label="OEE" value={formatPercent(oee)} tone="green" />
         <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
         <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
-        <Kpi label="Run Time" value={`${formatNumber(summary.run)} เธเธฒเธ—เธต`} tone="neutral" />
+        <Kpi label="Run Time" value={`${formatNumber(summary.run)} นาที`} tone="neutral" />
       </div>
       <OeeSummaryChart summary={summary} />
       <DowntimeInsightPanel rows={downtimeStats} summary={summary} />
 
-      <ReportRowsTable rows={shiftRows} title="เธชเธฃเธธเธเธ•เธฒเธกเธเธฐเนเธฅเธฐเธเนเธงเธเน€เธงเธฅเธฒเธ—เธณเธเธฒเธ" />
-      <ReportRowsTable rows={machineRows} title="เธชเธฃเธธเธเธ•เธฒเธกเน€เธเธฃเธทเนเธญเธเธเธฑเธเธฃ" />
-      <ReportRowsTable rows={partRows.slice(0, 40)} title="เธชเธฃเธธเธเธ•เธฒเธกเธฃเธธเนเธ / Part No." />
+      <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
+      <ReportRowsTable rows={machineRows} title="สรุปตามเครื่องจักร" />
+      <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No." />
 
       <div className="analysis-panel">
-        <h2>Downtime เนเธขเธเธ•เธฒเธกเธซเธฑเธงเธเนเธญ</h2>
+        <h2>Downtime แยกตามหัวข้อ</h2>
         <div className="report-downtime-grid">
           {downtimeRows.map((item) => (
             <div className="report-downtime-item" key={item.key}>
               <span>{item.shortLabel}</span>
-              <strong>{formatNumber(item.minutes)} เธเธฒเธ—เธต</strong>
+              <strong>{formatNumber(item.minutes)} นาที</strong>
             </div>
           ))}
         </div>
@@ -2591,46 +2586,46 @@ function DowntimeInsightPanel({ rows, summary }: { rows: DowntimeStatRow[]; summ
   const maxMinutes = Math.max(...topRows.map((row) => row.minutes), 1);
   const downtimeShare = summary.run + summary.downtime > 0 ? summary.downtime / (summary.run + summary.downtime) : 0;
   const insightText = topIssue
-    ? `เธเธงเธฃเนเธเธเธฑเธช ${topIssue.shortLabel} เธเนเธญเธ เน€เธเธฃเธฒเธฐเนเธเนเน€เธงเธฅเธฒ ${formatNumber(topIssue.minutes)} เธเธฒเธ—เธต (${formatPercent(topIssue.percent)})`
-    : "เธขเธฑเธเนเธกเนเธกเธต Downtime เธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน";
+    ? `ควรโฟกัส ${topIssue.shortLabel} ก่อน เพราะใช้เวลา ${formatNumber(topIssue.minutes)} นาที (${formatPercent(topIssue.percent)})`
+    : "ยังไม่มี Downtime ตามตัวกรองนี้";
 
   return (
     <div className="analysis-panel downtime-insight-panel">
       <div className="report-table-heading compact-heading">
-        <h2>เธงเธดเน€เธเธฃเธฒเธฐเธซเนเธเธฒเธฃเธซเธขเธธเธ”เน€เธเธฃเธทเนเธญเธ</h2>
-        <span>เธชเธฃเธธเธเธชเธฑเนเธ</span>
+        <h2>วิเคราะห์การหยุดเครื่อง</h2>
+        <span>สรุปสั้น</span>
       </div>
       <div className="downtime-insight-grid">
         <div className="downtime-insight-card focus">
-          <span>เธเธฑเธเธซเธฒเธซเธฅเธฑเธ</span>
+          <span>ปัญหาหลัก</span>
           <strong>{topIssue?.shortLabel ?? "-"}</strong>
           <p>{insightText}</p>
         </div>
         <div className="downtime-insight-card">
-          <span>Downtime เธฃเธงเธก</span>
-          <strong>{formatNumber(summary.downtime)} เธเธฒเธ—เธต</strong>
-          <p>เธเธดเธ”เน€เธเนเธ {formatPercent(downtimeShare)} เธเธญเธเน€เธงเธฅเธฒเธ—เธฑเนเธเธซเธกเธ”</p>
+          <span>Downtime รวม</span>
+          <strong>{formatNumber(summary.downtime)} นาที</strong>
+          <p>คิดเป็น {formatPercent(downtimeShare)} ของเวลาทั้งหมด</p>
         </div>
         <div className="downtime-insight-card">
           <span>Top 3</span>
           <strong>{formatPercent(topThreePercent)}</strong>
-          <p>เธเธญเธเน€เธงเธฅเธฒเธซเธขเธธเธ”เธ—เธฑเนเธเธซเธกเธ”</p>
+          <p>ของเวลาหยุดทั้งหมด</p>
         </div>
         <div className="downtime-insight-card">
-          <span>เธเธณเธเธงเธเธเธฑเธเธซเธฒ</span>
+          <span>จำนวนปัญหา</span>
           <strong>{formatNumber(activeRows.length)}</strong>
-          <p>เธซเธฑเธงเธเนเธญเธ—เธตเนเน€เธเธดเธ” downtime</p>
+          <p>หัวข้อที่เกิด downtime</p>
         </div>
       </div>
       <div className="downtime-insight-bars">
         {topRows.length === 0 ? (
-          <p className="empty-text">เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅ Downtime เธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน</p>
+          <p className="empty-text">ไม่มีข้อมูล Downtime ตามตัวกรองนี้</p>
         ) : (
           topRows.map((row) => (
             <div className="downtime-insight-bar" key={row.key}>
               <div>
                 <span>{row.shortLabel}</span>
-                <b>{formatNumber(row.minutes)} เธเธฒเธ—เธต</b>
+                <b>{formatNumber(row.minutes)} นาที</b>
               </div>
               <div className="downtime-insight-track">
                 <i style={{ width: `${Math.max((row.minutes / maxMinutes) * 100, 4)}%` }} />
@@ -2649,24 +2644,24 @@ function DowntimeStatsTable({ rows }: { rows: DowntimeStatRow[] }) {
   return (
     <div className="data-table-wrap report-table">
       <div className="report-table-heading">
-        <h2>เธชเธ–เธดเธ•เธดเธเธฒเธฃเธซเธขเธธเธ”เน€เธเธฃเธทเนเธญเธ</h2>
-        <span>{formatNumber(visibleRows.length)} เธเธฑเธเธซเธฒ</span>
+        <h2>สถิติการหยุดเครื่อง</h2>
+        <span>{formatNumber(visibleRows.length)} ปัญหา</span>
       </div>
       <table>
         <thead>
           <tr>
             <th>No.</th>
-            <th>เธเธฑเธเธซเธฒเธเธฒเธฃเธซเธขเธธเธ”เน€เธเธฃเธทเนเธญเธ</th>
-            <th>เน€เธงเธฅเธฒเธซเธขเธธเธ”เธฃเธงเธก</th>
-            <th>เธเธณเธเธงเธเธเธฃเธฑเนเธ</th>
-            <th>เธชเธฑเธ”เธชเนเธงเธ</th>
+            <th>ปัญหาการหยุดเครื่อง</th>
+            <th>เวลาหยุดรวม</th>
+            <th>จำนวนครั้ง</th>
+            <th>สัดส่วน</th>
           </tr>
         </thead>
         <tbody>
           {visibleRows.length === 0 ? (
             <tr>
               <td className="empty-cell" colSpan={5}>
-                เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน
+                ไม่มีข้อมูลตามตัวกรองนี้
               </td>
             </tr>
           ) : (
@@ -2677,8 +2672,8 @@ function DowntimeStatsTable({ rows }: { rows: DowntimeStatRow[] }) {
                   <strong>{row.label}</strong>
                   <small>{row.shortLabel}</small>
                 </td>
-                <td>{formatNumber(row.minutes)} เธเธฒเธ—เธต</td>
-                <td>{formatNumber(row.count)} เธเธฃเธฑเนเธ</td>
+                <td>{formatNumber(row.minutes)} นาที</td>
+                <td>{formatNumber(row.count)} ครั้ง</td>
                 <td>{formatPercent(row.percent)}</td>
               </tr>
             ))
@@ -2694,13 +2689,13 @@ function ReportRowsTable({ rows, title }: { rows: ReportRow[]; title: string }) 
     <div className="data-table-wrap report-table">
       <div className="report-table-heading">
         <h2>{title}</h2>
-        <span>{formatNumber(rows.length)} เธฃเธฒเธขเธเธฒเธฃ</span>
+        <span>{formatNumber(rows.length)} รายการ</span>
       </div>
       <table>
         <thead>
           <tr>
             <th>No.</th>
-            <th>เธฃเธฒเธขเธเธฒเธฃ</th>
+            <th>รายการ</th>
             <th>Good</th>
             <th>NG</th>
             <th>Test</th>
@@ -2714,7 +2709,7 @@ function ReportRowsTable({ rows, title }: { rows: ReportRow[]; title: string }) 
           {rows.length === 0 ? (
             <tr>
               <td className="empty-cell" colSpan={9}>
-                เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน
+                ไม่มีข้อมูลตามตัวกรองนี้
               </td>
             </tr>
           ) : (
@@ -2729,8 +2724,8 @@ function ReportRowsTable({ rows, title }: { rows: ReportRow[]; title: string }) 
                 <td>{formatNumber(row.ng)}</td>
                 <td>{formatNumber(row.test)}</td>
                 <td>{formatNumber(row.total)}</td>
-                <td>{formatNumber(row.downtime)} เธเธฒเธ—เธต</td>
-                <td>{formatNumber(row.normalMinutes)} เธเธฒเธ—เธต</td>
+                <td>{formatNumber(row.downtime)} นาที</td>
+                <td>{formatNumber(row.normalMinutes)} นาที</td>
                 <td>{formatNumber(row.count)}</td>
               </tr>
             ))
@@ -2745,17 +2740,17 @@ function FiltersBar({ filters, setFilters }: { filters: Filters; setFilters: (fi
   return (
     <div className="filters-bar">
       <label>
-        เธเธฒเธ
+        จาก
         <input value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} type="date" />
       </label>
       <label>
-        เธ–เธถเธ
+        ถึง
         <input value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} type="date" />
       </label>
       <label>
-        เน€เธเธฃเธทเนเธญเธ
+        เครื่อง
         <select value={filters.machineId} onChange={(event) => setFilters({ ...filters, machineId: event.target.value })}>
-          <option value="">เธ—เธฑเนเธเธซเธกเธ”</option>
+          <option value="">ทั้งหมด</option>
           {machines.map((machine) => (
             <option key={machine.id} value={machine.id}>
               {machine.name}
@@ -2764,9 +2759,9 @@ function FiltersBar({ filters, setFilters }: { filters: Filters; setFilters: (fi
         </select>
       </label>
       <label>
-        เธเธฐ
+        กะ
         <select value={filters.shift} onChange={(event) => setFilters({ ...filters, shift: event.target.value })}>
-          <option value="">เธ—เธฑเนเธเธซเธกเธ”</option>
+          <option value="">ทั้งหมด</option>
           {orderedShiftOptions.map((shift) => (
             <option key={shift} value={shift}>
               {shiftLabel(shift)}
@@ -2831,7 +2826,7 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
   return (
     <div className="analysis-panel part-summary-panel">
       <div className="part-summary-heading">
-        <h2>เธฃเธธเนเธ / Part No.</h2>
+        <h2>รุ่น / Part No.</h2>
         <span>{formatNumber(rows.length)} Part No.</span>
       </div>
       {visibleRows.length > 0 ? (
@@ -2849,10 +2844,10 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
               </div>
             ))}
           </div>
-          {hiddenCount > 0 && <p className="empty-text">เนเธชเธ”เธเธญเธตเธ {formatNumber(hiddenCount)} Part No. เนเธเธ•เธฒเธฃเธฒเธเธเธฃเธฐเธงเธฑเธ•เธด</p>}
+          {hiddenCount > 0 && <p className="empty-text">แสดงอีก {formatNumber(hiddenCount)} Part No. ในตารางประวัติ</p>}
         </>
       ) : (
-        <p className="empty-text">เนเธกเนเธกเธต Part No. เธ•เธฒเธกเธ•เธฑเธงเธเธฃเธญเธเธเธตเน</p>
+        <p className="empty-text">ไม่มี Part No. ตามตัวกรองนี้</p>
       )}
     </div>
   );
@@ -2874,7 +2869,7 @@ function OeeSummaryChart({ summary }: { summary: ReturnType<typeof summarize> })
     <div className="analysis-panel oee-summary-chart">
       <div className="section-title">
         <Gauge size={20} />
-        <h2>เธชเธฃเธธเธ OEE</h2>
+        <h2>สรุป OEE</h2>
       </div>
       <div className="oee-summary-layout">
         <div className="oee-gauge-wrap">
@@ -2910,11 +2905,11 @@ function OeeSummaryChart({ summary }: { summary: ReturnType<typeof summarize> })
         <div className="oee-volume-summary">
           <div>
             <span>Run time</span>
-            <strong>{formatNumber(summary.run)} เธเธฒเธ—เธต</strong>
+            <strong>{formatNumber(summary.run)} นาที</strong>
           </div>
           <div>
             <span>Downtime</span>
-            <strong>{formatNumber(summary.downtime)} เธเธฒเธ—เธต</strong>
+            <strong>{formatNumber(summary.downtime)} นาที</strong>
           </div>
           <div>
             <span>Total output</span>
@@ -3075,7 +3070,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
           {logs.map((log) => (
             <tr key={log.id}>
               <td>
-                <button className="icon-action-button" onClick={() => onEdit(log)} title="เนเธเนเนเธเธฃเธฒเธขเธเธฒเธฃเธเธตเน" type="button">
+                <button className="icon-action-button" onClick={() => onEdit(log)} title="แก้ไขรายการนี้" type="button">
                   <Pencil size={16} />
                 </button>
               </td>
@@ -3117,7 +3112,7 @@ function MasterTable() {
       <div className="table-toolbar">
         <div className="input-with-icon search-box">
           <Search size={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="เธเนเธเธซเธฒ master data" type="search" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา master data" type="search" />
         </div>
       </div>
       <div className="data-table-wrap">
@@ -3149,4 +3144,3 @@ function MasterTable() {
 }
 
 export default App;
-
