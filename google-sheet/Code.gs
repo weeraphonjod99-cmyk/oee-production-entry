@@ -5,16 +5,25 @@ const MACHINE_SHEET = "machines";
 const PRODUCT_MASTER_SHEET = "product_master";
 const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 const USER_SHEET = "app_users";
+const KPI_DASHBOARD_SHEET = "kpi_dashboard";
+const KPI_MACHINE_SHEET = "kpi_machine";
+const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
+const KPI_MACHINE_JOB_STEP_SHEET = "kpi_machine_job_step";
+const KPI_DAILY_DETAIL_SHEET = "kpi_daily_detail";
+const KPI_NOTES_SHEET = "kpi_notes";
+const KPI_REFRESH_ACTION = "refreshKpi";
 const PD_EXTERNAL_SHEETS = [
   {
     id: "1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j",
     label: "PD 1",
-    url: "https://docs.google.com/spreadsheets/d/1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j/edit",
+    gid: "708075205",
+    url: "https://docs.google.com/spreadsheets/d/1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j/edit?gid=708075205#gid=708075205",
   },
   {
     id: "1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq",
     label: "PD 2",
-    url: "https://docs.google.com/spreadsheets/d/1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq/edit",
+    gid: "255697382",
+    url: "https://docs.google.com/spreadsheets/d/1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq/edit?gid=255697382#gid=255697382",
   },
 ];
 const PD_MAX_ROWS_PER_SHEET = 300;
@@ -22,6 +31,7 @@ const PD_MAX_COLUMNS_PER_SHEET = 40;
 
 const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
 const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/product_master.csv";
+const PRODUCTION_LOGS_SEED_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/production_logs_seed.csv";
 const OEE_HEADER_ROW = 3;
 const OEE_FIRST_DATA_ROW = 4;
 const OEE_MINUTES_PER_SLOT = 5;
@@ -149,6 +159,9 @@ function doGet(e) {
     if (action === "pdSheets") {
       return jsonResponse({ ok: true, sources: getPdExternalSheets() });
     }
+    if (action === KPI_REFRESH_ACTION || action === "kpi") {
+      return jsonResponse({ ok: true, result: refreshKpiSheets() });
+    }
     if (action === "setup") {
       const book = setupProductionWorkbook();
       return jsonResponse({
@@ -157,6 +170,12 @@ function doGet(e) {
         spreadsheetId: book.getId(),
         spreadsheetUrl: book.getUrl(),
       });
+    }
+    if (action === "refreshMasterData") {
+      return jsonResponse({ ok: true, result: refreshMasterData() });
+    }
+    if (action === "refreshSeedLogs") {
+      return jsonResponse({ ok: true, result: refreshSeedLogs() });
     }
     if (action === "repairOeeFormulas") {
       return jsonResponse({ ok: true, result: repairOeeFormulas() });
@@ -1089,6 +1108,650 @@ function getLogs(limit) {
   return mergeLogs(productionLogs, getLegacyOeeLogs()).slice(0, limit);
 }
 
+function refreshKpiSheets() {
+  const book = getWorkbook();
+  const refreshedAt = new Date().toISOString();
+  const rawLogs = getLogs(100000);
+  const logs = dedupeKpiLogs(rawLogs);
+  const duplicateRowsRemoved = rawLogs.length - logs.length;
+  const machineRows = buildKpiMachineRows(logs);
+  const machineStepRows = buildKpiMachineStepRows(logs);
+  const machineJobStepRows = buildKpiMachineJobStepRows(logs);
+  const dailyRows = buildKpiDailyRows(logs);
+  const mainTarget = writeKpiReportToBook(
+    book,
+    logs,
+    machineRows,
+    machineStepRows,
+    machineJobStepRows,
+    dailyRows,
+    rawLogs.length,
+    duplicateRowsRemoved,
+    refreshedAt,
+    true
+  );
+  const pdTargets = writeKpiReportsToPdBooks(
+    logs,
+    machineRows,
+    machineStepRows,
+    machineJobStepRows,
+    dailyRows,
+    rawLogs.length,
+    duplicateRowsRemoved,
+    refreshedAt
+  );
+
+  return {
+    spreadsheetId: book.getId(),
+    spreadsheetUrl: book.getUrl(),
+    refreshedAt: refreshedAt,
+    rowsDownloaded: rawLogs.length,
+    rowsUsed: logs.length,
+    duplicateRowsRemoved: duplicateRowsRemoved,
+    machineGroups: machineRows.length,
+    machineStepGroups: machineStepRows.length,
+    machineJobStepGroups: machineJobStepRows.length,
+    dailyRows: dailyRows.length,
+    sheets: [
+      KPI_DASHBOARD_SHEET,
+      KPI_MACHINE_SHEET,
+      KPI_MACHINE_STEP_SHEET,
+      KPI_MACHINE_JOB_STEP_SHEET,
+      KPI_DAILY_DETAIL_SHEET,
+      KPI_NOTES_SHEET,
+    ],
+    targets: [mainTarget].concat(pdTargets),
+  };
+}
+
+function writeKpiReportToBook(book, logs, machineRows, machineStepRows, machineJobStepRows, dailyRows, rawCount, duplicateRowsRemoved, refreshedAt, includeDailyDetail) {
+  const sheets = [
+    KPI_DASHBOARD_SHEET,
+    KPI_MACHINE_SHEET,
+    KPI_MACHINE_STEP_SHEET,
+    KPI_MACHINE_JOB_STEP_SHEET,
+    KPI_NOTES_SHEET,
+  ];
+  writeKpiDashboardSheet(book, logs, machineRows, machineStepRows, machineJobStepRows, rawCount, duplicateRowsRemoved, refreshedAt);
+  writeKpiSheet(book, KPI_MACHINE_SHEET, getKpiMachineHeaders(), machineRows, getKpiMachineFormatRules());
+  writeKpiSheet(book, KPI_MACHINE_STEP_SHEET, getKpiMachineStepHeaders(), machineStepRows, getKpiMachineStepFormatRules());
+  writeKpiSheet(book, KPI_MACHINE_JOB_STEP_SHEET, getKpiMachineJobStepHeaders(), machineJobStepRows, getKpiMachineJobStepFormatRules());
+  if (includeDailyDetail) {
+    writeKpiSheet(book, KPI_DAILY_DETAIL_SHEET, getKpiDailyHeaders(), dailyRows, getKpiDailyFormatRules());
+    sheets.splice(4, 0, KPI_DAILY_DETAIL_SHEET);
+  }
+  writeKpiSheet(book, KPI_NOTES_SHEET, ["Item", "Detail"], buildKpiNotesRows(refreshedAt, rawCount, rawCount - duplicateRowsRemoved, duplicateRowsRemoved), []);
+  return {
+    ok: true,
+    spreadsheetId: book.getId(),
+    spreadsheetUrl: book.getUrl(),
+    sheets: sheets,
+  };
+}
+
+function writeKpiReportsToPdBooks(logs, machineRows, machineStepRows, machineJobStepRows, dailyRows, rawCount, duplicateRowsRemoved, refreshedAt) {
+  return PD_EXTERNAL_SHEETS.map(function(source) {
+    try {
+      const book = SpreadsheetApp.openById(source.id);
+      const result = writeKpiReportToBook(
+        book,
+        logs,
+        machineRows,
+        machineStepRows,
+        machineJobStepRows,
+        dailyRows,
+        rawCount,
+        duplicateRowsRemoved,
+        refreshedAt,
+        false
+      );
+      result.label = source.label;
+      result.gid = source.gid || "";
+      return result;
+    } catch (error) {
+      return {
+        ok: false,
+        label: source.label,
+        spreadsheetId: source.id,
+        spreadsheetUrl: source.url,
+        gid: source.gid || "",
+        error: String(error && error.message ? error.message : error),
+      };
+    }
+  });
+}
+
+function dedupeKpiLogs(rawLogs) {
+  const map = {};
+  rawLogs.forEach(function(raw) {
+    const log = normalizeKpiLog(raw);
+    if (!log.date || !log.machineId || !log.partKey) return;
+    const key = [
+      log.date,
+      log.shiftStartAt || log.shift,
+      log.machineId,
+      log.productKey,
+      log.partKey,
+      log.stepKey,
+    ].join("|");
+    map[key] = map[key] ? preferKpiLog(map[key], log) : log;
+  });
+
+  return Object.keys(map)
+    .map(function(key) { return map[key]; })
+    .sort(function(a, b) {
+      return (
+        a.date.localeCompare(b.date) ||
+        a.machineName.localeCompare(b.machineName, undefined, { numeric: true }) ||
+        a.partNo.localeCompare(b.partNo, undefined, { numeric: true }) ||
+        a.step.localeCompare(b.step, undefined, { numeric: true })
+      );
+    });
+}
+
+function normalizeKpiLog(raw) {
+  const workMinutes = numberValue(raw.workMinutes);
+  const machineSpeed = numberValue(raw.machineSpeed);
+  const cavityQty = numberValue(raw.cavityQty) || 1;
+  const goodQty = numberValue(raw.goodQty);
+  const ngQty = numberValue(raw.ngQty);
+  const testQty = numberValue(raw.testQty);
+  const downtimeMinutes = sumValues([
+    raw.changeoverMinutes,
+    raw.inspectionMinutes,
+    raw.equipmentRepairMinutes,
+    raw.moldRepairMinutes,
+    raw.materialChangeMinutes,
+    raw.emergencyStopMinutes,
+    raw.meetingMinutes,
+    raw.plannedStopMinutes,
+  ]);
+  const rawNormalMinutes = numberValue(raw.normalMinutes);
+  const normalMinutes = rawNormalMinutes > 0 ? rawNormalMinutes : Math.max(workMinutes - downtimeMinutes, 0);
+  const speedPcsPerMinute = machineSpeed >= 1000 ? machineSpeed / 480 : machineSpeed * cavityQty;
+  const targetQty = speedPcsPerMinute * workMinutes;
+  const actualOutput = goodQty + ngQty + testQty;
+  const target8h = speedPcsPerMinute * 480;
+  const kpi = targetQty > 0 ? actualOutput / targetQty : 0;
+  const availability = workMinutes > 0 ? normalMinutes / workMinutes : 0;
+  const quality = goodQty + ngQty > 0 ? goodQty / (goodQty + ngQty) : 0;
+
+  return {
+    id: normalizeKpiText(raw.id),
+    date: formatLegacyDate(raw.date),
+    month: String(formatLegacyDate(raw.date)).slice(0, 7),
+    shift: toOriginalShift(raw.shift) || "-",
+    shiftStartAt: normalizeKpiText(raw.shiftStartAt),
+    machineId: normalizeKpiText(raw.machineId || raw.machineName, "unknown"),
+    machineName: normalizeKpiText(raw.machineName, "Unknown machine"),
+    productName: normalizeKpiText(raw.productName, "-"),
+    productKey: normalizeKpiKey(raw.productName),
+    partNo: normalizeKpiText(raw.partNo, "(blank)"),
+    partKey: normalizeKpiKey(raw.partNo),
+    step: normalizeKpiText(raw.step, "-"),
+    stepKey: normalizeKpiKey(raw.step || "-"),
+    source: normalizeKpiText(raw.source, "unknown"),
+    workMinutes: workMinutes,
+    normalMinutes: normalMinutes,
+    downtimeMinutes: downtimeMinutes,
+    machineSpeed: machineSpeed,
+    cavityQty: cavityQty,
+    speedPcsPerMinute: speedPcsPerMinute,
+    target8h: target8h,
+    targetQty: targetQty,
+    goodQty: goodQty,
+    ngQty: ngQty,
+    testQty: testQty,
+    actualOutput: actualOutput,
+    gapQty: actualOutput - targetQty,
+    kpi: kpi,
+    availability: availability,
+    quality: quality,
+    oee: kpi * availability * quality,
+    speedSource: machineSpeed >= 1000 ? "machineSpeed / 480" : "machineSpeed x cavityQty",
+    createdAt: normalizeKpiText(raw.createdAt),
+    updatedAt: normalizeKpiText(raw.updatedAt),
+  };
+}
+
+function preferKpiLog(current, candidate) {
+  const currentScore = getKpiSourceScore(current) * 100000000000000 + getKpiTimestamp(current);
+  const candidateScore = getKpiSourceScore(candidate) * 100000000000000 + getKpiTimestamp(candidate);
+  return candidateScore > currentScore ? candidate : current;
+}
+
+function getKpiSourceScore(log) {
+  if (log.source === "google-sheet") return 3;
+  if (log.source === "local") return 2;
+  return 1;
+}
+
+function getKpiTimestamp(log) {
+  return Date.parse(log.updatedAt || log.createdAt || log.date || "") || 0;
+}
+
+function normalizeKpiText(value, fallback) {
+  const text = String(value == null ? "" : value).replace(/\u00a0/g, " ").trim();
+  return text || fallback || "";
+}
+
+function normalizeKpiKey(value) {
+  return normalizeKpiText(value).toUpperCase().replace(/\s+/g, "");
+}
+
+function buildKpiMachineRows(logs) {
+  return buildKpiGroupedRows(logs, function(log) {
+    return log.machineId;
+  }, function(rows) {
+    const metrics = aggregateKpiRows(rows);
+    return [
+      rows[0].machineId,
+      commonKpiValue(rows, "machineName"),
+      rows.length,
+      countUniqueKpi(rows, "partKey"),
+      countUniqueKpi(rows, "stepKey"),
+      metrics.firstDate,
+      metrics.lastDate,
+      metrics.workMinutes,
+      metrics.normalMinutes,
+      metrics.downtimeMinutes,
+      metrics.speedPcsPerMinute,
+      metrics.target8h,
+      metrics.targetQty,
+      metrics.actualOutput,
+      metrics.gapQty,
+      metrics.kpi,
+      metrics.availability,
+      metrics.quality,
+      metrics.oee,
+      metrics.goodQty,
+      metrics.ngQty,
+      metrics.testQty,
+      sourceMixKpi(rows),
+    ];
+  }).sort(function(a, b) {
+    return a[1].localeCompare(b[1], undefined, { numeric: true });
+  });
+}
+
+function buildKpiMachineStepRows(logs) {
+  return buildKpiGroupedRows(logs, function(log) {
+    return log.machineId + "|" + log.stepKey;
+  }, function(rows) {
+    const metrics = aggregateKpiRows(rows);
+    return [
+      rows[0].machineId,
+      commonKpiValue(rows, "machineName"),
+      commonKpiValue(rows, "step"),
+      rows.length,
+      countUniqueKpi(rows, "partKey"),
+      metrics.firstDate,
+      metrics.lastDate,
+      metrics.workMinutes,
+      metrics.normalMinutes,
+      metrics.downtimeMinutes,
+      metrics.speedPcsPerMinute,
+      metrics.target8h,
+      metrics.targetQty,
+      metrics.actualOutput,
+      metrics.gapQty,
+      metrics.kpi,
+      metrics.availability,
+      metrics.quality,
+      metrics.oee,
+      metrics.goodQty,
+      metrics.ngQty,
+      metrics.testQty,
+      sourceMixKpi(rows),
+    ];
+  }).sort(function(a, b) {
+    return (
+      a[1].localeCompare(b[1], undefined, { numeric: true }) ||
+      a[2].localeCompare(b[2], undefined, { numeric: true })
+    );
+  });
+}
+
+function buildKpiMachineJobStepRows(logs) {
+  return buildKpiGroupedRows(logs, function(log) {
+    return log.machineId + "|" + log.productKey + "|" + log.partKey + "|" + log.stepKey;
+  }, function(rows) {
+    const metrics = aggregateKpiRows(rows);
+    return [
+      rows[0].machineId,
+      commonKpiValue(rows, "machineName"),
+      commonKpiValue(rows, "productName"),
+      commonKpiValue(rows, "partNo"),
+      commonKpiValue(rows, "step"),
+      rows.length,
+      metrics.firstDate,
+      metrics.lastDate,
+      metrics.workMinutes,
+      metrics.normalMinutes,
+      metrics.downtimeMinutes,
+      metrics.speedPcsPerMinute,
+      metrics.target8h,
+      metrics.targetQty,
+      metrics.actualOutput,
+      metrics.gapQty,
+      metrics.kpi,
+      metrics.availability,
+      metrics.quality,
+      metrics.oee,
+      metrics.goodQty,
+      metrics.ngQty,
+      metrics.testQty,
+      sourceMixKpi(rows),
+    ];
+  }).sort(function(a, b) {
+    return (
+      a[1].localeCompare(b[1], undefined, { numeric: true }) ||
+      a[3].localeCompare(b[3], undefined, { numeric: true }) ||
+      a[4].localeCompare(b[4], undefined, { numeric: true })
+    );
+  });
+}
+
+function buildKpiDailyRows(logs) {
+  return logs.map(function(log) {
+    return [
+      log.date,
+      log.month,
+      log.shift,
+      log.machineId,
+      log.machineName,
+      log.productName,
+      log.partNo,
+      log.step,
+      log.workMinutes,
+      log.normalMinutes,
+      log.downtimeMinutes,
+      log.machineSpeed,
+      log.cavityQty,
+      log.speedPcsPerMinute,
+      log.target8h,
+      log.targetQty,
+      log.goodQty,
+      log.ngQty,
+      log.testQty,
+      log.actualOutput,
+      log.gapQty,
+      log.kpi,
+      log.availability,
+      log.quality,
+      log.oee,
+      log.speedSource,
+      log.source,
+      log.createdAt,
+      log.updatedAt,
+    ];
+  });
+}
+
+function buildKpiGroupedRows(logs, keyFn, rowFn) {
+  const groups = {};
+  logs.forEach(function(log) {
+    const key = keyFn(log);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(log);
+  });
+  return Object.keys(groups).map(function(key) {
+    return rowFn(groups[key]);
+  });
+}
+
+function aggregateKpiRows(rows) {
+  const metrics = {
+    firstDate: "",
+    lastDate: "",
+    workMinutes: 0,
+    normalMinutes: 0,
+    downtimeMinutes: 0,
+    targetQty: 0,
+    goodQty: 0,
+    ngQty: 0,
+    testQty: 0,
+    actualOutput: 0,
+  };
+  rows.forEach(function(row) {
+    metrics.workMinutes += row.workMinutes;
+    metrics.normalMinutes += row.normalMinutes;
+    metrics.downtimeMinutes += row.downtimeMinutes;
+    metrics.targetQty += row.targetQty;
+    metrics.goodQty += row.goodQty;
+    metrics.ngQty += row.ngQty;
+    metrics.testQty += row.testQty;
+    metrics.actualOutput += row.actualOutput;
+    if (!metrics.firstDate || row.date < metrics.firstDate) metrics.firstDate = row.date;
+    if (!metrics.lastDate || row.date > metrics.lastDate) metrics.lastDate = row.date;
+  });
+  metrics.speedPcsPerMinute = metrics.workMinutes > 0 ? metrics.targetQty / metrics.workMinutes : 0;
+  metrics.target8h = metrics.speedPcsPerMinute * 480;
+  metrics.gapQty = metrics.actualOutput - metrics.targetQty;
+  metrics.kpi = metrics.targetQty > 0 ? metrics.actualOutput / metrics.targetQty : 0;
+  metrics.availability = metrics.workMinutes > 0 ? metrics.normalMinutes / metrics.workMinutes : 0;
+  metrics.quality = metrics.goodQty + metrics.ngQty > 0 ? metrics.goodQty / (metrics.goodQty + metrics.ngQty) : 0;
+  metrics.oee = metrics.kpi * metrics.availability * metrics.quality;
+  return metrics;
+}
+
+function commonKpiValue(rows, field) {
+  const counts = {};
+  rows.forEach(function(row) {
+    const value = normalizeKpiText(row[field]);
+    if (!value) return;
+    counts[value] = (counts[value] || 0) + 1;
+  });
+  return Object.keys(counts).sort(function(a, b) {
+    return counts[b] - counts[a] || a.localeCompare(b, undefined, { numeric: true });
+  })[0] || "";
+}
+
+function countUniqueKpi(rows, field) {
+  const seen = {};
+  rows.forEach(function(row) {
+    const value = normalizeKpiText(row[field]);
+    if (value) seen[value] = true;
+  });
+  return Object.keys(seen).length;
+}
+
+function sourceMixKpi(rows) {
+  const counts = {};
+  rows.forEach(function(row) {
+    const source = normalizeKpiText(row.source, "unknown");
+    counts[source] = (counts[source] || 0) + 1;
+  });
+  return Object.keys(counts)
+    .sort()
+    .map(function(source) {
+      return source + ": " + counts[source];
+    })
+    .join("; ");
+}
+
+function writeKpiDashboardSheet(book, logs, machineRows, machineStepRows, machineJobStepRows, rawCount, duplicateRowsRemoved, refreshedAt) {
+  const sheet = resetKpiSheet(book, KPI_DASHBOARD_SHEET);
+  const overall = aggregateKpiRows(logs);
+  const topRows = machineJobStepRows
+    .filter(function(row) { return row[13] > 0; })
+    .slice()
+    .sort(function(a, b) { return b[16] - a[16] || b[14] - a[14]; })
+    .slice(0, 10);
+  const lowRows = machineJobStepRows
+    .filter(function(row) { return row[13] > 0; })
+    .slice()
+    .sort(function(a, b) { return a[16] - b[16] || a[14] - b[14]; })
+    .slice(0, 10);
+
+  const matrix = [];
+  matrix.push(["KPI by Machine, Job, and Step", "", "", "", "", "", "", ""]);
+  matrix.push(["Production date range", (overall.firstDate || "") + " to " + (overall.lastDate || ""), "Rows used", logs.length, "Duplicates removed", duplicateRowsRemoved, "Refreshed at", refreshedAt]);
+  matrix.push(["Raw rows", rawCount, "Machine groups", machineRows.length, "Machine+Step groups", machineStepRows.length, "Machine+Job+Step groups", machineJobStepRows.length]);
+  matrix.push(["", "", "", "", "", "", "", ""]);
+  matrix.push(["Metric", "Value", "Metric", "Value", "Metric", "Value", "Metric", "Value"]);
+  matrix.push(["Actual Output", overall.actualOutput, "Target Qty", overall.targetQty, "Gap Qty", overall.gapQty, "KPI %", overall.kpi]);
+  matrix.push(["Work Minutes", overall.workMinutes, "Normal Minutes", overall.normalMinutes, "Downtime Minutes", overall.downtimeMinutes, "Availability %", overall.availability]);
+  matrix.push(["Good Qty", overall.goodQty, "NG Qty", overall.ngQty, "Test Qty", overall.testQty, "Quality %", overall.quality]);
+  matrix.push(["", "", "", "", "", "", "", ""]);
+
+  const topTitleRow = matrix.length + 1;
+  matrix.push(["Top Machine+Job+Step by KPI %", "", "", "", "", "", "", ""]);
+  matrix.push(["Machine", "Job", "Part No.", "Step", "KPI %", "Target Qty", "Actual Output", "Gap Qty"]);
+  topRows.forEach(function(row) {
+    matrix.push([row[1], row[2], row[3], row[4], row[16], row[13], row[14], row[15]]);
+  });
+  matrix.push(["", "", "", "", "", "", "", ""]);
+
+  const lowTitleRow = matrix.length + 1;
+  matrix.push(["Lowest Machine+Job+Step by KPI %", "", "", "", "", "", "", ""]);
+  matrix.push(["Machine", "Job", "Part No.", "Step", "KPI %", "Target Qty", "Actual Output", "Gap Qty"]);
+  lowRows.forEach(function(row) {
+    matrix.push([row[1], row[2], row[3], row[4], row[16], row[13], row[14], row[15]]);
+  });
+
+  ensureKpiCapacity(sheet, matrix.length, 8);
+  sheet.getRange(1, 1, matrix.length, 8).setValues(matrix);
+  sheet.setFrozenRows(1);
+  styleKpiHeaderRange(sheet.getRange(1, 1, 1, 8), "#1f4e79");
+  styleKpiHeaderRange(sheet.getRange(5, 1, 1, 8), "#0f766e");
+  styleKpiHeaderRange(sheet.getRange(topTitleRow, 1, 1, 8), "#1f4e79");
+  styleKpiHeaderRange(sheet.getRange(topTitleRow + 1, 1, 1, 8), "#0f766e");
+  styleKpiHeaderRange(sheet.getRange(lowTitleRow, 1, 1, 8), "#1f4e79");
+  styleKpiHeaderRange(sheet.getRange(lowTitleRow + 1, 1, 1, 8), "#0f766e");
+  sheet.getRange(1, 1, matrix.length, 8).setWrap(true).setVerticalAlignment("middle");
+  sheet.getRange(6, 2, 3, 6).setNumberFormat("#,##0.0");
+  sheet.getRange(6, 8, 3, 1).setNumberFormat("0.0%");
+  if (topRows.length) {
+    sheet.getRange(topTitleRow + 2, 5, topRows.length, 1).setNumberFormat("0.0%");
+    sheet.getRange(topTitleRow + 2, 6, topRows.length, 3).setNumberFormat("#,##0.0");
+  }
+  if (lowRows.length) {
+    sheet.getRange(lowTitleRow + 2, 5, lowRows.length, 1).setNumberFormat("0.0%");
+    sheet.getRange(lowTitleRow + 2, 6, lowRows.length, 3).setNumberFormat("#,##0.0");
+  }
+  sheet.getRange(1, 1, matrix.length, 8).setBorder(true, true, true, true, true, true, "#d9e2ec", SpreadsheetApp.BorderStyle.SOLID);
+  sheet.autoResizeColumns(1, 8);
+}
+
+function writeKpiSheet(book, name, headers, rows, formatRules) {
+  const sheet = resetKpiSheet(book, name);
+  const matrix = [headers].concat(rows);
+  ensureKpiCapacity(sheet, matrix.length, headers.length);
+  sheet.getRange(1, 1, matrix.length, headers.length).setValues(matrix);
+  sheet.setFrozenRows(1);
+  styleKpiHeaderRange(sheet.getRange(1, 1, 1, headers.length), "#17372f");
+  sheet.getRange(1, 1, matrix.length, headers.length).setWrap(true).setVerticalAlignment("middle");
+  sheet.getRange(1, 1, matrix.length, headers.length).setBorder(true, true, true, true, true, true, "#d9e2ec", SpreadsheetApp.BorderStyle.SOLID);
+  applyKpiFormatRules(sheet, matrix.length, formatRules);
+  if (matrix.length > 1) {
+    sheet.getRange(1, 1, matrix.length, headers.length).createFilter();
+  }
+  sheet.autoResizeColumns(1, Math.min(headers.length, 26));
+}
+
+function resetKpiSheet(book, name) {
+  const sheet = book.getSheetByName(name) || book.insertSheet(name);
+  const filter = sheet.getFilter();
+  if (filter) filter.remove();
+  sheet.clear();
+  return sheet;
+}
+
+function ensureKpiCapacity(sheet, rowCount, columnCount) {
+  if (sheet.getMaxRows() < rowCount) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), rowCount - sheet.getMaxRows());
+  }
+  if (sheet.getMaxColumns() < columnCount) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), columnCount - sheet.getMaxColumns());
+  }
+}
+
+function styleKpiHeaderRange(range, fill) {
+  range
+    .setFontWeight("bold")
+    .setFontColor("#ffffff")
+    .setBackground(fill)
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setWrap(true);
+}
+
+function applyKpiFormatRules(sheet, rowCount, rules) {
+  if (rowCount <= 1) return;
+  rules.forEach(function(rule) {
+    sheet.getRange(2, rule.start, rowCount - 1, rule.end - rule.start + 1).setNumberFormat(rule.format);
+  });
+}
+
+function getKpiMachineHeaders() {
+  return ["Machine ID", "Machine", "Logs", "Job Groups", "Step Groups", "First Date", "Last Date", "Work Minutes", "Normal Minutes", "Downtime Minutes", "Speed pcs/min", "Target/8h", "Target Qty", "Actual Output", "Gap Qty", "KPI %", "Availability %", "Quality %", "OEE %", "Good Qty", "NG Qty", "Test Qty", "Source Mix"];
+}
+
+function getKpiMachineStepHeaders() {
+  return ["Machine ID", "Machine", "Step", "Logs", "Job Groups", "First Date", "Last Date", "Work Minutes", "Normal Minutes", "Downtime Minutes", "Speed pcs/min", "Target/8h", "Target Qty", "Actual Output", "Gap Qty", "KPI %", "Availability %", "Quality %", "OEE %", "Good Qty", "NG Qty", "Test Qty", "Source Mix"];
+}
+
+function getKpiMachineJobStepHeaders() {
+  return ["Machine ID", "Machine", "Product / Job", "Part No.", "Step", "Logs", "First Date", "Last Date", "Work Minutes", "Normal Minutes", "Downtime Minutes", "Speed pcs/min", "Target/8h", "Target Qty", "Actual Output", "Gap Qty", "KPI %", "Availability %", "Quality %", "OEE %", "Good Qty", "NG Qty", "Test Qty", "Source Mix"];
+}
+
+function getKpiDailyHeaders() {
+  return ["Date", "Month", "Shift", "Machine ID", "Machine", "Product / Job", "Part No.", "Step", "Work Minutes", "Normal Minutes", "Downtime Minutes", "Machine Speed", "Cavity Qty", "Speed pcs/min", "Target/8h", "Target Qty", "Good Qty", "NG Qty", "Test Qty", "Actual Output", "Gap Qty", "KPI %", "Availability %", "Quality %", "OEE %", "Speed Source", "Source", "Created At", "Updated At"];
+}
+
+function getKpiMachineFormatRules() {
+  return [
+    { start: 8, end: 15, format: "#,##0.0" },
+    { start: 16, end: 19, format: "0.0%" },
+    { start: 20, end: 22, format: "#,##0" },
+  ];
+}
+
+function getKpiMachineStepFormatRules() {
+  return [
+    { start: 8, end: 15, format: "#,##0.0" },
+    { start: 16, end: 19, format: "0.0%" },
+    { start: 20, end: 22, format: "#,##0" },
+  ];
+}
+
+function getKpiMachineJobStepFormatRules() {
+  return [
+    { start: 9, end: 16, format: "#,##0.0" },
+    { start: 17, end: 20, format: "0.0%" },
+    { start: 21, end: 23, format: "#,##0" },
+  ];
+}
+
+function getKpiDailyFormatRules() {
+  return [
+    { start: 9, end: 21, format: "#,##0.0" },
+    { start: 22, end: 25, format: "0.0%" },
+  ];
+}
+
+function buildKpiNotesRows(refreshedAt, rawCount, usedCount, duplicateRowsRemoved) {
+  return [
+    ["Method", "KPI % = Actual Output / Target Qty. Target Qty = Work Minutes x Speed pcs/min."],
+    ["Actual Output", "Good Qty + NG Qty + Test Qty."],
+    ["Speed pcs/min", "If machineSpeed >= 1000, treat machineSpeed as target per 8 hours and divide by 480. Otherwise speed = machineSpeed x cavityQty."],
+    ["Availability %", "Normal Minutes / Work Minutes."],
+    ["Quality %", "Good Qty / (Good Qty + NG Qty). Test Qty is excluded from quality."],
+    ["OEE %", "KPI % x Availability % x Quality %."],
+    ["Machine KPI", "Grouped by machine."],
+    ["Machine Step KPI", "Grouped by machine + step."],
+    ["Machine Job Step KPI", "Grouped by machine + product/job + part no. + step."],
+    ["Raw rows downloaded", rawCount],
+    ["Rows used after duplicate preference", usedCount],
+    ["Duplicate rows removed", duplicateRowsRemoved],
+    ["Duplicate rule", "Same date + shift/start + machine + product + part + step keeps google-sheet/latest over excel-seed."],
+    ["Refreshed at", refreshedAt],
+    ["PD 1", PD_EXTERNAL_SHEETS[0].url],
+    ["PD 2", PD_EXTERNAL_SHEETS[1].url],
+  ];
+}
+
 function isUsableLog(log) {
   return Boolean(
     formatLegacyDate(log.date) &&
@@ -1289,6 +1952,91 @@ function setupProductionWorkbook() {
   return sheet.getParent();
 }
 
+function refreshMasterData() {
+  const book = getWorkbook();
+  const machineRows = importCsvSheetForce(MACHINE_SHEET, MACHINE_HEADERS, MACHINES_CSV_URL);
+  const productRows = importCsvSheetForce(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS, PRODUCT_MASTER_CSV_URL);
+  return {
+    spreadsheetId: book.getId(),
+    spreadsheetUrl: book.getUrl(),
+    machines: machineRows,
+    products: productRows,
+    refreshedAt: new Date().toISOString(),
+  };
+}
+
+function refreshSeedLogs() {
+  const book = getWorkbook();
+  const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
+  const csv = UrlFetchApp.fetch(PRODUCTION_LOGS_SEED_CSV_URL).getContentText();
+  const rows = Utilities.parseCsv(csv);
+  if (!rows.length) {
+    return {
+      spreadsheetId: book.getId(),
+      spreadsheetUrl: book.getUrl(),
+      inserted: 0,
+      kept: 0,
+      removed: 0,
+      total: 0,
+      refreshedAt: new Date().toISOString(),
+    };
+  }
+
+  const csvHeaders = rows[0].map(String);
+  const sourceIndex = LOG_HEADERS.indexOf("source");
+  const existingRowCount = Math.max(sheet.getLastRow() - 1, 0);
+  const existingRows = existingRowCount
+    ? sheet.getRange(2, 1, existingRowCount, LOG_HEADERS.length).getValues()
+    : [];
+  const keptRows = existingRows
+    .filter(function(row) {
+      return String(row[sourceIndex] || "").trim() !== "excel-seed";
+    })
+    .map(function(row) {
+      return LOG_HEADERS.map(function(_header, index) {
+        return row[index] === undefined ? "" : row[index];
+      });
+    });
+  const seedRows = rows.slice(1).map(function(row) {
+    return LOG_HEADERS.map(function(header, columnIndex) {
+      const csvIndex = csvHeaders.indexOf(header);
+      return serializeTypedValue(header, csvIndex >= 0 ? row[csvIndex] : row[columnIndex], LOG_NUMBER_HEADERS);
+    });
+  });
+  const totalRows = 1 + keptRows.length + seedRows.length;
+
+  ensureSheetSize(sheet, totalRows, LOG_HEADERS.length);
+  sheet.clearContents();
+  applySheetTypeFormats(sheet, LOG_HEADERS, LOG_NUMBER_HEADERS, totalRows);
+  sheet.getRange(1, 1, 1, LOG_HEADERS.length).setValues([LOG_HEADERS]);
+  if (keptRows.length) {
+    sheet.getRange(2, 1, keptRows.length, LOG_HEADERS.length).setValues(keptRows);
+  }
+  if (seedRows.length) {
+    sheet.getRange(2 + keptRows.length, 1, seedRows.length, LOG_HEADERS.length).setValues(seedRows);
+  }
+  formatHeader(sheet, LOG_HEADERS.length);
+
+  return {
+    spreadsheetId: book.getId(),
+    spreadsheetUrl: book.getUrl(),
+    inserted: seedRows.length,
+    kept: keptRows.length,
+    removed: existingRows.length - keptRows.length,
+    total: keptRows.length + seedRows.length,
+    refreshedAt: new Date().toISOString(),
+  };
+}
+
+function ensureSheetSize(sheet, rowCount, columnCount) {
+  if (sheet.getMaxRows() < rowCount) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), rowCount - sheet.getMaxRows());
+  }
+  if (sheet.getMaxColumns() < columnCount) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), columnCount - sheet.getMaxColumns());
+  }
+}
+
 function ensureSheet(name, headers) {
   const book = getWorkbook();
   const sheet = book.getSheetByName(name) || book.insertSheet(name);
@@ -1368,6 +2116,26 @@ function importCsvSheet(name, headers, url) {
   formatHeader(sheet, headers.length);
 }
 
+function importCsvSheetForce(name, headers, url) {
+  const sheet = ensureSheet(name, headers);
+  const csv = UrlFetchApp.fetch(url).getContentText();
+  const rows = Utilities.parseCsv(csv);
+  if (!rows.length) return 0;
+
+  const normalizedRows = rows.map(function(row, index) {
+    if (index === 0) return headers;
+    return headers.map(function(header, columnIndex) {
+      return serializeTypedValue(header, row[columnIndex], getNumberHeadersForSheet(name));
+    });
+  });
+
+  sheet.clearContents();
+  applySheetTypeFormats(sheet, headers, getNumberHeadersForSheet(name), normalizedRows.length);
+  sheet.getRange(1, 1, normalizedRows.length, headers.length).setValues(normalizedRows);
+  formatHeader(sheet, headers.length);
+  return Math.max(normalizedRows.length - 1, 0);
+}
+
 function getNumberHeadersForSheet(name) {
   if (name === LOG_SHEET) return LOG_NUMBER_HEADERS;
   if (name === MACHINE_SHEET) return MACHINE_NUMBER_HEADERS;
@@ -1378,7 +2146,8 @@ function getNumberHeadersForSheet(name) {
 function getPdExternalSheets() {
   return PD_EXTERNAL_SHEETS.map(function(source) {
     try {
-      const url = "https://docs.google.com/spreadsheets/d/" + source.id + "/export?format=csv&gid=0";
+      const gid = source.gid || "0";
+      const url = "https://docs.google.com/spreadsheets/d/" + source.id + "/export?format=csv&gid=" + gid;
       const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
       const statusCode = response.getResponseCode();
       if (statusCode < 200 || statusCode >= 300) {
@@ -1393,6 +2162,7 @@ function getPdExternalSheets() {
         ok: true,
         id: source.id,
         label: source.label,
+        gid: gid,
         name: source.label,
         url: source.url,
         fetchedAt: new Date().toISOString(),
@@ -1412,6 +2182,7 @@ function getPdExternalSheets() {
         ok: false,
         id: source.id,
         label: source.label,
+        gid: source.gid || "0",
         name: source.label,
         url: source.url,
         fetchedAt: new Date().toISOString(),
