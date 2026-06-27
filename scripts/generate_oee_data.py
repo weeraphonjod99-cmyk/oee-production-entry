@@ -17,8 +17,45 @@ MASTER_TS = ROOT / "src" / "data" / "oeeMasterData.generated.ts"
 HEADINGS_TS = ROOT / "src" / "data" / "oeeWorkbookHeadings.generated.ts"
 MACHINES_CSV = ROOT / "google-sheet" / "machines.csv"
 PRODUCTS_CSV = ROOT / "google-sheet" / "product_master.csv"
+PRODUCTION_LOGS_SEED_CSV = ROOT / "google-sheet" / "production_logs_seed.csv"
 MINUTES_PER_SLOT = 5
 GENERATED_AT = date.today().isoformat()
+
+LOG_HEADERS = [
+    "id",
+    "recordDate",
+    "recordTime",
+    "date",
+    "shift",
+    "shiftStartAt",
+    "shiftEndAt",
+    "machineId",
+    "machineName",
+    "productName",
+    "partNo",
+    "step",
+    "workMinutes",
+    "timeSlots",
+    "minutesPerSlot",
+    "machineSpeed",
+    "cavityQty",
+    "normalMinutes",
+    "changeoverMinutes",
+    "inspectionMinutes",
+    "equipmentRepairMinutes",
+    "moldRepairMinutes",
+    "materialChangeMinutes",
+    "emergencyStopMinutes",
+    "meetingMinutes",
+    "plannedStopMinutes",
+    "goodQty",
+    "ngQty",
+    "testQty",
+    "note",
+    "createdAt",
+    "updatedAt",
+    "source",
+]
 
 
 def clean_text(value: Any) -> str:
@@ -370,6 +407,11 @@ def main() -> None:
         )
         writer.writeheader()
         writer.writerows(products)
+
+    with PRODUCTION_LOGS_SEED_CSV.open("w", encoding="utf-8-sig", newline="") as output:
+        writer = csv.DictWriter(output, fieldnames=LOG_HEADERS)
+        writer.writeheader()
+        writer.writerows([{header: log.get(header, "") for header in LOG_HEADERS} for log in seed_logs])
 
     print(json.dumps({"machines": len(machines), "products": len(products), "seedLogs": len(seed_logs)}, ensure_ascii=False))
 
