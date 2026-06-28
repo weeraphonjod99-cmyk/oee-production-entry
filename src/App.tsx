@@ -864,6 +864,7 @@ function App() {
   const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
   const [downtimePressTimes, setDowntimePressTimes] = useState<Partial<Record<DowntimeKey, string>>>({});
   const [employeeDraftSavedAt, setEmployeeDraftSavedAt] = useState("");
+  const [employeeDraftActive, setEmployeeDraftActive] = useState(false);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -1193,6 +1194,7 @@ function App() {
     setDowntimePressTimes({});
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
     setEmployeeDraftSavedAt("");
+    setEmployeeDraftActive(false);
     void loadProductDefaults(product, currentMachine);
   };
 
@@ -1233,6 +1235,35 @@ function App() {
   const clearEmployeeStoredDraft = () => {
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
     setEmployeeDraftSavedAt("");
+    setEmployeeDraftActive(false);
+  };
+
+  const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
+    const now = new Date();
+    const savedDate = targetDraft.date || getTodayInputValue();
+    const recordDate = freshRecordTime ? getTodayInputValue() : targetDraft.recordDate || getTodayInputValue();
+    const recordTime = freshRecordTime ? getCurrentTimeInputValue() : targetDraft.recordTime || getCurrentTimeInputValue();
+    const nextDraft = {
+      ...targetDraft,
+      date: savedDate,
+      recordDate,
+      recordTime,
+      shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
+      shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
+    };
+    return {
+      draft: nextDraft,
+      savedAt: now.toISOString(),
+      shiftEndAt: nextDraft.shiftEndAt,
+    };
+  };
+
+  const writeEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false) => {
+    const stored = buildEmployeeStoredDraft(targetDraft, freshRecordTime);
+    window.localStorage.setItem(EMPLOYEE_DRAFT_KEY, JSON.stringify(stored));
+    setEmployeeDraftActive(true);
+    setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
+    return stored;
   };
 
   const saveEmployeeDraftLocally = () => {
@@ -1246,28 +1277,9 @@ function App() {
       showMissingSaveFields(missingFields);
       return;
     }
-    if (duplicateEntryMessage) {
-      setStatus(duplicateEntryMessage);
-      setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
-      return;
-    }
-    const now = new Date();
-    const savedDate = draft.date || getTodayInputValue();
-    const stored: StoredEmployeeDraft = {
-      draft: {
-        ...draft,
-        date: savedDate,
-        recordDate: getTodayInputValue(),
-        recordTime: getCurrentTimeInputValue(),
-        shiftStartAt: shiftStartAt(savedDate, draft.shift),
-        shiftEndAt: shiftEndAt(savedDate, draft.shift),
-      },
-      savedAt: now.toISOString(),
-      shiftEndAt: shiftEndAt(savedDate, draft.shift),
-    };
-    window.localStorage.setItem(EMPLOYEE_DRAFT_KEY, JSON.stringify(stored));
-    const savedAt = now.toLocaleString("th-TH");
-    setEmployeeDraftSavedAt(savedAt);
+    const stored = writeEmployeeStoredDraft(draft, !employeeDraftActive);
+    setDraft(stored.draft);
+    const savedAt = new Date(stored.savedAt).toLocaleString("th-TH");
     setStatus(`บันทึกร่างไว้แล้ว ยังไม่ส่งเข้าระบบ (${savedAt})`);
     setSuccessDialog({ title: "บันทึกร่างไว้แล้ว", message: "ร่างนี้ยังไม่ส่งเข้าระบบ จนกว่าจะกดส่งยอดบันทึก หรือระบบส่งให้อัตโนมัติหลังจบกะ" });
   };
@@ -1345,6 +1357,7 @@ function App() {
     } catch {
       window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
       setEmployeeDraftSavedAt("");
+      setEmployeeDraftActive(false);
     } finally {
       autoSubmittingEmployeeDraft.current = false;
     }
@@ -1355,12 +1368,33 @@ function App() {
     if (raw) {
       try {
         const stored = JSON.parse(raw) as StoredEmployeeDraft;
+        if (stored?.draft) {
+          const savedDate = stored.draft.date || getTodayInputValue();
+          setDraft({
+            ...stored.draft,
+            date: savedDate,
+            shiftStartAt: shiftStartAt(savedDate, stored.draft.shift),
+            shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
+          });
+          setDateManuallyEdited(true);
+          setProductSearch("");
+          setEmployeeDraftActive(true);
+        }
         if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
       } catch {
         window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+        setEmployeeDraftActive(false);
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!isEmployeeEntry || !employeeDraftActive || editingLog || autoSubmittingEmployeeDraft.current) return;
+    const timer = window.setTimeout(() => {
+      writeEmployeeStoredDraft(draft);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [draft, editingLog, employeeDraftActive, isEmployeeEntry]);
 
   useEffect(() => {
     if (!remoteLoaded) return;
@@ -1877,7 +1911,7 @@ function App() {
               <div className="form-actions">
                 {isEmployeeEntry && (
                   <>
-                    <button className="draft-button" disabled={saving || Boolean(duplicateEntry)} onClick={saveEmployeeDraftLocally} type="button">
+                    <button className="draft-button" disabled={saving} onClick={saveEmployeeDraftLocally} type="button">
                       <Save size={18} /> บันทึกร่างไว้ก่อน
                     </button>
                     {employeeDraftSavedAt && <span className="draft-status">ร่างล่าสุด {employeeDraftSavedAt}</span>}
