@@ -1151,15 +1151,19 @@ function App() {
         const latestLog = machineLogs
           .slice()
           .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
+        const hasSubmitted = machineLogs.some(
+          (log) => log.date === draft.date && normalizeShiftCode(log.shift) === normalizeShiftCode(draft.shift),
+        );
         return {
           hasDraft: draft.machineId === machine.id && employeeDraftActive,
+          hasSubmitted,
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
           latestLog,
           logCount: machineLogs.length,
         };
       }),
-    [allLogs, draft.machineId, employeeDraftActive],
+    [allLogs, draft.date, draft.machineId, draft.shift, employeeDraftActive],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -2088,8 +2092,13 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ hasDraft, latestLog, logCount, machine, productCount }) => (
-                <button className={`machine-icon-card ${hasDraft ? "active-draft" : ""}`} key={machine.id} onClick={() => openEmployeeMachineEntry(machine.id)} type="button">
+              {employeeMachineCards.map(({ hasDraft, hasSubmitted, latestLog, logCount, machine, productCount }) => (
+                <button
+                  className={`machine-icon-card ${hasDraft ? "active-draft" : hasSubmitted ? "submitted-log" : ""}`}
+                  key={machine.id}
+                  onClick={() => openEmployeeMachineEntry(machine.id)}
+                  type="button"
+                >
                   <span className="machine-icon-symbol">
                     <Gauge size={26} />
                   </span>
@@ -2100,6 +2109,7 @@ function App() {
                     </small>
                   </span>
                   {hasDraft && <span className="machine-draft-badge">มีร่างค้าง</span>}
+                  {!hasDraft && hasSubmitted && <span className="machine-submitted-badge">ส่งยอดแล้ว</span>}
                   <span className="machine-card-detail">
                     {latestLog ? `${latestLog.date} · ${shiftLabel(latestLog.shift)} · Good ${formatNumber(latestLog.goodQty)}` : "ยังไม่มีประวัติล่าสุด"}
                   </span>
