@@ -79,6 +79,13 @@ type EmployeeActiveTimer = {
   key: EmployeeTimerKey;
   startedAt: string;
 };
+type PendingEmployeeTimer = {
+  key: EmployeeTimerKey;
+  label: string;
+  pressedDate: string;
+  pressedTime: string;
+  startedAt: string;
+};
 
 const getTodayInputValue = () => {
   const now = new Date();
@@ -1026,6 +1033,7 @@ function App() {
   const [employeeDraftEvents, setEmployeeDraftEvents] = useState<EmployeeDraftEvent[]>([]);
   const [employeeWorkStartedAt, setEmployeeWorkStartedAt] = useState("");
   const [employeeActiveTimer, setEmployeeActiveTimer] = useState<EmployeeActiveTimer | null>(null);
+  const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -1453,9 +1461,15 @@ function App() {
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
     const startedAt = now.toISOString();
-    if (!window.confirm(`ยืนยันบันทึกเวลา ${label} เวลา ${pressedTime}`)) return false;
+    setPendingEmployeeTimer({ key, label, pressedDate, pressedTime, startedAt });
+    return true;
+  };
 
+  const confirmEmployeeTimer = () => {
+    if (!pendingEmployeeTimer) return;
+    const { key, label, pressedDate, pressedTime, startedAt } = pendingEmployeeTimer;
     const activeTimer = employeeActiveTimerRef.current;
+    const now = parseStoredDateTime(startedAt) ?? new Date();
     const noteLine = `[${pressedDate} ${pressedTime}] เริ่ม ${label}`;
     setDraft((prev) => {
       const finalized = applyEmployeeTimerElapsed(prev, activeTimer, now);
@@ -1469,14 +1483,15 @@ function App() {
     employeeActiveTimerRef.current = nextTimer;
     setEmployeeDraftUpdatedAt(startedAt);
     recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`);
-    return true;
+    if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
+    if (key !== "work") setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
+    setStatus(`บันทึกเวลา ${label} เริ่ม ${pressedTime}`);
+    setPendingEmployeeTimer(null);
+    setSuccessDialog({ title: "การกรอกสำเร็จ", message: `บันทึกเวลา ${label} เวลา ${pressedTime} แล้ว` });
   };
 
   const pressEmployeeWorkStartRealtime = () => {
-    const startedAt = new Date().toISOString();
-    if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
-    const changed = switchEmployeeTimerRealtime("work", "A การทำงาน / เริ่มงานจริง");
-    if (!changed && !employeeWorkStartedAt) setEmployeeWorkStartedAt("");
+    switchEmployeeTimerRealtime("work", "A การทำงาน / เริ่มงานจริง");
   };
 
   const pressEmployeeDowntimeRealtime = (key: DowntimeKey) => {
@@ -1488,15 +1503,7 @@ function App() {
     }
     const pressedTime = getCurrentTimeInputValue();
     const field = downtimeFields.find((item) => item.key === key);
-    const startedAt = new Date().toISOString();
-    if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
-    const changed = switchEmployeeTimerRealtime(key, field?.label ?? key);
-    if (!changed) {
-      if (!employeeWorkStartedAt) setEmployeeWorkStartedAt("");
-      return;
-    }
-    setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
-    setStatus(`บันทึกเวลา ${field?.label ?? key} เริ่ม ${pressedTime}`);
+    switchEmployeeTimerRealtime(key, field?.label ?? key);
   };
 
   const resetDraft = () => {
@@ -2512,6 +2519,28 @@ function App() {
                 ยืนยันบันทึก
               </button>
               <button className="ghost-button" type="button" disabled={saving} onClick={() => setConfirmSaveDialog(null)}>
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingEmployeeTimer && (
+        <div className="confirm-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-entry-dialog-title">
+          <div className="confirm-modal">
+            <div className="confirm-modal-icon">
+              <AlertTriangle size={30} />
+            </div>
+            <h2 id="confirm-entry-dialog-title">ยืนยันการกรอก</h2>
+            <p>
+              ต้องการบันทึกเวลา {pendingEmployeeTimer.label} เวลา {pendingEmployeeTimer.pressedTime} ใช่หรือไม่
+            </p>
+            <div className="modal-actions">
+              <button className="primary-button" type="button" autoFocus onClick={confirmEmployeeTimer}>
+                ยืนยัน
+              </button>
+              <button className="ghost-button" type="button" onClick={() => setPendingEmployeeTimer(null)}>
                 ยกเลิก
               </button>
             </div>
