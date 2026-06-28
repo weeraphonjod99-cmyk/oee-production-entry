@@ -1423,7 +1423,7 @@ function App() {
   };
 
   const pressEmployeeDowntime = (key: DowntimeKey) => {
-    if (!employeeWorkStartedAt) {
+    if (false && !employeeWorkStartedAt) {
       const message = "กรุณากด A เริ่มงานจริงก่อน จึงจะบันทึกหัวข้อเวลาอื่นได้";
       setStatus(message);
       setProblemDialog({ title: "ยังไม่เริ่มงานจริง", message });
@@ -1480,7 +1480,7 @@ function App() {
   };
 
   const pressEmployeeDowntimeRealtime = (key: DowntimeKey) => {
-    if (!employeeWorkStartedAt) {
+    if (false && !employeeWorkStartedAt) {
       const message = "กรุณากด A เริ่มงานจริงก่อน จึงจะบันทึกหัวข้อเวลาอื่นได้";
       setStatus(message);
       setProblemDialog({ title: "ยังไม่เริ่มงานจริง", message });
@@ -1488,8 +1488,13 @@ function App() {
     }
     const pressedTime = getCurrentTimeInputValue();
     const field = downtimeFields.find((item) => item.key === key);
+    const startedAt = new Date().toISOString();
+    if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
     const changed = switchEmployeeTimerRealtime(key, field?.label ?? key);
-    if (!changed) return;
+    if (!changed) {
+      if (!employeeWorkStartedAt) setEmployeeWorkStartedAt("");
+      return;
+    }
     setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setStatus(`บันทึกเวลา ${field?.label ?? key} เริ่ม ${pressedTime}`);
   };
@@ -2206,7 +2211,7 @@ function App() {
               </div>
               <p className="slot-help">
                 {isEmployeeEntry
-                  ? "กด A เพื่อเริ่มนับเวลาจริง จากนั้นกดหัวข้อใหม่เพื่อหยุดหัวข้อก่อนหน้าและเริ่มนับหัวข้อใหม่ตามเวลาปัจจุบัน"
+                  ? "กดหัวข้อใดก่อนก็ได้ ปุ่มแรกคือเวลาเริ่มงานจริง จากนั้นกดหัวข้อใหม่เพื่อหยุดหัวข้อก่อนหน้าและเริ่มนับหัวข้อใหม่"
                   : `กรอกเป็นจำนวนช่อง: 1 ช่อง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้`}
               </p>
               <div className="downtime-grid">
@@ -2273,7 +2278,7 @@ function App() {
                     <div className="employee-work-start-card">
                       <span>A การทำงาน / เริ่มงานจริง</span>
                       <b>{employeeWorkStartedLabel}</b>
-                      <small>{employeeWorkStartedAt ? `นับเวลางานจริง ${employeeWorkElapsed}` : "ยังไม่กด A ระบบยังไม่นับเวลาผลิต"}</small>
+                      <small>{employeeWorkStartedAt ? `นับเวลางานจริง ${employeeWorkElapsed}` : "ยังไม่กดหัวข้อแรก ระบบยังไม่นับเวลาผลิต"}</small>
                     </div>
                     <div>
                       <span>อัปเดตล่าสุด</span>
