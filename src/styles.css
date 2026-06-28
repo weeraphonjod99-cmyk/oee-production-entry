@@ -555,6 +555,25 @@ input[readonly] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.downtime-card {
+  background: #ffffff;
+  border: 1px solid #dfe8df;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.downtime-card.code-a {
+  border-color: #16a34a;
+}
+
+.downtime-card.code-c {
+  border-color: #f6c453;
+}
+
+.downtime-card.code-e {
+  border-color: #38bdf8;
+}
+
 .slot-help {
   color: #365044;
   font-size: 13px;
@@ -569,13 +588,41 @@ input[readonly] {
   justify-content: space-between;
 }
 
-.downtime-label-row b {
+.downtime-field-title {
+  color: #061635;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.downtime-label-row b,
+.excel-code-badge {
   background: #e7f5ec;
   border: 1px solid #cbe7d5;
   border-radius: 999px;
   color: #177245;
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 950;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.excel-code-badge.code-a {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #166534;
+}
+
+.excel-code-badge.code-c {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.excel-code-badge.code-e {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #075985;
 }
 
 .downtime-slot-input {
@@ -609,6 +656,31 @@ input[readonly] {
 
 .downtime-press-button:hover {
   background: #105b37;
+}
+
+.downtime-press-button.code-a {
+  background: #15803d;
+}
+
+.downtime-press-button.code-a:hover {
+  background: #166534;
+}
+
+.downtime-press-button.code-c {
+  background: #f6c453;
+  color: #061635;
+}
+
+.downtime-press-button.code-c:hover {
+  background: #f59e0b;
+}
+
+.downtime-press-button.code-e {
+  background: #0ea5e9;
+}
+
+.downtime-press-button.code-e:hover {
+  background: #0284c7;
 }
 
 .downtime-grid small {
@@ -735,6 +807,15 @@ input[readonly] {
   color: #53627b;
   font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+.employee-live-report-grid .employee-work-start-card {
+  background: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.employee-work-start-card span {
+  color: #166534;
 }
 
 .employee-live-downtime {

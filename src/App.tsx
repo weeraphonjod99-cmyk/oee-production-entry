@@ -132,6 +132,7 @@ const downtimeExcelCodes = {
   meetingMinutes: "H",
   plannedStopMinutes: "X",
 } as const;
+const productionWorkExcelCode = "A";
 
 const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
@@ -169,6 +170,12 @@ const getShiftBreakLabel = (shift: string) =>
 const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
 const numberInputValue = (value: number | undefined) => (Number(value || 0) > 0 ? String(value) : "");
 const roundNumber = (value: number) => Number(value.toFixed(2));
+const getExcelCodeTone = (code: string) => {
+  if (code === "A") return "code-a";
+  if (code === "C") return "code-c";
+  if (code === "E") return "code-e";
+  return "code-default";
+};
 const clampWorkMinutes = (value: number) => Math.min(roundNumber(Math.max(Number(value) || 0, 0)), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
@@ -313,24 +320,34 @@ const overlapMinutes = (startA: Date, endA: Date, startB: Date, endB: Date) => {
   return Math.max(roundNumber((end - start) / 60000), 0);
 };
 
-const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date()) => {
+const parseStoredDateTime = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date(), workStartedAt?: string) => {
   const schedule = getShiftSchedule(productionDate, shift);
   const shiftStart = parseLocalDateTime(schedule.startDate, schedule.startTime);
   const shiftEnd = parseLocalDateTime(schedule.endDate, schedule.endTime);
   if (!shiftStart || !shiftEnd) return 0;
 
+  const actualStart = parseStoredDateTime(workStartedAt);
+  const workStart = actualStart
+    ? new Date(Math.min(Math.max(actualStart.getTime(), shiftStart.getTime()), shiftEnd.getTime()))
+    : shiftStart;
   const cappedNow = new Date(Math.min(Math.max(now.getTime(), shiftStart.getTime()), shiftEnd.getTime()));
-  const elapsed = Math.max(roundNumber((cappedNow.getTime() - shiftStart.getTime()) / 60000), 0);
+  const elapsed = Math.max(roundNumber((cappedNow.getTime() - workStart.getTime()) / 60000), 0);
   const breakElapsed = getShiftBreakWindows(schedule.startDate, shift).reduce(
-    (sum, item) => sum + overlapMinutes(shiftStart, cappedNow, item.startAt, item.endAt),
+    (sum, item) => sum + overlapMinutes(workStart, cappedNow, item.startAt, item.endAt),
     0,
   );
   return clampWorkMinutes(elapsed - breakElapsed);
 };
 
-const applyShiftClockRuntime = (targetDraft: EntryDraft, now = new Date()) => {
+const applyShiftClockRuntime = (targetDraft: EntryDraft, now = new Date(), workStartedAt?: string) => {
   const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
-  const workMinutes = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now);
+  const workMinutes = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now, workStartedAt);
   return applyAutomaticBreakMinutes({
     ...targetDraft,
     minutesPerSlot,
@@ -926,6 +943,7 @@ type StoredEmployeeDraft = {
   entryUpdatedAt?: string;
   savedAt: string;
   shiftEndAt: string;
+  workStartedAt?: string;
 };
 
 type EmployeeDraftEvent = {
@@ -967,6 +985,7 @@ function App() {
   const [employeeDraftStartedAt, setEmployeeDraftStartedAt] = useState("");
   const [employeeDraftUpdatedAt, setEmployeeDraftUpdatedAt] = useState("");
   const [employeeDraftEvents, setEmployeeDraftEvents] = useState<EmployeeDraftEvent[]>([]);
+  const [employeeWorkStartedAt, setEmployeeWorkStartedAt] = useState("");
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -1026,12 +1045,12 @@ function App() {
 
   useEffect(() => {
     if (tab !== "employeeEntry" || editingLog) return;
-    setDraft((prev) => applyShiftClockRuntime(prev));
+    setDraft((prev) => applyShiftClockRuntime(prev, undefined, employeeWorkStartedAt));
     const timer = window.setInterval(() => {
-      setDraft((prev) => applyShiftClockRuntime(prev));
+      setDraft((prev) => applyShiftClockRuntime(prev, undefined, employeeWorkStartedAt));
     }, 60000);
     return () => window.clearInterval(timer);
-  }, [tab, editingLog, draft.date, draft.shift, draft.minutesPerSlot]);
+  }, [tab, editingLog, draft.date, draft.shift, draft.minutesPerSlot, employeeWorkStartedAt]);
 
   useEffect(() => {
     setDraft((prev) => {
@@ -1116,6 +1135,13 @@ function App() {
   const employeeEntryElapsed = employeeEntryStartedAt
     ? formatElapsedTime(employeeReportNow.getTime() - employeeEntryStartedAt.getTime())
     : "-";
+  const employeeWorkStartedDate = useMemo(() => parseStoredDateTime(employeeWorkStartedAt), [employeeWorkStartedAt]);
+  const employeeWorkElapsed = employeeWorkStartedDate
+    ? formatElapsedTime(employeeReportNow.getTime() - employeeWorkStartedDate.getTime())
+    : "-";
+  const employeeWorkStartedLabel = employeeWorkStartedDate
+    ? `${employeeWorkStartedDate.toLocaleDateString("th-TH")} ${formatClock(employeeWorkStartedDate)}`
+    : "ยังไม่กดเริ่มงานจริง";
   const employeeDraftUpdatedLabel = employeeDraftUpdatedAt ? new Date(employeeDraftUpdatedAt).toLocaleString("th-TH") : "-";
   const employeeDraftTimeline = employeeDraftEvents.slice(0, 8);
   const employeeDowntimeDetails = useMemo(
@@ -1231,6 +1257,7 @@ function App() {
     const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
     recordEmployeeDraftEvent("เปลี่ยนเครื่อง", machine.name);
     setProductSearch("");
+    setEmployeeWorkStartedAt("");
     setDraft((prev) => ({
       ...prev,
       machineId: machine.id,
@@ -1324,6 +1351,27 @@ function App() {
     }));
   };
 
+  const pressEmployeeWorkStart = () => {
+    const now = new Date();
+    const pressedDate = getTodayInputValue();
+    const pressedTime = getCurrentTimeInputValue();
+    const startedAt = now.toISOString();
+    const noteLine = `[${pressedDate} ${pressedTime}] A เริ่มงานจริง`;
+    setEmployeeWorkStartedAt(startedAt);
+    recordEmployeeDraftEvent("A เริ่มงานจริง", `${pressedDate} ${pressedTime}`);
+    setDraft((prev) =>
+      applyShiftClockRuntime(
+        {
+          ...prev,
+          note: prev.note.trim() ? `${prev.note.trim()}\n${noteLine}` : noteLine,
+        },
+        now,
+        startedAt,
+      ),
+    );
+    setStatus(`บันทึกเวลาเริ่มงานจริง A เวลา ${pressedTime}`);
+  };
+
   const pressEmployeeDowntime = (key: DowntimeKey) => {
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
@@ -1361,6 +1409,7 @@ function App() {
     setEmployeeDraftStartedAt("");
     setEmployeeDraftUpdatedAt("");
     setEmployeeDraftEvents([]);
+    setEmployeeWorkStartedAt("");
     void loadProductDefaults(product, currentMachine);
   };
 
@@ -1405,11 +1454,12 @@ function App() {
     setEmployeeDraftStartedAt("");
     setEmployeeDraftUpdatedAt("");
     setEmployeeDraftEvents([]);
+    setEmployeeWorkStartedAt("");
   };
 
   const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
     const now = new Date();
-    const clockDraft = applyShiftClockRuntime(targetDraft, now);
+    const clockDraft = applyShiftClockRuntime(targetDraft, now, employeeWorkStartedAt);
     const savedDate = clockDraft.date || getTodayInputValue();
     const recordDate = freshRecordTime ? getTodayInputValue() : clockDraft.recordDate || getTodayInputValue();
     const recordTime = freshRecordTime ? getCurrentTimeInputValue() : clockDraft.recordTime || getCurrentTimeInputValue();
@@ -1438,6 +1488,7 @@ function App() {
       entryUpdatedAt,
       savedAt: now.toISOString(),
       shiftEndAt: nextDraft.shiftEndAt,
+      workStartedAt: employeeWorkStartedAt,
     };
   };
 
@@ -1547,7 +1598,7 @@ function App() {
       if (!stored?.draft || !stored.shiftEndAt) return;
       if (Date.now() < new Date(stored.shiftEndAt).getTime()) return;
       autoSubmittingEmployeeDraft.current = true;
-      await submitProductionDraft(stored.draft, { autoSubmit: true, resetAfterSave: true });
+      await submitProductionDraft(applyShiftClockRuntime(stored.draft, new Date(), stored.workStartedAt), { autoSubmit: true, resetAfterSave: true });
     } catch {
       window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
       setEmployeeDraftSavedAt("");
@@ -1555,6 +1606,7 @@ function App() {
       setEmployeeDraftStartedAt("");
       setEmployeeDraftUpdatedAt("");
       setEmployeeDraftEvents([]);
+      setEmployeeWorkStartedAt("");
     } finally {
       autoSubmittingEmployeeDraft.current = false;
     }
@@ -1577,13 +1629,14 @@ function App() {
             shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
             timeSlots,
             workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
-          })));
+          }), undefined, stored.workStartedAt));
           setDateManuallyEdited(true);
           setProductSearch("");
           setEmployeeDraftActive(true);
           setEmployeeDraftStartedAt(stored.entryStartedAt || parseLocalDateTime(stored.draft.recordDate || getTodayInputValue(), stored.draft.recordTime || getCurrentTimeInputValue())?.toISOString() || "");
           setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
           setEmployeeDraftEvents(Array.isArray(stored.entryEvents) ? stored.entryEvents : []);
+          setEmployeeWorkStartedAt(stored.workStartedAt || "");
         }
         if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
       } catch {
@@ -1615,7 +1668,7 @@ function App() {
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
-    const targetDraft = isEmployeeEntry && !editingLog ? applyShiftClockRuntime(draft) : draft;
+    const targetDraft = isEmployeeEntry && !editingLog ? applyShiftClockRuntime(draft, undefined, employeeWorkStartedAt) : draft;
     if (targetDraft !== draft) setDraft(targetDraft);
     await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
   };
@@ -1809,12 +1862,13 @@ function App() {
                   <input
                     required
                     value={draft.date}
-                    onChange={(event) => {
-                      const date = event.target.value;
-                      setDateManuallyEdited(true);
-                      setDraft({
-                        ...draft,
-                        date,
+                  onChange={(event) => {
+                    const date = event.target.value;
+                    setDateManuallyEdited(true);
+                    setEmployeeWorkStartedAt("");
+                    setDraft({
+                      ...draft,
+                      date,
                         shiftEndAt: shiftEndAt(date, draft.shift),
                         shiftStartAt: shiftStartAt(date, draft.shift),
                       });
@@ -1827,11 +1881,12 @@ function App() {
                   <select
                     required
                     value={draft.shift}
-                    onChange={(event) => {
-                      const shift = event.target.value;
-                      recordEmployeeDraftEvent("เปลี่ยนกะ", shiftLabel(shift));
-                      setDraft({
-                        ...draft,
+                  onChange={(event) => {
+                    const shift = event.target.value;
+                    recordEmployeeDraftEvent("เปลี่ยนกะ", shiftLabel(shift));
+                    setEmployeeWorkStartedAt("");
+                    setDraft({
+                      ...draft,
                         meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
                         shift,
                         shiftEndAt: shiftEndAt(draft.date, shift),
@@ -2038,14 +2093,27 @@ function App() {
                   : `กรอกเป็นจำนวนช่อง: 1 ช่อง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้`}
               </p>
               <div className="downtime-grid">
-                {downtimeFields.map((field) => (
-                  <label key={field.key}>
+                {isEmployeeEntry && (
+                  <label className={`downtime-card ${getExcelCodeTone(productionWorkExcelCode)}`}>
                     <span className="downtime-label-row">
-                      <span>{field.label}</span>
-                      <b>Excel {downtimeExcelCodes[field.key]}</b>
+                      <span className="downtime-field-title">A การทำงาน / เริ่มงานจริง</span>
+                      <b className={`excel-code-badge ${getExcelCodeTone(productionWorkExcelCode)}`}>Excel {productionWorkExcelCode}</b>
+                    </span>
+                    <button className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)}`} onClick={pressEmployeeWorkStart} type="button">
+                      กดเริ่มงานจริงเวลาปัจจุบัน
+                    </button>
+                    <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
+                    {employeeWorkStartedAt && <small className="downtime-press-time">นับเวลางานจริงแล้ว {employeeWorkElapsed}</small>}
+                  </label>
+                )}
+                {downtimeFields.map((field) => (
+                  <label className={`downtime-card ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} key={field.key}>
+                    <span className="downtime-label-row">
+                      <span className="downtime-field-title">{field.label}</span>
+                      <b className={`excel-code-badge ${getExcelCodeTone(downtimeExcelCodes[field.key])}`}>Excel {downtimeExcelCodes[field.key]}</b>
                     </span>
                     {isEmployeeEntry ? (
-                      <button className="downtime-press-button" onClick={() => pressEmployeeDowntime(field.key)} type="button">
+                      <button className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} onClick={() => pressEmployeeDowntime(field.key)} type="button">
                         กดบันทึกเวลาปัจจุบัน
                       </button>
                     ) : (
@@ -2083,6 +2151,11 @@ function App() {
                     <strong>{formatClock(employeeReportNow)}</strong>
                   </div>
                   <div className="employee-live-report-grid">
+                    <div className="employee-work-start-card">
+                      <span>A การทำงาน / เริ่มงานจริง</span>
+                      <b>{employeeWorkStartedLabel}</b>
+                      <small>{employeeWorkStartedAt ? `นับเวลางานจริง ${employeeWorkElapsed}` : "ถ้ายังไม่กด A ระบบอิงเวลาเริ่มกะ"}</small>
+                    </div>
                     <div>
                       <span>อัปเดตล่าสุด</span>
                       <b>{employeeDraftUpdatedLabel}</b>
