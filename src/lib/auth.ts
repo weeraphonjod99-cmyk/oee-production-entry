@@ -299,5 +299,5 @@ export async function changePassword(username: string, password: string) {
 
 export function canAccessTab(session: AppSession, tab: string) {
   if (session.role === "admin") return true;
-  return tab === "entry" || tab === "history" || tab === "pd";
+  return tab === "employeeEntry" || tab === "entry" || tab === "history" || tab === "pd";
 }

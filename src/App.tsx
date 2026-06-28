@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
+  ClipboardList,
   Database,
   Download,
   FileText,
@@ -61,7 +62,7 @@ import {
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
 
-type TabId = "entry" | "dashboard" | "reports" | "pd" | "history" | "master" | "users";
+type TabId = "employeeEntry" | "entry" | "dashboard" | "reports" | "pd" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -803,7 +804,7 @@ function RequiredMark() {
 }
 
 function App() {
-  const [tab, setTab] = useState<TabId>("entry");
+  const [tab, setTab] = useState<TabId>("employeeEntry");
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
@@ -841,7 +842,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (session && !canAccessTab(session, tab)) setTab("entry");
+    if (session && !canAccessTab(session, tab)) setTab("employeeEntry");
   }, [session, tab]);
 
   const loadPdSheets = async (silent = false) => {
@@ -1287,11 +1288,14 @@ function App() {
           </div>
         </div>
         <nav>
-          <button className={`employee-entry ${tab === "entry" ? "active" : ""}`} onClick={() => setTab("entry")} type="button">
+          <button className={`employee-entry ${tab === "employeeEntry" ? "active" : ""}`} onClick={() => setTab("employeeEntry")} type="button">
             <span className="nav-icon-badge">
               <ClipboardCheck size={18} />
             </span>
             กรอกยอดสำหรับพนักงาน
+          </button>
+          <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
+            <ClipboardList size={18} /> กรอกยอด
           </button>
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
@@ -1353,7 +1357,7 @@ function App() {
           </div>
         </header>
 
-        {tab === "entry" && (
+        {(tab === "employeeEntry" || tab === "entry") && (
           <section className="entry-layout">
             <form className="entry-form" onSubmit={submit}>
               <div className="section-title">

@@ -230,8 +230,10 @@ textarea:disabled {
   background: rgba(46, 125, 99, 0.72);
   color: #ffffff;
   font-weight: 700;
+  line-height: 1.25;
   min-height: 48px;
   padding-left: 10px;
+  white-space: normal;
 }
 
 .side-nav button.employee-entry.active,
