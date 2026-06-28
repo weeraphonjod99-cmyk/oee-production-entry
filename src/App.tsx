@@ -1642,13 +1642,19 @@ function App() {
                   <div className="runtime-input-row">
                     <input
                       min="0"
-                      onChange={(event) => updateWorkMinutes(event.target.value)}
+                      onChange={(event) => {
+                        if (!isEmployeeEntry) updateWorkMinutes(event.target.value);
+                      }}
+                      readOnly={isEmployeeEntry}
                       required
                       type="number"
                       value={draft.workMinutes}
                     />
                     <b>นาที</b>
                   </div>
+                  {isEmployeeEntry && (
+                    <small className="field-help">คำนวณอัตโนมัติ: จำนวนช่องเวลา x นาที/ช่อง</small>
+                  )}
                 </label>
                 <label className="runtime-input-block">
                   <span>ความเร็วเครื่องจักร <RequiredMark /></span>

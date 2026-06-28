@@ -474,6 +474,11 @@ textarea:focus {
   outline: none;
 }
 
+input[readonly] {
+  background: #f3f7f4;
+  color: #314155;
+}
+
 .input-with-icon {
   align-items: center;
   display: flex;
