@@ -21,8 +21,23 @@ export const downtimeFields: Array<{ key: DowntimeKey; label: string; shortLabel
   { key: "plannedStopMinutes", label: "หยุดตามแผน", shortLabel: "Plan" },
 ];
 
-export function totalDowntime(log: Pick<ProductionLog, DowntimeKey>) {
-  return downtimeFields.reduce((sum, field) => sum + Number(log[field.key] || 0), 0);
+const normalizeShiftCode = (value: unknown) => {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (["day", "a", "d", "白"].includes(text)) return "day";
+  if (["night", "b", "n", "夜"].includes(text)) return "night";
+  return text;
+};
+
+const shiftBreakMinutes = (shift?: string) => (normalizeShiftCode(shift) === "night" ? 110 : 110);
+
+export function effectiveDowntimeValue(log: Pick<ProductionLog, DowntimeKey> & Partial<Pick<ProductionLog, "shift">>, key: DowntimeKey) {
+  const value = Number(log[key] || 0);
+  if (key !== "meetingMinutes") return value;
+  return Math.max(value - shiftBreakMinutes(log.shift), 0);
+}
+
+export function totalDowntime(log: Pick<ProductionLog, DowntimeKey> & Partial<Pick<ProductionLog, "shift">>) {
+  return downtimeFields.reduce((sum, field) => sum + effectiveDowntimeValue(log, field.key), 0);
 }
 
 export function totalOutput(log: Pick<ProductionLog, "goodQty" | "ngQty" | "testQty">) {
@@ -63,7 +78,7 @@ export function groupDowntime(logs: ProductionLog[]) {
   return downtimeFields
     .map((field) => ({
       ...field,
-      minutes: logs.reduce((sum, log) => sum + Number(log[field.key] || 0), 0),
+      minutes: logs.reduce((sum, log) => sum + effectiveDowntimeValue(log, field.key), 0),
     }))
     .sort((a, b) => b.minutes - a.minutes);
 }

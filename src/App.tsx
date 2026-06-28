@@ -52,6 +52,7 @@ import {
 import {
   type DowntimeKey,
   downtimeFields,
+  effectiveDowntimeValue,
   formatNumber,
   formatPercent,
   formatRate,
@@ -1059,7 +1060,7 @@ function App() {
         .map((field) => ({
           ...field,
           lastPressed: downtimePressTimes[field.key],
-          minutes: Number(draft[field.key] || 0),
+          minutes: effectiveDowntimeValue(draft, field.key),
         }))
         .filter((field) => field.minutes > 0 || field.lastPressed),
     [draft, downtimePressTimes],
