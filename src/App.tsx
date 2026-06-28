@@ -1170,6 +1170,9 @@ function App() {
       .filter((field) => Number(field.value || 0) <= 0)
       .map((field) => field.label);
 
+  const getMissingEmployeeDraftFields = () =>
+    getMissingSaveFields(draft).filter((label) => !label.startsWith("Good quantity"));
+
   const showMissingSaveFields = (missingFields: string[]) => {
     const message = `กรุณากรอก ${missingFields.join(", ")} ให้มากกว่า 0 ก่อนบันทึก`;
     setStatus(message);
@@ -1187,7 +1190,7 @@ function App() {
       setProblemDialog({ title: "ยังบันทึกร่างไม่ได้", message: "รายการที่กำลังแก้ไขให้กดยืนยันบันทึกโดยตรง" });
       return;
     }
-    const missingFields = getMissingSaveFields(draft);
+    const missingFields = getMissingEmployeeDraftFields();
     if (missingFields.length > 0) {
       showMissingSaveFields(missingFields);
       return;
