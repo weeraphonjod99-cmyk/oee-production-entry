@@ -1100,10 +1100,16 @@ function App() {
   useEffect(() => {
     if (tab !== "employeeEntry" || editingLog) return;
     const activeTimer = employeeActiveTimerRef.current;
-    if (!activeTimer) return;
-    setDraft((prev) => applyEmployeeTimerElapsed(prev, activeTimer, employeeReportNow));
-    setEmployeeActiveTimer({ ...activeTimer, startedAt: employeeReportNow.toISOString() });
-  }, [employeeReportNow, tab, editingLog]);
+    if (!activeTimer && !employeeWorkStartedAt) return;
+    setDraft((prev) => {
+      const withActiveDowntime =
+        activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(prev, activeTimer, employeeReportNow) : prev;
+      return employeeWorkStartedAt
+        ? applyShiftClockRuntime(withActiveDowntime, employeeReportNow, employeeWorkStartedAt)
+        : withActiveDowntime;
+    });
+    if (activeTimer) setEmployeeActiveTimer({ ...activeTimer, startedAt: employeeReportNow.toISOString() });
+  }, [employeeReportNow, tab, editingLog, employeeWorkStartedAt]);
 
   useEffect(() => {
     setDraft((prev) => {
@@ -1463,10 +1469,12 @@ function App() {
     const now = parseStoredDateTime(startedAt) ?? new Date();
     const noteLine = `[${pressedDate} ${pressedTime}] เริ่ม ${label}`;
     setDraft((prev) => {
-      const finalized = applyEmployeeTimerElapsed(prev, activeTimer, now);
+      const workStart = employeeWorkStartedAt || startedAt;
+      const finalized = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(prev, activeTimer, now) : prev;
+      const withRuntime = applyShiftClockRuntime(finalized, now, workStart);
       return {
-        ...finalized,
-        note: finalized.note.trim() ? `${finalized.note.trim()}\n${noteLine}` : noteLine,
+        ...withRuntime,
+        note: withRuntime.note.trim() ? `${withRuntime.note.trim()}\n${noteLine}` : noteLine,
       };
     });
     const nextTimer = { key, startedAt };
@@ -1567,7 +1575,8 @@ function App() {
   const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
     const now = new Date();
     const activeTimer = employeeActiveTimerRef.current;
-    const clockDraft = applyEmployeeTimerElapsed(targetDraft, activeTimer, now);
+    const activeDraft = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(targetDraft, activeTimer, now) : targetDraft;
+    const clockDraft = employeeWorkStartedAt ? applyShiftClockRuntime(activeDraft, now, employeeWorkStartedAt) : activeDraft;
     const savedDate = clockDraft.date || getTodayInputValue();
     const recordDate = freshRecordTime ? getTodayInputValue() : clockDraft.recordDate || getTodayInputValue();
     const recordTime = freshRecordTime ? getCurrentTimeInputValue() : clockDraft.recordTime || getCurrentTimeInputValue();
@@ -1703,10 +1712,12 @@ function App() {
     activeTimer: EmployeeActiveTimer | null,
     finalAt: Date,
     reason = "สิ้นสุดการผลิต / ส่งยอดบันทึก",
+    workStartedAt = employeeWorkStartedAt,
   ) => {
     const endDate = formatInputDate(finalAt);
     const endTime = formatInputTime(finalAt);
-    const finalizedDraft = applyEmployeeTimerElapsed(targetDraft, activeTimer, finalAt);
+    const activeDraft = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(targetDraft, activeTimer, finalAt) : targetDraft;
+    const finalizedDraft = workStartedAt ? applyShiftClockRuntime(activeDraft, finalAt, workStartedAt) : activeDraft;
     const endNoteLine = `[${endDate} ${endTime}] ${reason}`;
     return {
       draft: {
@@ -1728,7 +1739,13 @@ function App() {
       const finalAt = new Date(stored.shiftEndAt);
       if (Date.now() < finalAt.getTime()) return;
       autoSubmittingEmployeeDraft.current = true;
-      const finalized = finalizeEmployeeDraftForSubmit(stored.draft, stored.activeTimer ?? null, finalAt, "ตัดกะอัตโนมัติ / ส่งยอดบันทึก");
+      const finalized = finalizeEmployeeDraftForSubmit(
+        stored.draft,
+        stored.activeTimer ?? null,
+        finalAt,
+        "ตัดกะอัตโนมัติ / ส่งยอดบันทึก",
+        stored.workStartedAt || "",
+      );
       await submitProductionDraft(finalized.draft, { autoSubmit: true, resetAfterSave: true });
     } catch {
       window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
@@ -1782,7 +1799,7 @@ function App() {
           const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
           const workMinutes = clampWorkMinutes(stored.draft.workMinutes);
           const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
-          setDraft(applyEmployeeTimerElapsed(applyAutomaticBreakMinutes({
+          const storedBaseDraft = applyAutomaticBreakMinutes({
             ...stored.draft,
             date: savedDate,
             minutesPerSlot,
@@ -1790,7 +1807,12 @@ function App() {
             shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
             timeSlots,
             workMinutes,
-          }), stored.activeTimer ?? null));
+          });
+          const storedActiveDraft =
+            stored.activeTimer && stored.activeTimer.key !== "work"
+              ? applyEmployeeTimerElapsed(storedBaseDraft, stored.activeTimer)
+              : storedBaseDraft;
+          setDraft(stored.workStartedAt ? applyShiftClockRuntime(storedActiveDraft, new Date(), stored.workStartedAt) : storedActiveDraft);
           setDateManuallyEdited(true);
           setProductSearch("");
           setEmployeeDraftActive(true);
