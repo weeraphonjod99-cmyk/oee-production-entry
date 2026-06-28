@@ -74,6 +74,11 @@ type Filters = {
 };
 
 type ProductFieldKey = "productName" | "partNo" | "step";
+type EmployeeTimerKey = "work" | DowntimeKey;
+type EmployeeActiveTimer = {
+  key: EmployeeTimerKey;
+  startedAt: string;
+};
 
 const getTodayInputValue = () => {
   const now = new Date();
@@ -344,6 +349,38 @@ const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now =
     0,
   );
   return clampWorkMinutes(elapsed - breakElapsed);
+};
+
+const getElapsedWallMinutes = (startedAt: string, now = new Date()) => {
+  const started = parseStoredDateTime(startedAt);
+  if (!started) return 0;
+  return Math.max(roundNumber((now.getTime() - started.getTime()) / 60000), 0);
+};
+
+const applyEmployeeTimerElapsed = (targetDraft: EntryDraft, timer: EmployeeActiveTimer | null, now = new Date()) => {
+  if (!timer) return targetDraft;
+  const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
+  if (timer.key === "work") {
+    const elapsed = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now, timer.startedAt);
+    if (elapsed <= 0) return targetDraft;
+    const workMinutes = clampWorkMinutes(Number(targetDraft.workMinutes || 0) + elapsed);
+    return {
+      ...targetDraft,
+      timeSlots: slotsFromMinutes(workMinutes, minutesPerSlot),
+      workMinutes,
+    };
+  }
+
+  const elapsed = getElapsedWallMinutes(timer.startedAt, now);
+  if (elapsed <= 0) return targetDraft;
+  const nextMinutes =
+    timer.key === "meetingMinutes"
+      ? Math.max(Number(targetDraft[timer.key] || 0) + elapsed, getShiftBreakMinutes(targetDraft.shift))
+      : Number(targetDraft[timer.key] || 0) + elapsed;
+  return {
+    ...targetDraft,
+    [timer.key]: roundNumber(nextMinutes),
+  };
 };
 
 const applyShiftClockRuntime = (targetDraft: EntryDraft, now = new Date(), workStartedAt?: string) => {
@@ -945,6 +982,7 @@ type StoredEmployeeDraft = {
   savedAt: string;
   shiftEndAt: string;
   workStartedAt?: string;
+  activeTimer?: EmployeeActiveTimer | null;
 };
 
 type EmployeeDraftEvent = {
@@ -987,9 +1025,11 @@ function App() {
   const [employeeDraftUpdatedAt, setEmployeeDraftUpdatedAt] = useState("");
   const [employeeDraftEvents, setEmployeeDraftEvents] = useState<EmployeeDraftEvent[]>([]);
   const [employeeWorkStartedAt, setEmployeeWorkStartedAt] = useState("");
+  const [employeeActiveTimer, setEmployeeActiveTimer] = useState<EmployeeActiveTimer | null>(null);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
+  const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -1045,13 +1085,16 @@ function App() {
   }, [tab]);
 
   useEffect(() => {
+    employeeActiveTimerRef.current = employeeActiveTimer;
+  }, [employeeActiveTimer]);
+
+  useEffect(() => {
     if (tab !== "employeeEntry" || editingLog) return;
-    setDraft((prev) => applyShiftClockRuntime(prev, undefined, employeeWorkStartedAt));
-    const timer = window.setInterval(() => {
-      setDraft((prev) => applyShiftClockRuntime(prev, undefined, employeeWorkStartedAt));
-    }, 60000);
-    return () => window.clearInterval(timer);
-  }, [tab, editingLog, draft.date, draft.shift, draft.minutesPerSlot, employeeWorkStartedAt]);
+    const activeTimer = employeeActiveTimerRef.current;
+    if (!activeTimer) return;
+    setDraft((prev) => applyEmployeeTimerElapsed(prev, activeTimer, employeeReportNow));
+    setEmployeeActiveTimer({ ...activeTimer, startedAt: employeeReportNow.toISOString() });
+  }, [employeeReportNow, tab, editingLog]);
 
   useEffect(() => {
     setDraft((prev) => {
@@ -1253,12 +1296,18 @@ function App() {
     setEmployeeDraftEvents((prev) => [event, ...prev].slice(0, 30));
   };
 
+  const clearEmployeeActiveTimer = () => {
+    setEmployeeActiveTimer(null);
+    employeeActiveTimerRef.current = null;
+  };
+
   const selectMachine = (machineId: string) => {
     const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
     const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
     recordEmployeeDraftEvent("เปลี่ยนเครื่อง", machine.name);
     setProductSearch("");
     setEmployeeWorkStartedAt("");
+    clearEmployeeActiveTimer();
     setDraft((prev) => ({
       ...prev,
       machineId: machine.id,
@@ -1399,6 +1448,52 @@ function App() {
     setStatus(`บันทึกเวลาหยุด ${field?.label ?? key} เวลา ${pressedTime}`);
   };
 
+  const switchEmployeeTimerRealtime = (key: EmployeeTimerKey, label: string) => {
+    const now = new Date();
+    const pressedDate = getTodayInputValue();
+    const pressedTime = getCurrentTimeInputValue();
+    const startedAt = now.toISOString();
+    if (!window.confirm(`ยืนยันบันทึกเวลา ${label} เวลา ${pressedTime}`)) return false;
+
+    const activeTimer = employeeActiveTimerRef.current;
+    const noteLine = `[${pressedDate} ${pressedTime}] เริ่ม ${label}`;
+    setDraft((prev) => {
+      const finalized = applyEmployeeTimerElapsed(prev, activeTimer, now);
+      return {
+        ...finalized,
+        note: finalized.note.trim() ? `${finalized.note.trim()}\n${noteLine}` : noteLine,
+      };
+    });
+    const nextTimer = { key, startedAt };
+    setEmployeeActiveTimer(nextTimer);
+    employeeActiveTimerRef.current = nextTimer;
+    setEmployeeDraftUpdatedAt(startedAt);
+    recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`);
+    return true;
+  };
+
+  const pressEmployeeWorkStartRealtime = () => {
+    const startedAt = new Date().toISOString();
+    if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
+    const changed = switchEmployeeTimerRealtime("work", "A การทำงาน / เริ่มงานจริง");
+    if (!changed && !employeeWorkStartedAt) setEmployeeWorkStartedAt("");
+  };
+
+  const pressEmployeeDowntimeRealtime = (key: DowntimeKey) => {
+    if (!employeeWorkStartedAt) {
+      const message = "กรุณากด A เริ่มงานจริงก่อน จึงจะบันทึกหัวข้อเวลาอื่นได้";
+      setStatus(message);
+      setProblemDialog({ title: "ยังไม่เริ่มงานจริง", message });
+      return;
+    }
+    const pressedTime = getCurrentTimeInputValue();
+    const field = downtimeFields.find((item) => item.key === key);
+    const changed = switchEmployeeTimerRealtime(key, field?.label ?? key);
+    if (!changed) return;
+    setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
+    setStatus(`บันทึกเวลา ${field?.label ?? key} เริ่ม ${pressedTime}`);
+  };
+
   const resetDraft = () => {
     const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
     const nextDraft = createEmptyDraft(currentMachine, product);
@@ -1417,6 +1512,7 @@ function App() {
     setEmployeeDraftUpdatedAt("");
     setEmployeeDraftEvents([]);
     setEmployeeWorkStartedAt("");
+    clearEmployeeActiveTimer();
     void loadProductDefaults(product, currentMachine);
   };
 
@@ -1462,11 +1558,13 @@ function App() {
     setEmployeeDraftUpdatedAt("");
     setEmployeeDraftEvents([]);
     setEmployeeWorkStartedAt("");
+    clearEmployeeActiveTimer();
   };
 
   const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
     const now = new Date();
-    const clockDraft = applyShiftClockRuntime(targetDraft, now, employeeWorkStartedAt);
+    const activeTimer = employeeActiveTimerRef.current;
+    const clockDraft = applyEmployeeTimerElapsed(targetDraft, activeTimer, now);
     const savedDate = clockDraft.date || getTodayInputValue();
     const recordDate = freshRecordTime ? getTodayInputValue() : clockDraft.recordDate || getTodayInputValue();
     const recordTime = freshRecordTime ? getCurrentTimeInputValue() : clockDraft.recordTime || getCurrentTimeInputValue();
@@ -1496,6 +1594,7 @@ function App() {
       savedAt: now.toISOString(),
       shiftEndAt: nextDraft.shiftEndAt,
       workStartedAt: employeeWorkStartedAt,
+      activeTimer: activeTimer ? { ...activeTimer, startedAt: now.toISOString() } : null,
     };
   };
 
@@ -1605,7 +1704,7 @@ function App() {
       if (!stored?.draft || !stored.shiftEndAt) return;
       if (Date.now() < new Date(stored.shiftEndAt).getTime()) return;
       autoSubmittingEmployeeDraft.current = true;
-      await submitProductionDraft(applyShiftClockRuntime(stored.draft, new Date(), stored.workStartedAt), { autoSubmit: true, resetAfterSave: true });
+      await submitProductionDraft(applyEmployeeTimerElapsed(stored.draft, stored.activeTimer ?? null, new Date(stored.shiftEndAt)), { autoSubmit: true, resetAfterSave: true });
     } catch {
       window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
       setEmployeeDraftSavedAt("");
@@ -1614,6 +1713,7 @@ function App() {
       setEmployeeDraftUpdatedAt("");
       setEmployeeDraftEvents([]);
       setEmployeeWorkStartedAt("");
+      clearEmployeeActiveTimer();
     } finally {
       autoSubmittingEmployeeDraft.current = false;
     }
@@ -1628,7 +1728,7 @@ function App() {
           const savedDate = stored.draft.date || getTodayInputValue();
           const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
           const timeSlots = clampTimeSlots(stored.draft.timeSlots, minutesPerSlot);
-          setDraft(applyShiftClockRuntime(applyAutomaticBreakMinutes({
+          setDraft(applyEmployeeTimerElapsed(applyAutomaticBreakMinutes({
             ...stored.draft,
             date: savedDate,
             minutesPerSlot,
@@ -1636,7 +1736,7 @@ function App() {
             shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
             timeSlots,
             workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
-          }), undefined, stored.workStartedAt));
+          }), stored.activeTimer ?? null));
           setDateManuallyEdited(true);
           setProductSearch("");
           setEmployeeDraftActive(true);
@@ -1644,6 +1744,8 @@ function App() {
           setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
           setEmployeeDraftEvents(Array.isArray(stored.entryEvents) ? stored.entryEvents : []);
           setEmployeeWorkStartedAt(stored.workStartedAt || "");
+          setEmployeeActiveTimer(stored.activeTimer ?? null);
+          employeeActiveTimerRef.current = stored.activeTimer ?? null;
         }
         if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
       } catch {
@@ -1675,8 +1777,14 @@ function App() {
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
-    const targetDraft = isEmployeeEntry && !editingLog ? applyShiftClockRuntime(draft, undefined, employeeWorkStartedAt) : draft;
+    const now = new Date();
+    const targetDraft = isEmployeeEntry && !editingLog ? applyEmployeeTimerElapsed(draft, employeeActiveTimerRef.current, now) : draft;
     if (targetDraft !== draft) setDraft(targetDraft);
+    if (isEmployeeEntry && employeeActiveTimerRef.current) {
+      const nextTimer = { ...employeeActiveTimerRef.current, startedAt: now.toISOString() };
+      setEmployeeActiveTimer(nextTimer);
+      employeeActiveTimerRef.current = nextTimer;
+    }
     await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
   };
 
@@ -1873,6 +1981,7 @@ function App() {
                     const date = event.target.value;
                     setDateManuallyEdited(true);
                     setEmployeeWorkStartedAt("");
+                    clearEmployeeActiveTimer();
                     setDraft({
                       ...draft,
                       date,
@@ -1892,6 +2001,7 @@ function App() {
                     const shift = event.target.value;
                     recordEmployeeDraftEvent("เปลี่ยนกะ", shiftLabel(shift));
                     setEmployeeWorkStartedAt("");
+                    clearEmployeeActiveTimer();
                     setDraft({
                       ...draft,
                         meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
@@ -2096,7 +2206,7 @@ function App() {
               </div>
               <p className="slot-help">
                 {isEmployeeEntry
-                  ? `กดปุ่มตามหัวข้อที่เกิดขึ้น: 1 ครั้ง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ระบบจะบันทึกเวลาปัจจุบันที่กดลงหมายเหตุ`
+                  ? "กด A เพื่อเริ่มนับเวลาจริง จากนั้นกดหัวข้อใหม่เพื่อหยุดหัวข้อก่อนหน้าและเริ่มนับหัวข้อใหม่ตามเวลาปัจจุบัน"
                   : `กรอกเป็นจำนวนช่อง: 1 ช่อง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้`}
               </p>
               <div className="downtime-grid">
@@ -2106,10 +2216,11 @@ function App() {
                       <span className="downtime-field-title">A การทำงาน / เริ่มงานจริง</span>
                       <b className={`excel-code-badge ${getExcelCodeTone(productionWorkExcelCode)}`}>Excel {productionWorkExcelCode}</b>
                     </span>
-                    <button className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)}`} onClick={pressEmployeeWorkStart} type="button">
+                    <button className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)}`} onClick={pressEmployeeWorkStartRealtime} type="button">
                       กดเริ่มงานจริงเวลาปัจจุบัน
                     </button>
                     <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
+                    {employeeActiveTimer?.key === "work" && <small className="downtime-press-time">กำลังนับ A อยู่</small>}
                     {employeeWorkStartedAt && <small className="downtime-press-time">นับเวลางานจริงแล้ว {employeeWorkElapsed}</small>}
                   </label>
                 )}
@@ -2120,7 +2231,7 @@ function App() {
                       <b className={`excel-code-badge ${getExcelCodeTone(downtimeExcelCodes[field.key])}`}>Excel {downtimeExcelCodes[field.key]}</b>
                     </span>
                     {isEmployeeEntry ? (
-                      <button className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} onClick={() => pressEmployeeDowntime(field.key)} type="button">
+                      <button className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} onClick={() => pressEmployeeDowntimeRealtime(field.key)} type="button">
                         กดบันทึกเวลาปัจจุบัน
                       </button>
                     ) : (
@@ -2139,6 +2250,7 @@ function App() {
                     {isEmployeeEntry && downtimePressTimes[field.key] && (
                       <small className="downtime-press-time">กดล่าสุด {downtimePressTimes[field.key]}</small>
                     )}
+                    {isEmployeeEntry && employeeActiveTimer?.key === field.key && <small className="downtime-press-time">กำลังนับหัวข้อนี้อยู่</small>}
                   </label>
                 ))}
               </div>
