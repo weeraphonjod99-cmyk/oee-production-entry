@@ -192,7 +192,7 @@ const getExcelCodeTone = (code: string) => {
 const clampWorkMinutes = (value: number) => Math.min(roundNumber(Math.max(Number(value) || 0, 0)), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
-  minutesPerSlot > 0 ? roundNumber(clampWorkMinutes(workMinutes) / minutesPerSlot) : 0;
+  minutesPerSlot > 0 ? Math.round(clampWorkMinutes(workMinutes) / minutesPerSlot) : 0;
 
 const clampTimeSlots = (slots: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? Math.min(roundNumber(Math.max(Number(slots) || 0, 0)), slotsFromMinutes(maxShiftWorkMinutes, minutesPerSlot)) : 0;
@@ -201,7 +201,6 @@ const minutesToSlots = (minutes: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? roundNumber(minutes / minutesPerSlot) : 0;
 
 const slotsToMinutes = (slots: number, minutesPerSlot: number) => roundNumber(slots * minutesPerSlot);
-const workMinutesFromSlots = (slots: number, minutesPerSlot: number) => clampWorkMinutes(slotsToMinutes(slots, minutesPerSlot));
 const applyAutomaticBreakMinutes = <T extends { meetingMinutes: number; shift: string }>(draft: T): T => ({
   ...draft,
   meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(draft.shift)),
@@ -1263,14 +1262,12 @@ function App() {
           normalizeText(prev.step || "-") === normalizeText(product.step || "-");
         if (!sameProduct) return prev;
         const minutesPerSlot = Number(defaults.minutesPerSlot || prev.minutesPerSlot || defaultMinutesPerSlot);
-        const timeSlots = clampTimeSlots(prev.timeSlots, minutesPerSlot);
         return {
           ...prev,
           machineSpeed: Number(defaults.machineSpeed || 0) > 0 ? roundNumber(Number(defaults.machineSpeed)) : prev.machineSpeed,
           cavityQty: Number(defaults.cavityQty || 0) > 0 ? roundNumber(Number(defaults.cavityQty)) : prev.cavityQty,
           minutesPerSlot,
-          timeSlots,
-          workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
+          timeSlots: slotsFromMinutes(prev.workMinutes, minutesPerSlot),
         };
       });
     };
@@ -1379,7 +1376,6 @@ function App() {
     setDraft((prev) => ({
       ...prev,
       timeSlots: clampTimeSlots(rawTimeSlots, prev.minutesPerSlot),
-      workMinutes: workMinutesFromSlots(rawTimeSlots, prev.minutesPerSlot),
     }));
   };
 
@@ -1389,14 +1385,7 @@ function App() {
     setDraft((prev) => ({
       ...prev,
       minutesPerSlot,
-      timeSlots: clampTimeSlots(prev.timeSlots, minutesPerSlot),
-      workMinutes: workMinutesFromSlots(prev.timeSlots, minutesPerSlot),
-      ...Object.fromEntries(
-        downtimeFields.map((field) => [
-          field.key,
-          slotsToMinutes(minutesToSlots(Number(prev[field.key] || 0), prev.minutesPerSlot), minutesPerSlot),
-        ]),
-      ),
+      timeSlots: slotsFromMinutes(prev.workMinutes, minutesPerSlot),
     }));
   };
 
@@ -1583,8 +1572,8 @@ function App() {
     const recordDate = freshRecordTime ? getTodayInputValue() : clockDraft.recordDate || getTodayInputValue();
     const recordTime = freshRecordTime ? getCurrentTimeInputValue() : clockDraft.recordTime || getCurrentTimeInputValue();
     const minutesPerSlot = clockDraft.minutesPerSlot || defaultMinutesPerSlot;
-    const timeSlots = clampTimeSlots(clockDraft.timeSlots, minutesPerSlot);
-    const workMinutes = workMinutesFromSlots(timeSlots, minutesPerSlot);
+    const workMinutes = clampWorkMinutes(clockDraft.workMinutes);
+    const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
     const nextDraft = applyAutomaticBreakMinutes({
       ...clockDraft,
       date: savedDate,
@@ -1660,8 +1649,8 @@ function App() {
     const savedRecordDate = shouldUpdate ? getDraftRecordDate(options.editingLog) : getDraftRecordDate(targetDraft);
     const savedRecordTime = shouldUpdate ? getDraftRecordTime(options.editingLog) : getDraftRecordTime(targetDraft);
     const savedMinutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
-    const savedTimeSlots = clampTimeSlots(targetDraft.timeSlots, savedMinutesPerSlot);
-    const savedWorkMinutes = workMinutesFromSlots(savedTimeSlots, savedMinutesPerSlot);
+    const savedWorkMinutes = clampWorkMinutes(targetDraft.workMinutes);
+    const savedTimeSlots = slotsFromMinutes(savedWorkMinutes, savedMinutesPerSlot);
     const savedMeetingMinutes = Math.max(Number(targetDraft.meetingMinutes || 0), getShiftBreakMinutes(targetDraft.shift));
     const log: ProductionLog = {
       ...targetDraft,
@@ -1791,7 +1780,8 @@ function App() {
         if (stored?.draft) {
           const savedDate = stored.draft.date || getTodayInputValue();
           const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
-          const timeSlots = clampTimeSlots(stored.draft.timeSlots, minutesPerSlot);
+          const workMinutes = clampWorkMinutes(stored.draft.workMinutes);
+          const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
           setDraft(applyEmployeeTimerElapsed(applyAutomaticBreakMinutes({
             ...stored.draft,
             date: savedDate,
@@ -1799,7 +1789,7 @@ function App() {
             shiftStartAt: shiftStartAt(savedDate, stored.draft.shift),
             shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
             timeSlots,
-            workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
+            workMinutes,
           }), stored.activeTimer ?? null));
           setDateManuallyEdited(true);
           setProductSearch("");
