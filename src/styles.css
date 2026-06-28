@@ -474,6 +474,18 @@ h3 {
   padding-top: 9px;
 }
 
+.machine-draft-badge {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  color: #9a3412;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  justify-self: start;
+  padding: 5px 9px;
+}
+
 .machine-menu-back {
   margin-left: auto;
 }

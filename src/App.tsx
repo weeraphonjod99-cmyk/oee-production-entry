@@ -1152,13 +1152,14 @@ function App() {
           .slice()
           .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
         return {
+          hasDraft: draft.machineId === machine.id && employeeDraftActive,
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
           latestLog,
           logCount: machineLogs.length,
         };
       }),
-    [allLogs],
+    [allLogs, draft.machineId, employeeDraftActive],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -1847,7 +1848,7 @@ function App() {
           setEmployeeWorkStartedAt(stored.workStartedAt || "");
           setEmployeeActiveTimer(stored.activeTimer ?? null);
           employeeActiveTimerRef.current = stored.activeTimer ?? null;
-          setEmployeeMachineSelected(true);
+          setEmployeeMachineSelected(false);
         }
         if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
       } catch {
@@ -2005,7 +2006,7 @@ function App() {
             className={`employee-entry ${tab === "employeeEntry" ? "active" : ""}`}
             onClick={() => {
               setTab("employeeEntry");
-              if (!employeeDraftActive) setEmployeeMachineSelected(false);
+              setEmployeeMachineSelected(false);
             }}
             type="button"
           >
@@ -2087,7 +2088,7 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ latestLog, logCount, machine, productCount }) => (
+              {employeeMachineCards.map(({ hasDraft, latestLog, logCount, machine, productCount }) => (
                 <button className="machine-icon-card" key={machine.id} onClick={() => openEmployeeMachineEntry(machine.id)} type="button">
                   <span className="machine-icon-symbol">
                     <Gauge size={26} />
@@ -2098,6 +2099,7 @@ function App() {
                       {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
                     </small>
                   </span>
+                  {hasDraft && <span className="machine-draft-badge">มีร่างค้าง</span>}
                   <span className="machine-card-detail">
                     {latestLog ? `${latestLog.date} · ${shiftLabel(latestLog.shift)} · Good ${formatNumber(latestLog.goodQty)}` : "ยังไม่มีประวัติล่าสุด"}
                   </span>
