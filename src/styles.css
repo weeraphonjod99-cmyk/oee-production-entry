@@ -226,6 +226,31 @@ textarea:disabled {
   color: #ffffff;
 }
 
+.side-nav button.employee-entry {
+  background: rgba(46, 125, 99, 0.72);
+  color: #ffffff;
+  font-weight: 700;
+  min-height: 48px;
+  padding-left: 10px;
+}
+
+.side-nav button.employee-entry.active,
+.side-nav button.employee-entry:hover {
+  background: #2f6f5f;
+}
+
+.nav-icon-badge {
+  align-items: center;
+  background: #ffffff;
+  border-radius: 8px;
+  color: #137a54;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
 .user-panel {
   align-items: center;
   background: rgba(255, 255, 255, 0.08);

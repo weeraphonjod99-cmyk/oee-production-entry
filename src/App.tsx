@@ -2,7 +2,7 @@ import {
   BarChart3,
   AlertTriangle,
   CheckCircle2,
-  ClipboardList,
+  ClipboardCheck,
   Database,
   Download,
   FileText,
@@ -1287,8 +1287,11 @@ function App() {
           </div>
         </div>
         <nav>
-          <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
-            <ClipboardList size={18} /> กรอกยอด
+          <button className={`employee-entry ${tab === "entry" ? "active" : ""}`} onClick={() => setTab("entry")} type="button">
+            <span className="nav-icon-badge">
+              <ClipboardCheck size={18} />
+            </span>
+            กรอกยอดสำหรับพนักงาน
           </button>
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
