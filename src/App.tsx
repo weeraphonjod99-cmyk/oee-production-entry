@@ -2089,7 +2089,7 @@ function App() {
             </div>
             <div className="machine-icon-grid">
               {employeeMachineCards.map(({ hasDraft, latestLog, logCount, machine, productCount }) => (
-                <button className="machine-icon-card" key={machine.id} onClick={() => openEmployeeMachineEntry(machine.id)} type="button">
+                <button className={`machine-icon-card ${hasDraft ? "active-draft" : ""}`} key={machine.id} onClick={() => openEmployeeMachineEntry(machine.id)} type="button">
                   <span className="machine-icon-symbol">
                     <Gauge size={26} />
                   </span>

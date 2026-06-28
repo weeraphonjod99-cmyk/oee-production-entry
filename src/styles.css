@@ -440,6 +440,23 @@ h3 {
   transform: translateY(-1px);
 }
 
+.machine-icon-card.active-draft {
+  background: #fff7cc;
+  border-color: #f59e0b;
+  box-shadow: 0 12px 26px rgba(245, 158, 11, 0.18);
+}
+
+.machine-icon-card.active-draft .machine-icon-symbol {
+  background: #f59e0b;
+  color: #3b2600;
+}
+
+.machine-icon-card.active-draft:hover,
+.machine-icon-card.active-draft:focus-visible {
+  border-color: #d97706;
+  box-shadow: 0 14px 28px rgba(217, 119, 6, 0.22);
+}
+
 .machine-icon-symbol {
   align-items: center;
   background: #177245;
@@ -475,10 +492,10 @@ h3 {
 }
 
 .machine-draft-badge {
-  background: #fff7ed;
-  border: 1px solid #fdba74;
+  background: #ffffff;
+  border: 1px solid #f59e0b;
   border-radius: 999px;
-  color: #9a3412;
+  color: #92400e;
   display: inline-flex;
   font-size: 12px;
   font-weight: 900;
