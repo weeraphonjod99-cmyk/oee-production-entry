@@ -158,6 +158,7 @@ const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
+const EMPLOYEE_SUBMITTED_KEY_PREFIX = "oee-production-employee-submitted";
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
     { label: "10:00-10:10", start: "10:00", end: "10:10", minutes: 10 },
@@ -1054,6 +1055,7 @@ function App() {
   const [employeeActiveTimer, setEmployeeActiveTimer] = useState<EmployeeActiveTimer | null>(null);
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
+  const [employeeSubmittedMachineIds, setEmployeeSubmittedMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -1140,6 +1142,19 @@ function App() {
   }, [draft.shift]);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
+  const employeeSubmittedShiftKey = `${draft.date || getTodayInputValue()}::${normalizeShiftCode(draft.shift)}`;
+  const employeeSubmittedStorageKey = `${EMPLOYEE_SUBMITTED_KEY_PREFIX}::${employeeSubmittedShiftKey}`;
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(employeeSubmittedStorageKey);
+      const ids = raw ? (JSON.parse(raw) as string[]) : [];
+      setEmployeeSubmittedMachineIds(new Set(Array.isArray(ids) ? ids : []));
+    } catch {
+      setEmployeeSubmittedMachineIds(new Set());
+    }
+  }, [employeeSubmittedStorageKey]);
+
   const machineProducts = useMemo(
     () => products.filter((product) => product.machineId === draft.machineId),
     [draft.machineId],
@@ -1169,19 +1184,16 @@ function App() {
         const latestLog = machineLogs
           .slice()
           .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
-        const hasSubmitted = machineLogs.some(
-          (log) => log.date === draft.date && normalizeShiftCode(log.shift) === normalizeShiftCode(draft.shift),
-        );
         return {
           hasDraft: draft.machineId === machine.id && employeeDraftActive,
-          hasSubmitted,
+          hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
           latestLog,
           logCount: machineLogs.length,
         };
       }),
-    [allLogs, draft.date, draft.machineId, draft.shift, employeeDraftActive],
+    [allLogs, draft.machineId, employeeDraftActive, employeeSubmittedMachineIds],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -1353,6 +1365,15 @@ function App() {
   const clearEmployeeActiveTimer = () => {
     setEmployeeActiveTimer(null);
     employeeActiveTimerRef.current = null;
+  };
+
+  const markEmployeeMachineSubmitted = (machineId: string) => {
+    setEmployeeSubmittedMachineIds((prev) => {
+      const next = new Set(prev);
+      next.add(machineId);
+      window.localStorage.setItem(employeeSubmittedStorageKey, JSON.stringify([...next]));
+      return next;
+    });
   };
 
   const selectMachine = (machineId: string) => {
@@ -1740,6 +1761,7 @@ function App() {
       setLocalLogs(next);
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
+      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(saved.machineId);
       if (!shouldUpdate) clearEmployeeStoredDraft();
       if (options.resetAfterSave !== false) resetDraft();
       return true;
@@ -1747,6 +1769,7 @@ function App() {
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
+      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(localLog.machineId);
       if (!shouldUpdate) clearEmployeeStoredDraft();
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
       return true;
