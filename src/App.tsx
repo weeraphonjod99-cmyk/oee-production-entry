@@ -87,22 +87,23 @@ type PendingEmployeeTimer = {
   startedAt: string;
 };
 
-const getTodayInputValue = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+const formatInputDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
-const getCurrentTimeInputValue = () => {
-  const now = new Date();
-  return [
-    String(now.getHours()).padStart(2, "0"),
-    String(now.getMinutes()).padStart(2, "0"),
-    String(now.getSeconds()).padStart(2, "0"),
+const getTodayInputValue = () => formatInputDate(new Date());
+
+const formatInputTime = (date: Date) =>
+  [
+    String(date.getHours()).padStart(2, "0"),
+    String(date.getMinutes()).padStart(2, "0"),
+    String(date.getSeconds()).padStart(2, "0"),
   ].join(":");
-};
+
+const getCurrentTimeInputValue = () => formatInputTime(new Date());
 
 const parseLocalDateTime = (date: string, time: string) => {
   if (!date || !time) return null;
@@ -1038,6 +1039,7 @@ function App() {
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
+  const employeeAutoSubmitKeyRef = useRef("");
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -1707,6 +1709,26 @@ function App() {
     }
   };
 
+  const finalizeEmployeeDraftForSubmit = (
+    targetDraft: EntryDraft,
+    activeTimer: EmployeeActiveTimer | null,
+    finalAt: Date,
+    reason = "สิ้นสุดการผลิต / ส่งยอดบันทึก",
+  ) => {
+    const endDate = formatInputDate(finalAt);
+    const endTime = formatInputTime(finalAt);
+    const finalizedDraft = applyEmployeeTimerElapsed(targetDraft, activeTimer, finalAt);
+    const endNoteLine = `[${endDate} ${endTime}] ${reason}`;
+    return {
+      draft: {
+        ...finalizedDraft,
+        note: finalizedDraft.note.trim() ? `${finalizedDraft.note.trim()}\n${endNoteLine}` : endNoteLine,
+      },
+      endDate,
+      endTime,
+    };
+  };
+
   const autoSubmitStoredEmployeeDraft = async () => {
     if (autoSubmittingEmployeeDraft.current) return;
     const raw = window.localStorage.getItem(EMPLOYEE_DRAFT_KEY);
@@ -1714,9 +1736,11 @@ function App() {
     try {
       const stored = JSON.parse(raw) as StoredEmployeeDraft;
       if (!stored?.draft || !stored.shiftEndAt) return;
-      if (Date.now() < new Date(stored.shiftEndAt).getTime()) return;
+      const finalAt = new Date(stored.shiftEndAt);
+      if (Date.now() < finalAt.getTime()) return;
       autoSubmittingEmployeeDraft.current = true;
-      await submitProductionDraft(applyEmployeeTimerElapsed(stored.draft, stored.activeTimer ?? null, new Date(stored.shiftEndAt)), { autoSubmit: true, resetAfterSave: true });
+      const finalized = finalizeEmployeeDraftForSubmit(stored.draft, stored.activeTimer ?? null, finalAt, "ตัดกะอัตโนมัติ / ส่งยอดบันทึก");
+      await submitProductionDraft(finalized.draft, { autoSubmit: true, resetAfterSave: true });
     } catch {
       window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
       setEmployeeDraftSavedAt("");
@@ -1726,6 +1750,34 @@ function App() {
       setEmployeeDraftEvents([]);
       setEmployeeWorkStartedAt("");
       clearEmployeeActiveTimer();
+    } finally {
+      autoSubmittingEmployeeDraft.current = false;
+    }
+  };
+
+  const autoSubmitCurrentEmployeeDraft = async () => {
+    if (!isEmployeeEntry || editingLog || autoSubmittingEmployeeDraft.current) return;
+    const activeTimer = employeeActiveTimerRef.current;
+    if (!employeeDraftActive && !activeTimer && !employeeWorkStartedAt) return;
+    const productionDate = draft.date || getTodayInputValue();
+    const finalAt = parseStoredDateTime(shiftEndAt(productionDate, draft.shift));
+    if (!finalAt || Date.now() < finalAt.getTime()) return;
+
+    const autoKey = `${productionDate}|${normalizeShiftCode(draft.shift)}|${draft.machineId}|${draft.partNo}|${draft.step}|${finalAt.toISOString()}`;
+    if (employeeAutoSubmitKeyRef.current === autoKey) return;
+    employeeAutoSubmitKeyRef.current = autoKey;
+    autoSubmittingEmployeeDraft.current = true;
+    try {
+      const finalized = finalizeEmployeeDraftForSubmit(draft, activeTimer, finalAt, "ตัดกะอัตโนมัติ / ส่งยอดบันทึก");
+      setDraft(finalized.draft);
+      setEmployeeDraftUpdatedAt(finalAt.toISOString());
+      recordEmployeeDraftEvent("ตัดกะอัตโนมัติ / ส่งยอดบันทึก", `${finalized.endDate} ${finalized.endTime}`);
+      const saved = await submitProductionDraft(finalized.draft, { autoSubmit: true, resetAfterSave: true });
+      if (saved) {
+        clearEmployeeActiveTimer();
+      } else {
+        employeeAutoSubmitKeyRef.current = "";
+      }
     } finally {
       autoSubmittingEmployeeDraft.current = false;
     }
@@ -1780,32 +1832,28 @@ function App() {
 
   useEffect(() => {
     if (!remoteLoaded) return;
+    void autoSubmitCurrentEmployeeDraft();
     void autoSubmitStoredEmployeeDraft();
     const timer = window.setInterval(() => {
+      void autoSubmitCurrentEmployeeDraft();
       void autoSubmitStoredEmployeeDraft();
     }, 30000);
     return () => window.clearInterval(timer);
-  }, [remoteLoaded, allLogs]);
+  }, [allLogs, draft, editingLog, employeeDraftActive, employeeWorkStartedAt, isEmployeeEntry, remoteLoaded]);
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
     const now = new Date();
-    const endDate = getTodayInputValue();
-    const endTime = getCurrentTimeInputValue();
     const activeTimer = employeeActiveTimerRef.current;
-    const finalizedDraft = isEmployeeEntry && !editingLog ? applyEmployeeTimerElapsed(draft, activeTimer, now) : draft;
-    const endNoteLine = `[${endDate} ${endTime}] สิ้นสุดการผลิต / ส่งยอดบันทึก`;
+    const finalized = isEmployeeEntry && !editingLog ? finalizeEmployeeDraftForSubmit(draft, activeTimer, now) : null;
     const targetDraft =
       isEmployeeEntry && !editingLog
-        ? {
-            ...finalizedDraft,
-            note: finalizedDraft.note.trim() ? `${finalizedDraft.note.trim()}\n${endNoteLine}` : endNoteLine,
-          }
-        : finalizedDraft;
+        ? finalized?.draft ?? draft
+        : draft;
     if (targetDraft !== draft) setDraft(targetDraft);
     if (isEmployeeEntry && !editingLog) {
       setEmployeeDraftUpdatedAt(now.toISOString());
-      recordEmployeeDraftEvent("สิ้นสุดการผลิต / ส่งยอดบันทึก", `${endDate} ${endTime}`);
+      recordEmployeeDraftEvent("สิ้นสุดการผลิต / ส่งยอดบันทึก", `${finalized?.endDate ?? formatInputDate(now)} ${finalized?.endTime ?? formatInputTime(now)}`);
     }
     const saved = await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
     if (saved && isEmployeeEntry && !editingLog) {
