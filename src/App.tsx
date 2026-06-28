@@ -982,6 +982,24 @@ function RequiredMark() {
   return <span className="required-mark" aria-label="required">*</span>;
 }
 
+function StampingPressIcon() {
+  return (
+    <svg aria-hidden="true" className="stamping-press-icon" viewBox="0 0 64 64">
+      <path d="M14 52h36" />
+      <path d="M18 52V18h28v34" />
+      <path d="M22 18V10h20v8" />
+      <path d="M24 30h16" />
+      <path d="M28 30v12h8V30" />
+      <path d="M21 42h22" />
+      <path d="M13 24h10" />
+      <path d="M41 24h10" />
+      <path d="M46 18l6 6-6 6" />
+      <path d="M18 18l-6 6 6 6" />
+      <circle cx="32" cy="14" r="2" />
+    </svg>
+  );
+}
+
 type StoredEmployeeDraft = {
   draft: EntryDraft;
   entryEvents?: EmployeeDraftEvent[];
@@ -2100,7 +2118,7 @@ function App() {
                   type="button"
                 >
                   <span className="machine-icon-symbol">
-                    <Gauge size={26} />
+                    <StampingPressIcon />
                   </span>
                   <span className="machine-card-main">
                     <strong>{machine.name}</strong>

@@ -485,6 +485,16 @@ h3 {
   width: 48px;
 }
 
+.stamping-press-icon {
+  fill: none;
+  height: 31px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+  width: 31px;
+}
+
 .machine-card-main {
   display: grid;
   gap: 3px;
