@@ -159,6 +159,7 @@ const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SUBMITTED_KEY_PREFIX = "oee-production-employee-submitted";
+const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
     { label: "10:00-10:10", start: "10:00", end: "10:10", minutes: 10 },
@@ -1055,6 +1056,7 @@ function App() {
   const [employeeActiveTimer, setEmployeeActiveTimer] = useState<EmployeeActiveTimer | null>(null);
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
+  const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeSubmittedMachineIds, setEmployeeSubmittedMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
@@ -1185,7 +1187,7 @@ function App() {
           .slice()
           .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
         return {
-          hasDraft: draft.machineId === machine.id && employeeDraftActive,
+          hasDraft: (draft.machineId === machine.id && employeeDraftActive) || employeeDraftMachineIds.has(machine.id),
           hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
@@ -1193,7 +1195,7 @@ function App() {
           logCount: machineLogs.length,
         };
       }),
-    [allLogs, draft.machineId, employeeDraftActive, employeeSubmittedMachineIds],
+    [allLogs, draft.machineId, employeeDraftActive, employeeDraftMachineIds, employeeSubmittedMachineIds],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -1367,6 +1369,17 @@ function App() {
     employeeActiveTimerRef.current = null;
   };
 
+  const refreshEmployeeDraftMachineIds = () => {
+    const ids = machines
+      .filter((machine) => Boolean(window.localStorage.getItem(getEmployeeDraftStorageKey(machine.id))))
+      .map((machine) => machine.id);
+    setEmployeeDraftMachineIds(new Set(ids));
+  };
+
+  useEffect(() => {
+    refreshEmployeeDraftMachineIds();
+  }, []);
+
   const markEmployeeMachineSubmitted = (machineId: string) => {
     setEmployeeSubmittedMachineIds((prev) => {
       const next = new Set(prev);
@@ -1374,6 +1387,49 @@ function App() {
       window.localStorage.setItem(employeeSubmittedStorageKey, JSON.stringify([...next]));
       return next;
     });
+  };
+
+  const loadEmployeeStoredDraftForMachine = (machineId: string) => {
+    const raw = window.localStorage.getItem(getEmployeeDraftStorageKey(machineId));
+    if (!raw) return false;
+    try {
+      const stored = JSON.parse(raw) as StoredEmployeeDraft;
+      if (!stored?.draft) return false;
+      const savedDate = stored.draft.date || getTodayInputValue();
+      const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
+      const workMinutes = clampWorkMinutes(stored.draft.workMinutes);
+      const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
+      const storedBaseDraft = applyAutomaticBreakMinutes({
+        ...stored.draft,
+        date: savedDate,
+        minutesPerSlot,
+        shiftStartAt: shiftStartAt(savedDate, stored.draft.shift),
+        shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
+        timeSlots,
+        workMinutes,
+      });
+      const storedActiveDraft =
+        stored.activeTimer && stored.activeTimer.key !== "work"
+          ? applyEmployeeTimerElapsed(storedBaseDraft, stored.activeTimer)
+          : storedBaseDraft;
+      setDraft(stored.workStartedAt ? applyShiftClockRuntime(storedActiveDraft, new Date(), stored.workStartedAt) : storedActiveDraft);
+      setDateManuallyEdited(true);
+      setProductSearch("");
+      setDowntimePressTimes({});
+      setEmployeeDraftActive(true);
+      setEmployeeDraftStartedAt(stored.entryStartedAt || parseLocalDateTime(stored.draft.recordDate || getTodayInputValue(), stored.draft.recordTime || getCurrentTimeInputValue())?.toISOString() || "");
+      setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
+      setEmployeeDraftEvents(Array.isArray(stored.entryEvents) ? stored.entryEvents : []);
+      setEmployeeWorkStartedAt(stored.workStartedAt || "");
+      setEmployeeActiveTimer(stored.activeTimer ?? null);
+      employeeActiveTimerRef.current = stored.activeTimer ?? null;
+      if (stored.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
+      return true;
+    } catch {
+      window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
+      refreshEmployeeDraftMachineIds();
+      return false;
+    }
   };
 
   const selectMachine = (machineId: string) => {
@@ -1394,7 +1450,27 @@ function App() {
   };
 
   const openEmployeeMachineEntry = (machineId: string) => {
-    selectMachine(machineId);
+    if (employeeMachineSelected && employeeDraftActive) writeEmployeeStoredDraft(draft);
+    if (!loadEmployeeStoredDraftForMachine(machineId)) {
+      const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
+      const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
+      const nextDraft = createEmptyDraft(machine, nextProduct);
+      setDraft({
+        ...nextDraft,
+        ...applyProductToDraft(nextProduct, allLogs, machine),
+      });
+      setDateManuallyEdited(false);
+      setProductSearch("");
+      setDowntimePressTimes({});
+      setEmployeeDraftSavedAt("");
+      setEmployeeDraftActive(false);
+      setEmployeeDraftStartedAt("");
+      setEmployeeDraftUpdatedAt("");
+      setEmployeeDraftEvents([]);
+      setEmployeeWorkStartedAt("");
+      clearEmployeeActiveTimer();
+      void loadProductDefaults(nextProduct, machine);
+    }
     setEmployeeMachineSelected(true);
     setProductSearch("");
     setStatus(`เลือกเครื่อง ${machines.find((machine) => machine.id === machineId)?.name ?? machineId} สำหรับกรอกยอดพนักงาน`);
@@ -1585,7 +1661,9 @@ function App() {
     setDateManuallyEdited(false);
     setProductSearch("");
     setDowntimePressTimes({});
+    window.localStorage.removeItem(getEmployeeDraftStorageKey(draft.machineId));
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+    refreshEmployeeDraftMachineIds();
     setEmployeeDraftSavedAt("");
     setEmployeeDraftActive(false);
     setEmployeeDraftStartedAt("");
@@ -1630,8 +1708,11 @@ function App() {
     setProblemDialog({ title: "กรอกข้อมูลไม่ครบ", message });
   };
 
-  const clearEmployeeStoredDraft = () => {
+  const clearEmployeeStoredDraft = (machineId = draft.machineId) => {
+    window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+    refreshEmployeeDraftMachineIds();
+    if (machineId !== draft.machineId) return;
     setEmployeeDraftSavedAt("");
     setEmployeeDraftActive(false);
     setEmployeeDraftStartedAt("");
@@ -1681,7 +1762,8 @@ function App() {
 
   const writeEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false) => {
     const stored = buildEmployeeStoredDraft(targetDraft, freshRecordTime);
-    window.localStorage.setItem(EMPLOYEE_DRAFT_KEY, JSON.stringify(stored));
+    window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+    refreshEmployeeDraftMachineIds();
     setEmployeeDraftActive(true);
     setEmployeeDraftStartedAt(stored.entryStartedAt || "");
     setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || "");
@@ -1762,7 +1844,7 @@ function App() {
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
       if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(saved.machineId);
-      if (!shouldUpdate) clearEmployeeStoredDraft();
+      if (!shouldUpdate) clearEmployeeStoredDraft(saved.machineId);
       if (options.resetAfterSave !== false) resetDraft();
       return true;
     } catch (error) {
@@ -1770,7 +1852,7 @@ function App() {
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
       if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(localLog.machineId);
-      if (!shouldUpdate) clearEmployeeStoredDraft();
+      if (!shouldUpdate) clearEmployeeStoredDraft(localLog.machineId);
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
       return true;
     } finally {
@@ -1802,13 +1884,15 @@ function App() {
 
   const autoSubmitStoredEmployeeDraft = async () => {
     if (autoSubmittingEmployeeDraft.current) return;
-    const raw = window.localStorage.getItem(EMPLOYEE_DRAFT_KEY);
-    if (!raw) return;
-    try {
+    const draftKeys = machines.map((machine) => getEmployeeDraftStorageKey(machine.id));
+    for (const draftKey of draftKeys) {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) continue;
+      try {
       const stored = JSON.parse(raw) as StoredEmployeeDraft;
-      if (!stored?.draft || !stored.shiftEndAt) return;
+        if (!stored?.draft || !stored.shiftEndAt) continue;
       const finalAt = new Date(stored.shiftEndAt);
-      if (Date.now() < finalAt.getTime()) return;
+        if (Date.now() < finalAt.getTime()) continue;
       autoSubmittingEmployeeDraft.current = true;
       const finalized = finalizeEmployeeDraftForSubmit(
         stored.draft,
@@ -1817,18 +1901,16 @@ function App() {
         "ตัดกะอัตโนมัติ / ส่งยอดบันทึก",
         stored.workStartedAt || "",
       );
-      await submitProductionDraft(finalized.draft, { autoSubmit: true, resetAfterSave: true });
-    } catch {
-      window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
-      setEmployeeDraftSavedAt("");
-      setEmployeeDraftActive(false);
-      setEmployeeDraftStartedAt("");
-      setEmployeeDraftUpdatedAt("");
-      setEmployeeDraftEvents([]);
-      setEmployeeWorkStartedAt("");
-      clearEmployeeActiveTimer();
-    } finally {
-      autoSubmittingEmployeeDraft.current = false;
+      await submitProductionDraft(finalized.draft, {
+        autoSubmit: true,
+        resetAfterSave: stored.draft.machineId === draft.machineId,
+      });
+      } catch {
+        window.localStorage.removeItem(draftKey);
+        refreshEmployeeDraftMachineIds();
+      } finally {
+        autoSubmittingEmployeeDraft.current = false;
+      }
     }
   };
 
@@ -1866,36 +1948,10 @@ function App() {
       try {
         const stored = JSON.parse(raw) as StoredEmployeeDraft;
         if (stored?.draft) {
-          const savedDate = stored.draft.date || getTodayInputValue();
-          const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
-          const workMinutes = clampWorkMinutes(stored.draft.workMinutes);
-          const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
-          const storedBaseDraft = applyAutomaticBreakMinutes({
-            ...stored.draft,
-            date: savedDate,
-            minutesPerSlot,
-            shiftStartAt: shiftStartAt(savedDate, stored.draft.shift),
-            shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
-            timeSlots,
-            workMinutes,
-          });
-          const storedActiveDraft =
-            stored.activeTimer && stored.activeTimer.key !== "work"
-              ? applyEmployeeTimerElapsed(storedBaseDraft, stored.activeTimer)
-              : storedBaseDraft;
-          setDraft(stored.workStartedAt ? applyShiftClockRuntime(storedActiveDraft, new Date(), stored.workStartedAt) : storedActiveDraft);
-          setDateManuallyEdited(true);
-          setProductSearch("");
-          setEmployeeDraftActive(true);
-          setEmployeeDraftStartedAt(stored.entryStartedAt || parseLocalDateTime(stored.draft.recordDate || getTodayInputValue(), stored.draft.recordTime || getCurrentTimeInputValue())?.toISOString() || "");
-          setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
-          setEmployeeDraftEvents(Array.isArray(stored.entryEvents) ? stored.entryEvents : []);
-          setEmployeeWorkStartedAt(stored.workStartedAt || "");
-          setEmployeeActiveTimer(stored.activeTimer ?? null);
-          employeeActiveTimerRef.current = stored.activeTimer ?? null;
-          setEmployeeMachineSelected(false);
+          window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+          refreshEmployeeDraftMachineIds();
         }
-        if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
+        window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
       } catch {
         window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
         setEmployeeDraftActive(false);
@@ -2231,7 +2287,7 @@ function App() {
                 </label>
                 <label>
                   <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>
-                  <select required value={draft.machineId} onChange={(event) => selectMachine(event.target.value)}>
+                  <select required value={draft.machineId} onChange={(event) => (isEmployeeEntry ? openEmployeeMachineEntry(event.target.value) : selectMachine(event.target.value))}>
                     {machines.map((machine) => (
                       <option key={machine.id} value={machine.id}>
                         {machine.name}
