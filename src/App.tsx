@@ -1424,9 +1424,9 @@ function App() {
 
   const pressEmployeeDowntime = (key: DowntimeKey) => {
     if (false && !employeeWorkStartedAt) {
-      const message = "กรุณากด A เริ่มงานจริงก่อน จึงจะบันทึกหัวข้อเวลาอื่นได้";
+      const message = "";
       setStatus(message);
-      setProblemDialog({ title: "ยังไม่เริ่มงานจริง", message });
+      setProblemDialog({ title: "", message });
       return;
     }
     const pressedDate = getTodayInputValue();
@@ -1481,9 +1481,9 @@ function App() {
 
   const pressEmployeeDowntimeRealtime = (key: DowntimeKey) => {
     if (false && !employeeWorkStartedAt) {
-      const message = "กรุณากด A เริ่มงานจริงก่อน จึงจะบันทึกหัวข้อเวลาอื่นได้";
+      const message = "";
       setStatus(message);
-      setProblemDialog({ title: "ยังไม่เริ่มงานจริง", message });
+      setProblemDialog({ title: "", message });
       return;
     }
     const pressedTime = getCurrentTimeInputValue();
