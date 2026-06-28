@@ -91,6 +91,31 @@ const getCurrentTimeInputValue = () => {
   ].join(":");
 };
 
+const parseLocalDateTime = (date: string, time: string) => {
+  if (!date || !time) return null;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour = 0, minute = 0, second = 0] = time.split(":").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, hour, minute, second);
+};
+
+const formatClock = (date: Date) =>
+  [
+    String(date.getHours()).padStart(2, "0"),
+    String(date.getMinutes()).padStart(2, "0"),
+    String(date.getSeconds()).padStart(2, "0"),
+  ].join(":");
+
+const formatElapsedTime = (milliseconds: number) => {
+  const totalSeconds = Math.max(Math.floor(milliseconds / 1000), 0);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours} ชม. ${minutes} นาที ${seconds} วิ`;
+  if (minutes > 0) return `${minutes} นาที ${seconds} วิ`;
+  return `${seconds} วิ`;
+};
+
 const getRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => log?.recordDate || "";
 const getDraftRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => getRecordDate(log) || getTodayInputValue();
 const getRecordTime = (log?: Pick<ProductionLog, "recordTime"> | null) => log?.recordTime || "";
@@ -839,6 +864,7 @@ function App() {
   const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
   const [downtimePressTimes, setDowntimePressTimes] = useState<Partial<Record<DowntimeKey, string>>>({});
   const [employeeDraftSavedAt, setEmployeeDraftSavedAt] = useState("");
+  const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
 
@@ -885,6 +911,13 @@ function App() {
     const timer = window.setInterval(() => {
       void loadPdSheets(true);
     }, 60000);
+    return () => window.clearInterval(timer);
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== "employeeEntry") return;
+    setEmployeeReportNow(new Date());
+    const timer = window.setInterval(() => setEmployeeReportNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, [tab]);
 
@@ -953,6 +986,24 @@ function App() {
   const isEmployeeEntry = tab === "employeeEntry";
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
+  const employeeEntryStartedAt = useMemo(
+    () => parseLocalDateTime(draft.recordDate || getTodayInputValue(), draft.recordTime || getCurrentTimeInputValue()),
+    [draft.recordDate, draft.recordTime],
+  );
+  const employeeEntryElapsed = employeeEntryStartedAt
+    ? formatElapsedTime(employeeReportNow.getTime() - employeeEntryStartedAt.getTime())
+    : "-";
+  const employeeDowntimeDetails = useMemo(
+    () =>
+      downtimeFields
+        .map((field) => ({
+          ...field,
+          lastPressed: downtimePressTimes[field.key],
+          minutes: Number(draft[field.key] || 0),
+        }))
+        .filter((field) => field.minutes > 0 || field.lastPressed),
+    [draft, downtimePressTimes],
+  );
   const findDuplicateForDraft = (targetDraft: EntryDraft, ignoredId?: string) => {
     if (!targetDraft.date || !targetDraft.shift || !targetDraft.machineId || !normalizeText(targetDraft.partNo)) return null;
     return (
@@ -1755,6 +1806,73 @@ function App() {
                 หมายเหตุ
                 <textarea value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} rows={3} />
               </label>
+
+              {isEmployeeEntry && (
+                <section className="employee-live-report" aria-live="polite">
+                  <div className="employee-live-report-heading">
+                    <div>
+                      <span>Realtime employee report</span>
+                      <h3>รายงานสดการกรอกยอดพนักงาน</h3>
+                    </div>
+                    <strong>{formatClock(employeeReportNow)}</strong>
+                  </div>
+                  <div className="employee-live-report-grid">
+                    <div>
+                      <span>ช่วงเวลาการกรอก</span>
+                      <b>
+                        {draft.recordDate || getTodayInputValue()} {draft.recordTime || getCurrentTimeInputValue()} - {formatClock(employeeReportNow)}
+                      </b>
+                      <small>ใช้เวลา {employeeEntryElapsed}</small>
+                    </div>
+                    <div>
+                      <span>วันที่ผลิต / กะ</span>
+                      <b>{draft.date || getTodayInputValue()}</b>
+                      <small>
+                        {shiftLabel(draft.shift)} · {shiftWindowLabel(draft.date, draft.shift)}
+                      </small>
+                    </div>
+                    <div>
+                      <span>เครื่อง / ไลน์</span>
+                      <b>{currentMachine.name}</b>
+                      <small>{draft.productName || "-"}</small>
+                    </div>
+                    <div>
+                      <span>Part No. / Step</span>
+                      <b>{draft.partNo || "-"}</b>
+                      <small>Step {draft.step || "-"}</small>
+                    </div>
+                    <div>
+                      <span>ยอดผลิต</span>
+                      <b>Good {formatNumber(draft.goodQty || 0)}</b>
+                      <small>
+                        NG {formatNumber(draft.ngQty || 0)} / Test {formatNumber(draft.testQty || 0)}
+                      </small>
+                    </div>
+                    <div>
+                      <span>เวลาผลิต</span>
+                      <b>{formatNumber(draft.workMinutes)} นาที</b>
+                      <small>
+                        Downtime {formatNumber(totalDraftDowntime)} / Normal {formatNumber(computedNormalMinutes)}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="employee-live-downtime">
+                    <span>รายละเอียดเวลาหยุด</span>
+                    {employeeDowntimeDetails.length > 0 ? (
+                      <div>
+                        {employeeDowntimeDetails.map((item) => (
+                          <em key={item.key}>
+                            {item.label}: {formatRate(item.minutes)} นาที{item.lastPressed ? ` (กดล่าสุด ${item.lastPressed})` : ""}
+                          </em>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>ยังไม่มีการกดหัวข้อเวลาหยุด</p>
+                    )}
+                  </div>
+                  {employeeDraftSavedAt && <p className="employee-live-draft">ร่างล่าสุด: {employeeDraftSavedAt}</p>}
+                </section>
+              )}
 
               <div className="form-actions">
                 {isEmployeeEntry && (

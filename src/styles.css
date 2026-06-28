@@ -668,6 +668,103 @@ input[readonly] {
   min-height: 42px;
 }
 
+.employee-live-report {
+  background: #f8fbf8;
+  border: 1px solid #cbe7d5;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.employee-live-report-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.employee-live-report-heading span,
+.employee-live-report-grid span,
+.employee-live-downtime > span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.employee-live-report-heading h3 {
+  color: #061635;
+  font-size: 18px;
+  margin: 2px 0 0;
+}
+
+.employee-live-report-heading strong {
+  background: #177245;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+
+.employee-live-report-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.employee-live-report-grid div {
+  background: #ffffff;
+  border: 1px solid #dfe8df;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.employee-live-report-grid b {
+  color: #061635;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.employee-live-report-grid small {
+  color: #53627b;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.employee-live-downtime {
+  display: grid;
+  gap: 8px;
+}
+
+.employee-live-downtime div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.employee-live-downtime em {
+  background: #e7f5ec;
+  border-radius: 999px;
+  color: #137a54;
+  font-style: normal;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+
+.employee-live-downtime p,
+.employee-live-draft {
+  color: #53627b;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
 .ghost-button {
   background: #ffffff;
   border: 1px solid #cfd8cf;
@@ -2313,6 +2410,15 @@ td:nth-child(10) {
   .form-actions button {
     justify-content: center;
     width: 100%;
+  }
+
+  .employee-live-report-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .employee-live-report-grid {
+    grid-template-columns: 1fr;
   }
 
   .kpi-grid {
