@@ -115,6 +115,7 @@ const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
+const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 
 const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
 const numberInputValue = (value: number | undefined) => (Number(value || 0) > 0 ? String(value) : "");
@@ -804,12 +805,19 @@ function RequiredMark() {
   return <span className="required-mark" aria-label="required">*</span>;
 }
 
+type StoredEmployeeDraft = {
+  draft: EntryDraft;
+  savedAt: string;
+  shiftEndAt: string;
+};
+
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
   const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
+  const [remoteLoaded, setRemoteLoaded] = useState(!remoteEnabled);
   const [saving, setSaving] = useState(false);
   const [pdSheets, setPdSheets] = useState<PdWorkbook[]>([]);
   const [pdLoading, setPdLoading] = useState(false);
@@ -830,7 +838,9 @@ function App() {
   const [confirmSaveDialog, setConfirmSaveDialog] = useState<{ title: string; message: string } | null>(null);
   const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
   const [downtimePressTimes, setDowntimePressTimes] = useState<Partial<Record<DowntimeKey, string>>>({});
+  const [employeeDraftSavedAt, setEmployeeDraftSavedAt] = useState("");
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
+  const autoSubmittingEmployeeDraft = useRef(false);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -840,7 +850,8 @@ function App() {
         setRemoteLogs(logs);
         setStatus(`เชื่อมต่อ Google Sheet แล้ว (${logs.length} records)`);
       })
-      .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"));
+      .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"))
+      .finally(() => setRemoteLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -942,26 +953,29 @@ function App() {
   const isEmployeeEntry = tab === "employeeEntry";
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
-  const duplicateEntry = useMemo(() => {
-    if (!draft.date || !draft.shift || !draft.machineId || !normalizeText(draft.partNo)) return null;
+  const findDuplicateForDraft = (targetDraft: EntryDraft, ignoredId?: string) => {
+    if (!targetDraft.date || !targetDraft.shift || !targetDraft.machineId || !normalizeText(targetDraft.partNo)) return null;
     return (
       allLogs.find(
         (log) =>
-          log.id !== editingLog?.id &&
-          log.date === draft.date &&
-          normalizeShiftCode(log.shift) === normalizeShiftCode(draft.shift) &&
-          log.machineId === draft.machineId &&
-          normalizeText(log.partNo) === normalizeText(draft.partNo) &&
-          normalizeText(log.step || "-") === normalizeText(draft.step || "-"),
+          log.id !== ignoredId &&
+          log.date === targetDraft.date &&
+          normalizeShiftCode(log.shift) === normalizeShiftCode(targetDraft.shift) &&
+          log.machineId === targetDraft.machineId &&
+          normalizeText(log.partNo) === normalizeText(targetDraft.partNo) &&
+          normalizeText(log.step || "-") === normalizeText(targetDraft.step || "-"),
       ) ?? null
     );
-  }, [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, draft.step, editingLog?.id]);
+  };
+  const getDuplicateMessage = (targetDraft: EntryDraft, duplicate: ProductionLog | null) =>
+    duplicate
+      ? `วันที่ผลิต ${targetDraft.date} กะ ${shiftLabel(targetDraft.shift)} (${shiftWindowLabel(targetDraft.date, targetDraft.shift)}) เครื่อง ${duplicate.machineName} Part No. ${duplicate.partNo} Step ${duplicate.step || "-"} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
+      : "";
+  const duplicateEntry = useMemo(() => findDuplicateForDraft(draft, editingLog?.id), [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, draft.step, editingLog?.id]);
   const duplicateEntryKey = duplicateEntry
     ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}::${normalizeText(draft.step || "-")}`
     : "";
-  const duplicateEntryMessage = duplicateEntry
-    ? `วันที่ผลิต ${draft.date} กะ ${shiftLabel(draft.shift)} (${shiftWindowLabel(draft.date, draft.shift)}) เครื่อง ${duplicateEntry.machineName} Part No. ${duplicateEntry.partNo} Step ${duplicateEntry.step || "-"} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
-    : "";
+  const duplicateEntryMessage = getDuplicateMessage(draft, duplicateEntry);
 
   useEffect(() => {
     if (!duplicateEntryMessage) {
@@ -1126,6 +1140,8 @@ function App() {
     setDateManuallyEdited(false);
     setProductSearch("");
     setDowntimePressTimes({});
+    window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+    setEmployeeDraftSavedAt("");
     void loadProductDefaults(product, currentMachine);
   };
 
@@ -1145,11 +1161,11 @@ function App() {
     setStatus(`กำลังแก้ไขรายการ ${log.machineName} วันที่ ${log.date}`);
   };
 
-  const getMissingSaveFields = () =>
+  const getMissingSaveFields = (targetDraft = draft) =>
     [
-      { label: "Good quantity / จำนวนงานดี", value: draft.goodQty },
-      { label: "ความเร็วเครื่องจักร", value: draft.machineSpeed },
-      { label: "จำนวนคาวิตี้", value: draft.cavityQty },
+      { label: "Good quantity / จำนวนงานดี", value: targetDraft.goodQty },
+      { label: "ความเร็วเครื่องจักร", value: targetDraft.machineSpeed },
+      { label: "จำนวนคาวิตี้", value: targetDraft.cavityQty },
     ]
       .filter((field) => Number(field.value || 0) <= 0)
       .map((field) => field.label);
@@ -1160,34 +1176,77 @@ function App() {
     setProblemDialog({ title: "กรอกข้อมูลไม่ครบ", message });
   };
 
-  const saveDraft = async () => {
-    setConfirmSaveDialog(null);
-    const missingFields = getMissingSaveFields();
+  const clearEmployeeStoredDraft = () => {
+    window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+    setEmployeeDraftSavedAt("");
+  };
+
+  const saveEmployeeDraftLocally = () => {
+    if (!isEmployeeEntry) return;
+    if (editingLog) {
+      setProblemDialog({ title: "ยังบันทึกร่างไม่ได้", message: "รายการที่กำลังแก้ไขให้กดยืนยันบันทึกโดยตรง" });
+      return;
+    }
+    const missingFields = getMissingSaveFields(draft);
     if (missingFields.length > 0) {
       showMissingSaveFields(missingFields);
       return;
     }
-    const machine = machines.find((item) => item.id === draft.machineId) ?? currentMachine;
-    const shouldUpdate = Boolean(editingLog);
     if (duplicateEntryMessage) {
       setStatus(duplicateEntryMessage);
       setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
       return;
     }
+    const now = new Date();
     const savedDate = draft.date || getTodayInputValue();
-    const savedRecordDate = shouldUpdate ? getDraftRecordDate(editingLog) : getTodayInputValue();
-    const savedRecordTime = shouldUpdate ? getDraftRecordTime(editingLog) : getCurrentTimeInputValue();
+    const stored: StoredEmployeeDraft = {
+      draft: {
+        ...draft,
+        date: savedDate,
+        recordDate: getTodayInputValue(),
+        recordTime: getCurrentTimeInputValue(),
+        shiftStartAt: shiftStartAt(savedDate, draft.shift),
+        shiftEndAt: shiftEndAt(savedDate, draft.shift),
+      },
+      savedAt: now.toISOString(),
+      shiftEndAt: shiftEndAt(savedDate, draft.shift),
+    };
+    window.localStorage.setItem(EMPLOYEE_DRAFT_KEY, JSON.stringify(stored));
+    const savedAt = now.toLocaleString("th-TH");
+    setEmployeeDraftSavedAt(savedAt);
+    setStatus(`บันทึกร่างไว้แล้ว ยังไม่ส่งเข้าระบบ (${savedAt})`);
+    setSuccessDialog({ title: "บันทึกร่างไว้แล้ว", message: "ร่างนี้ยังไม่ส่งเข้าระบบ จนกว่าจะกดส่งยอดบันทึก หรือระบบส่งให้อัตโนมัติหลังจบกะ" });
+  };
+
+  const submitProductionDraft = async (targetDraft: EntryDraft, options: { autoSubmit?: boolean; editingLog?: ProductionLog | null; resetAfterSave?: boolean } = {}) => {
+    const missingFields = getMissingSaveFields(targetDraft);
+    if (missingFields.length > 0) {
+      showMissingSaveFields(missingFields);
+      return false;
+    }
+    const machine = machines.find((item) => item.id === targetDraft.machineId) ?? currentMachine;
+    const shouldUpdate = Boolean(options.editingLog);
+    const duplicate = findDuplicateForDraft(targetDraft, options.editingLog?.id);
+    const duplicateMessage = getDuplicateMessage(targetDraft, duplicate);
+    if (duplicateMessage) {
+      setStatus(duplicateMessage);
+      setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateMessage });
+      return false;
+    }
+    const savedDate = targetDraft.date || getTodayInputValue();
+    const savedRecordDate = shouldUpdate ? getDraftRecordDate(options.editingLog) : getDraftRecordDate(targetDraft);
+    const savedRecordTime = shouldUpdate ? getDraftRecordTime(options.editingLog) : getDraftRecordTime(targetDraft);
     const log: ProductionLog = {
-      ...draft,
+      ...targetDraft,
       recordDate: savedRecordDate,
       recordTime: savedRecordTime,
       date: savedDate,
-      shiftStartAt: shiftStartAt(savedDate, draft.shift),
-      shiftEndAt: shiftEndAt(savedDate, draft.shift),
-      id: editingLog?.id ?? makeLogId(),
+      shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
+      shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
+      id: options.editingLog?.id ?? makeLogId(),
       machineName: machine.name,
-      normalMinutes: computedNormalMinutes,
-      createdAt: editingLog?.createdAt ?? new Date().toISOString(),
+      normalMinutes: Math.max(targetDraft.workMinutes - totalDowntime(targetDraft), 0),
+      createdAt: options.editingLog?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       source: remoteEnabled ? "google-sheet" : "local",
     };
@@ -1196,21 +1255,71 @@ function App() {
     try {
       const saved = remoteEnabled ? (shouldUpdate ? await updateRemoteLog(log) : await appendRemoteLog(log)) : log;
       const next = shouldUpdate ? upsertLocalLog(saved) : appendLocalLog(saved);
-      const successMessage = shouldUpdate
-        ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
-        : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`;
+      const successMessage = options.autoSubmit
+        ? `ส่งยอดอัตโนมัติหลังจบกะแล้ว: ${saved.machineName} วันที่ ${saved.date}`
+        : shouldUpdate
+          ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
+          : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`;
       setLocalLogs(next);
       setStatus(successMessage);
-      setSuccessDialog({ title: "บันทึกเสร็จแล้ว", message: successMessage });
-      resetDraft();
+      setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
+      if (!shouldUpdate) clearEmployeeStoredDraft();
+      if (options.resetAfterSave !== false) resetDraft();
+      return true;
     } catch (error) {
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
+      if (!shouldUpdate) clearEmployeeStoredDraft();
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
+      return true;
     } finally {
       setSaving(false);
     }
+  };
+
+  const autoSubmitStoredEmployeeDraft = async () => {
+    if (autoSubmittingEmployeeDraft.current) return;
+    const raw = window.localStorage.getItem(EMPLOYEE_DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const stored = JSON.parse(raw) as StoredEmployeeDraft;
+      if (!stored?.draft || !stored.shiftEndAt) return;
+      if (Date.now() < new Date(stored.shiftEndAt).getTime()) return;
+      autoSubmittingEmployeeDraft.current = true;
+      await submitProductionDraft(stored.draft, { autoSubmit: true, resetAfterSave: true });
+    } catch {
+      window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+      setEmployeeDraftSavedAt("");
+    } finally {
+      autoSubmittingEmployeeDraft.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(EMPLOYEE_DRAFT_KEY);
+    if (raw) {
+      try {
+        const stored = JSON.parse(raw) as StoredEmployeeDraft;
+        if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
+      } catch {
+        window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!remoteLoaded) return;
+    void autoSubmitStoredEmployeeDraft();
+    const timer = window.setInterval(() => {
+      void autoSubmitStoredEmployeeDraft();
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [remoteLoaded, allLogs]);
+
+  const saveDraft = async () => {
+    setConfirmSaveDialog(null);
+    await submitProductionDraft(draft, { editingLog, resetAfterSave: true });
   };
 
   const submit = (event: FormEvent) => {
@@ -1639,8 +1748,16 @@ function App() {
               </label>
 
               <div className="form-actions">
+                {isEmployeeEntry && (
+                  <>
+                    <button className="draft-button" disabled={saving || Boolean(duplicateEntry)} onClick={saveEmployeeDraftLocally} type="button">
+                      <Save size={18} /> บันทึกร่างไว้ก่อน
+                    </button>
+                    {employeeDraftSavedAt && <span className="draft-status">ร่างล่าสุด {employeeDraftSavedAt}</span>}
+                  </>
+                )}
                 <button className="primary-button" disabled={saving || Boolean(duplicateEntry)} type="submit">
-                  <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : "บันทึกยอด"}
+                  <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : isEmployeeEntry ? "ส่งยอดบันทึก" : "บันทึกยอด"}
                 </button>
                 <button className="ghost-button" onClick={resetDraft} type="button">
                   {editingLog ? "ยกเลิกแก้ไข" : "ล้างฟอร์ม"}

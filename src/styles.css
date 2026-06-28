@@ -638,6 +638,31 @@ textarea:focus {
   opacity: 0.7;
 }
 
+.draft-button {
+  background: #eef7f1;
+  border: 1px solid #9ed8b2;
+  color: #137a54;
+  font-weight: 900;
+}
+
+.draft-button:hover {
+  background: #dff3e8;
+}
+
+.draft-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.draft-status {
+  align-items: center;
+  color: #177245;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 42px;
+}
+
 .ghost-button {
   background: #ffffff;
   border: 1px solid #cfd8cf;
