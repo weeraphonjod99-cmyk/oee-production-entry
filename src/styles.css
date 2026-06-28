@@ -585,10 +585,36 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.downtime-press-button {
+  align-items: center;
+  background: #177245;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  line-height: 1.25;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: center;
+  width: 100%;
+}
+
+.downtime-press-button:hover {
+  background: #105b37;
+}
+
 .downtime-grid small {
   color: #667085;
   font-size: 12px;
   font-weight: 700;
+}
+
+.downtime-grid .downtime-press-time {
+  color: #177245;
+  font-weight: 900;
 }
 
 .form-actions {

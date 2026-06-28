@@ -50,6 +50,7 @@ import {
   type AppUserSummary,
 } from "./lib/auth";
 import {
+  type DowntimeKey,
   downtimeFields,
   formatNumber,
   formatPercent,
@@ -828,6 +829,7 @@ function App() {
   const [problemDialog, setProblemDialog] = useState<{ title: string; message: string } | null>(null);
   const [confirmSaveDialog, setConfirmSaveDialog] = useState<{ title: string; message: string } | null>(null);
   const [warnedDuplicateKey, setWarnedDuplicateKey] = useState("");
+  const [downtimePressTimes, setDowntimePressTimes] = useState<Partial<Record<DowntimeKey, string>>>({});
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
 
   useEffect(() => {
@@ -937,6 +939,7 @@ function App() {
 
   const summary = useMemo(() => (tab === "dashboard" ? summarize(dashboardLogs) : summarize([])), [dashboardLogs, tab]);
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
+  const isEmployeeEntry = tab === "employeeEntry";
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
   const duplicateEntry = useMemo(() => {
@@ -1094,6 +1097,24 @@ function App() {
     }));
   };
 
+  const pressEmployeeDowntime = (key: DowntimeKey) => {
+    const pressedDate = getTodayInputValue();
+    const pressedTime = getCurrentTimeInputValue();
+    const field = downtimeFields.find((item) => item.key === key);
+    setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
+    setDraft((prev) => {
+      const minutesPerSlot = prev.minutesPerSlot || defaultMinutesPerSlot;
+      const nextMinutes = roundNumber(Number(prev[key] || 0) + minutesPerSlot);
+      const noteLine = `[${pressedDate} ${pressedTime}] ${field?.label ?? key} +${formatRate(minutesPerSlot)} นาที`;
+      return {
+        ...prev,
+        [key]: nextMinutes,
+        note: prev.note.trim() ? `${prev.note.trim()}\n${noteLine}` : noteLine,
+      };
+    });
+    setStatus(`บันทึกเวลาหยุด ${field?.label ?? key} เวลา ${pressedTime}`);
+  };
+
   const resetDraft = () => {
     const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
     const nextDraft = createEmptyDraft(currentMachine, product);
@@ -1104,6 +1125,7 @@ function App() {
     setEditingLog(null);
     setDateManuallyEdited(false);
     setProductSearch("");
+    setDowntimePressTimes({});
     void loadProductDefaults(product, currentMachine);
   };
 
@@ -1118,6 +1140,7 @@ function App() {
     setEditingLog(log);
     setDateManuallyEdited(true);
     setProductSearch("");
+    setDowntimePressTimes({});
     setTab("entry");
     setStatus(`กำลังแก้ไขรายการ ${log.machineName} วันที่ ${log.date}`);
   };
@@ -1575,7 +1598,9 @@ function App() {
                 <h2>เวลาหยุด</h2>
               </div>
               <p className="slot-help">
-                กรอกเป็นจำนวนช่อง: 1 ช่อง = {formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้
+                {isEmployeeEntry
+                  ? `กดปุ่มตามหัวข้อที่เกิดขึ้น: 1 ครั้ง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ระบบจะบันทึกเวลาปัจจุบันที่กดลงหมายเหตุ`
+                  : `กรอกเป็นจำนวนช่อง: 1 ช่อง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้`}
               </p>
               <div className="downtime-grid">
                 {downtimeFields.map((field) => (
@@ -1584,17 +1609,26 @@ function App() {
                       <span>{field.label}</span>
                       <b>Excel {downtimeExcelCodes[field.key]}</b>
                     </span>
-                    <div className="downtime-slot-input">
-                      <input
-                        value={numberInputValue(minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot))}
-                        onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
-                        min="0"
-                        step="1"
-                        type="number"
-                      />
-                      <b>ช่อง</b>
-                    </div>
+                    {isEmployeeEntry ? (
+                      <button className="downtime-press-button" onClick={() => pressEmployeeDowntime(field.key)} type="button">
+                        กดบันทึกเวลาปัจจุบัน
+                      </button>
+                    ) : (
+                      <div className="downtime-slot-input">
+                        <input
+                          value={numberInputValue(minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot))}
+                          onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
+                          min="0"
+                          step="1"
+                          type="number"
+                        />
+                        <b>ช่อง</b>
+                      </div>
+                    )}
                     <small>{formatRate(Number(draft[field.key] || 0))} นาที</small>
+                    {isEmployeeEntry && downtimePressTimes[field.key] && (
+                      <small className="downtime-press-time">กดล่าสุด {downtimePressTimes[field.key]}</small>
+                    )}
                   </label>
                 ))}
               </div>
