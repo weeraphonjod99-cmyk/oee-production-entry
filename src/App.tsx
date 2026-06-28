@@ -832,8 +832,18 @@ function RequiredMark() {
 
 type StoredEmployeeDraft = {
   draft: EntryDraft;
+  entryEvents?: EmployeeDraftEvent[];
+  entryStartedAt?: string;
+  entryUpdatedAt?: string;
   savedAt: string;
   shiftEndAt: string;
+};
+
+type EmployeeDraftEvent = {
+  at: string;
+  id: string;
+  label: string;
+  value?: string;
 };
 
 function App() {
@@ -865,6 +875,9 @@ function App() {
   const [downtimePressTimes, setDowntimePressTimes] = useState<Partial<Record<DowntimeKey, string>>>({});
   const [employeeDraftSavedAt, setEmployeeDraftSavedAt] = useState("");
   const [employeeDraftActive, setEmployeeDraftActive] = useState(false);
+  const [employeeDraftStartedAt, setEmployeeDraftStartedAt] = useState("");
+  const [employeeDraftUpdatedAt, setEmployeeDraftUpdatedAt] = useState("");
+  const [employeeDraftEvents, setEmployeeDraftEvents] = useState<EmployeeDraftEvent[]>([]);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -988,12 +1001,17 @@ function App() {
   const totalDraftDowntime = totalDowntime(draft);
   const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
   const employeeEntryStartedAt = useMemo(
-    () => parseLocalDateTime(draft.recordDate || getTodayInputValue(), draft.recordTime || getCurrentTimeInputValue()),
-    [draft.recordDate, draft.recordTime],
+    () =>
+      employeeDraftStartedAt
+        ? new Date(employeeDraftStartedAt)
+        : parseLocalDateTime(draft.recordDate || getTodayInputValue(), draft.recordTime || getCurrentTimeInputValue()),
+    [draft.recordDate, draft.recordTime, employeeDraftStartedAt],
   );
   const employeeEntryElapsed = employeeEntryStartedAt
     ? formatElapsedTime(employeeReportNow.getTime() - employeeEntryStartedAt.getTime())
     : "-";
+  const employeeDraftUpdatedLabel = employeeDraftUpdatedAt ? new Date(employeeDraftUpdatedAt).toLocaleString("th-TH") : "-";
+  const employeeDraftTimeline = employeeDraftEvents.slice(0, 8);
   const employeeDowntimeDetails = useMemo(
     () =>
       downtimeFields
@@ -1087,9 +1105,23 @@ function App() {
     }
   };
 
+  const recordEmployeeDraftEvent = (label: string, value?: string) => {
+    if (!isEmployeeEntry) return;
+    const now = new Date();
+    const event: EmployeeDraftEvent = {
+      at: now.toISOString(),
+      id: `evt-${now.getTime()}-${Math.random().toString(16).slice(2)}`,
+      label,
+      value,
+    };
+    setEmployeeDraftUpdatedAt(event.at);
+    setEmployeeDraftEvents((prev) => [event, ...prev].slice(0, 30));
+  };
+
   const selectMachine = (machineId: string) => {
     const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
     const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
+    recordEmployeeDraftEvent("เปลี่ยนเครื่อง", machine.name);
     setProductSearch("");
     setDraft((prev) => ({
       ...prev,
@@ -1103,6 +1135,12 @@ function App() {
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
     const matchedProduct = findMatchingProduct(machineProducts, key, value, draft);
+    const productFieldLabels: Record<ProductFieldKey, string> = {
+      partNo: "แก้ Part No.",
+      productName: "แก้รุ่น",
+      step: "แก้ Step",
+    };
+    recordEmployeeDraftEvent(productFieldLabels[key], matchedProduct ? `${matchedProduct.productName} / ${matchedProduct.partNo}` : value || "-");
 
     setDraft((prev) =>
       matchedProduct
@@ -1119,7 +1157,16 @@ function App() {
   };
 
   const handleNumber = (key: keyof EntryDraft, value: string) => {
-    setDraft((prev) => ({ ...prev, [key]: Math.max(Number(value) || 0, 0) }));
+    const nextValue = Math.max(Number(value) || 0, 0);
+    const numberLabels: Partial<Record<keyof EntryDraft, string>> = {
+      cavityQty: "แก้จำนวนคาวิตี้",
+      goodQty: "แก้ Good quantity",
+      machineSpeed: "แก้ความเร็วเครื่องจักร",
+      ngQty: "แก้ NG quantity",
+      testQty: "แก้ Test",
+    };
+    if (numberLabels[key]) recordEmployeeDraftEvent(numberLabels[key], formatRate(nextValue));
+    setDraft((prev) => ({ ...prev, [key]: nextValue }));
   };
 
   const updateWorkMinutes = (value: string) => {
@@ -1133,6 +1180,7 @@ function App() {
 
   const updateTimeSlots = (value: string) => {
     const timeSlots = toPositiveNumber(value);
+    recordEmployeeDraftEvent("แก้จำนวนช่องเวลา", `${formatRate(timeSlots)} ช่อง`);
     setDraft((prev) => ({
       ...prev,
       timeSlots,
@@ -1142,6 +1190,7 @@ function App() {
 
   const updateMinutesPerSlot = (value: string) => {
     const minutesPerSlot = toPositiveNumber(value);
+    recordEmployeeDraftEvent("แก้นาที/ช่อง", `${formatRate(minutesPerSlot)} นาที`);
     setDraft((prev) => ({
       ...prev,
       minutesPerSlot,
@@ -1167,6 +1216,8 @@ function App() {
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
     const field = downtimeFields.find((item) => item.key === key);
+    const minutesPerPress = draft.minutesPerSlot || defaultMinutesPerSlot;
+    recordEmployeeDraftEvent(`กด ${field?.label ?? key}`, `+${formatRate(minutesPerPress)} นาที`);
     setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setDraft((prev) => {
       const minutesPerSlot = prev.minutesPerSlot || defaultMinutesPerSlot;
@@ -1195,6 +1246,9 @@ function App() {
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
     setEmployeeDraftSavedAt("");
     setEmployeeDraftActive(false);
+    setEmployeeDraftStartedAt("");
+    setEmployeeDraftUpdatedAt("");
+    setEmployeeDraftEvents([]);
     void loadProductDefaults(product, currentMachine);
   };
 
@@ -1236,6 +1290,9 @@ function App() {
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
     setEmployeeDraftSavedAt("");
     setEmployeeDraftActive(false);
+    setEmployeeDraftStartedAt("");
+    setEmployeeDraftUpdatedAt("");
+    setEmployeeDraftEvents([]);
   };
 
   const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
@@ -1251,8 +1308,15 @@ function App() {
       shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
       shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
     };
+    const entryStartedAt =
+      (freshRecordTime ? now : employeeDraftStartedAt ? new Date(employeeDraftStartedAt) : parseLocalDateTime(recordDate, recordTime))?.toISOString() ??
+      now.toISOString();
+    const entryUpdatedAt = employeeDraftUpdatedAt || now.toISOString();
     return {
       draft: nextDraft,
+      entryEvents: employeeDraftEvents,
+      entryStartedAt,
+      entryUpdatedAt,
       savedAt: now.toISOString(),
       shiftEndAt: nextDraft.shiftEndAt,
     };
@@ -1262,6 +1326,8 @@ function App() {
     const stored = buildEmployeeStoredDraft(targetDraft, freshRecordTime);
     window.localStorage.setItem(EMPLOYEE_DRAFT_KEY, JSON.stringify(stored));
     setEmployeeDraftActive(true);
+    setEmployeeDraftStartedAt(stored.entryStartedAt || "");
+    setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || "");
     setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
     return stored;
   };
@@ -1277,6 +1343,7 @@ function App() {
       showMissingSaveFields(missingFields);
       return;
     }
+    recordEmployeeDraftEvent(employeeDraftActive ? "อัปเดตร่าง" : "เริ่มบันทึกร่าง", employeeDraftActive ? "แก้ไขต่อ" : "เวลาเริ่มงาน");
     const stored = writeEmployeeStoredDraft(draft, !employeeDraftActive);
     setDraft(stored.draft);
     const savedAt = new Date(stored.savedAt).toLocaleString("th-TH");
@@ -1358,6 +1425,9 @@ function App() {
       window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
       setEmployeeDraftSavedAt("");
       setEmployeeDraftActive(false);
+      setEmployeeDraftStartedAt("");
+      setEmployeeDraftUpdatedAt("");
+      setEmployeeDraftEvents([]);
     } finally {
       autoSubmittingEmployeeDraft.current = false;
     }
@@ -1379,11 +1449,17 @@ function App() {
           setDateManuallyEdited(true);
           setProductSearch("");
           setEmployeeDraftActive(true);
+          setEmployeeDraftStartedAt(stored.entryStartedAt || parseLocalDateTime(stored.draft.recordDate || getTodayInputValue(), stored.draft.recordTime || getCurrentTimeInputValue())?.toISOString() || "");
+          setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
+          setEmployeeDraftEvents(Array.isArray(stored.entryEvents) ? stored.entryEvents : []);
         }
         if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
       } catch {
         window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
         setEmployeeDraftActive(false);
+        setEmployeeDraftStartedAt("");
+        setEmployeeDraftUpdatedAt("");
+        setEmployeeDraftEvents([]);
       }
     }
   }, []);
@@ -1394,7 +1470,7 @@ function App() {
       writeEmployeeStoredDraft(draft);
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [draft, editingLog, employeeDraftActive, isEmployeeEntry]);
+  }, [draft, editingLog, employeeDraftActive, employeeDraftEvents, employeeDraftUpdatedAt, isEmployeeEntry]);
 
   useEffect(() => {
     if (!remoteLoaded) return;
@@ -1852,6 +1928,11 @@ function App() {
                   </div>
                   <div className="employee-live-report-grid">
                     <div>
+                      <span>อัปเดตล่าสุด</span>
+                      <b>{employeeDraftUpdatedLabel}</b>
+                      <small>รวมเวลาการกรอกอัตโนมัติ {employeeEntryElapsed}</small>
+                    </div>
+                    <div>
                       <span>ช่วงเวลาการกรอก</span>
                       <b>
                         {draft.recordDate || getTodayInputValue()} {draft.recordTime || getCurrentTimeInputValue()} - {formatClock(employeeReportNow)}
@@ -1902,6 +1983,22 @@ function App() {
                       </div>
                     ) : (
                       <p>ยังไม่มีการกดหัวข้อเวลาหยุด</p>
+                    )}
+                  </div>
+                  <div className="employee-live-timeline">
+                    <span>ประวัติการกรอกล่าสุด</span>
+                    {employeeDraftTimeline.length > 0 ? (
+                      <ol>
+                        {employeeDraftTimeline.map((item) => (
+                          <li key={item.id}>
+                            <time>{new Date(item.at).toLocaleTimeString("th-TH")}</time>
+                            <b>{item.label}</b>
+                            {item.value && <small>{item.value}</small>}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p>ยังไม่มีประวัติการแก้ไขร่าง</p>
                     )}
                   </div>
                   {employeeDraftSavedAt && <p className="employee-live-draft">ร่างล่าสุด: {employeeDraftSavedAt}</p>}
