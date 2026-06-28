@@ -1790,14 +1790,31 @@ function App() {
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
     const now = new Date();
-    const targetDraft = isEmployeeEntry && !editingLog ? applyEmployeeTimerElapsed(draft, employeeActiveTimerRef.current, now) : draft;
+    const endDate = getTodayInputValue();
+    const endTime = getCurrentTimeInputValue();
+    const activeTimer = employeeActiveTimerRef.current;
+    const finalizedDraft = isEmployeeEntry && !editingLog ? applyEmployeeTimerElapsed(draft, activeTimer, now) : draft;
+    const endNoteLine = `[${endDate} ${endTime}] สิ้นสุดการผลิต / ส่งยอดบันทึก`;
+    const targetDraft =
+      isEmployeeEntry && !editingLog
+        ? {
+            ...finalizedDraft,
+            note: finalizedDraft.note.trim() ? `${finalizedDraft.note.trim()}\n${endNoteLine}` : endNoteLine,
+          }
+        : finalizedDraft;
     if (targetDraft !== draft) setDraft(targetDraft);
-    if (isEmployeeEntry && employeeActiveTimerRef.current) {
-      const nextTimer = { ...employeeActiveTimerRef.current, startedAt: now.toISOString() };
+    if (isEmployeeEntry && !editingLog) {
+      setEmployeeDraftUpdatedAt(now.toISOString());
+      recordEmployeeDraftEvent("สิ้นสุดการผลิต / ส่งยอดบันทึก", `${endDate} ${endTime}`);
+    }
+    const saved = await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
+    if (saved && isEmployeeEntry && !editingLog) {
+      clearEmployeeActiveTimer();
+    } else if (!saved && isEmployeeEntry && !editingLog && activeTimer) {
+      const nextTimer = { ...activeTimer, startedAt: now.toISOString() };
       setEmployeeActiveTimer(nextTimer);
       employeeActiveTimerRef.current = nextTimer;
     }
-    await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
   };
 
   const submit = (event: FormEvent) => {
