@@ -383,6 +383,101 @@ h3 {
   padding: 20px;
 }
 
+.employee-machine-menu {
+  background: #ffffff;
+  border: 1px solid #dfe5dd;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(23, 32, 51, 0.06);
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+}
+
+.machine-menu-heading {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.machine-menu-heading > span {
+  background: #ecfdf5;
+  border: 1px solid #b7e4c7;
+  border-radius: 999px;
+  color: #075e35;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+
+.machine-icon-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.machine-icon-card {
+  align-items: stretch;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf8 100%);
+  border: 1px solid #cfdcd2;
+  border-radius: 8px;
+  color: #001b3d;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  min-height: 154px;
+  padding: 14px;
+  text-align: left;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.machine-icon-card:hover,
+.machine-icon-card:focus-visible {
+  border-color: #177245;
+  box-shadow: 0 12px 26px rgba(23, 114, 69, 0.14);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.machine-icon-symbol {
+  align-items: center;
+  background: #177245;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.machine-card-main {
+  display: grid;
+  gap: 3px;
+}
+
+.machine-card-main strong {
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.machine-card-main small,
+.machine-card-detail {
+  color: #4b5c73;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.machine-card-detail {
+  border-top: 1px solid #e4ebe6;
+  display: block;
+  padding-top: 9px;
+}
+
+.machine-menu-back {
+  margin-left: auto;
+}
+
 .users-layout,
 .user-form {
   display: grid;
@@ -2481,11 +2576,31 @@ td:nth-child(10) {
 
   .entry-form,
   .entry-summary,
+  .employee-machine-menu,
   .analysis-panel,
   .filters-bar,
   .table-toolbar,
   .user-form {
     padding: 12px;
+  }
+
+  .machine-menu-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .machine-icon-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .machine-icon-card {
+    min-height: 136px;
+  }
+
+  .machine-menu-back {
+    justify-content: center;
+    margin-left: 0;
+    width: 100%;
   }
 
   .report-toolbar .primary-button {

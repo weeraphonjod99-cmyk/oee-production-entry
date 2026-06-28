@@ -1,6 +1,7 @@
 import {
   BarChart3,
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
@@ -1034,6 +1035,7 @@ function App() {
   const [employeeWorkStartedAt, setEmployeeWorkStartedAt] = useState("");
   const [employeeActiveTimer, setEmployeeActiveTimer] = useState<EmployeeActiveTimer | null>(null);
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
+  const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -1141,6 +1143,22 @@ function App() {
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
+  );
+  const employeeMachineCards = useMemo(
+    () =>
+      machines.map((machine) => {
+        const machineLogs = allLogs.filter((log) => log.machineId === machine.id);
+        const latestLog = machineLogs
+          .slice()
+          .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
+        return {
+          machine,
+          productCount: products.filter((product) => product.machineId === machine.id).length,
+          latestLog,
+          logCount: machineLogs.length,
+        };
+      }),
+    [allLogs],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -1329,6 +1347,13 @@ function App() {
       timeSlots: slotsFromMinutes(machine.capacityMinutes, prev.minutesPerSlot),
     }));
     void loadProductDefaults(nextProduct, machine);
+  };
+
+  const openEmployeeMachineEntry = (machineId: string) => {
+    selectMachine(machineId);
+    setEmployeeMachineSelected(true);
+    setProductSearch("");
+    setStatus(`เลือกเครื่อง ${machines.find((machine) => machine.id === machineId)?.name ?? machineId} สำหรับกรอกยอดพนักงาน`);
   };
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
@@ -1822,6 +1847,7 @@ function App() {
           setEmployeeWorkStartedAt(stored.workStartedAt || "");
           setEmployeeActiveTimer(stored.activeTimer ?? null);
           employeeActiveTimerRef.current = stored.activeTimer ?? null;
+          setEmployeeMachineSelected(true);
         }
         if (stored?.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
       } catch {
@@ -1975,7 +2001,14 @@ function App() {
           </div>
         </div>
         <nav>
-          <button className={`employee-entry ${tab === "employeeEntry" ? "active" : ""}`} onClick={() => setTab("employeeEntry")} type="button">
+          <button
+            className={`employee-entry ${tab === "employeeEntry" ? "active" : ""}`}
+            onClick={() => {
+              setTab("employeeEntry");
+              if (!employeeDraftActive) setEmployeeMachineSelected(false);
+            }}
+            type="button"
+          >
             <span className="nav-icon-badge">
               <ClipboardCheck size={18} />
             </span>
@@ -2044,12 +2077,47 @@ function App() {
           </div>
         </header>
 
-        {(tab === "employeeEntry" || tab === "entry") && (
+        {tab === "employeeEntry" && !employeeMachineSelected && (
+          <section className="employee-machine-menu">
+            <div className="machine-menu-heading">
+              <div>
+                <p className="eyebrow">Employee entry</p>
+                <h2>เลือกเครื่องจักรสำหรับกรอกยอด</h2>
+              </div>
+              <span>{formatNumber(machines.length)} เครื่อง</span>
+            </div>
+            <div className="machine-icon-grid">
+              {employeeMachineCards.map(({ latestLog, logCount, machine, productCount }) => (
+                <button className="machine-icon-card" key={machine.id} onClick={() => openEmployeeMachineEntry(machine.id)} type="button">
+                  <span className="machine-icon-symbol">
+                    <Gauge size={26} />
+                  </span>
+                  <span className="machine-card-main">
+                    <strong>{machine.name}</strong>
+                    <small>
+                      {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
+                    </small>
+                  </span>
+                  <span className="machine-card-detail">
+                    {latestLog ? `${latestLog.date} · ${shiftLabel(latestLog.shift)} · Good ${formatNumber(latestLog.goodQty)}` : "ยังไม่มีประวัติล่าสุด"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {((tab === "employeeEntry" && employeeMachineSelected) || tab === "entry") && (
           <section className="entry-layout">
             <form className="entry-form" onSubmit={submit}>
               <div className="section-title">
                 <Gauge size={20} />
                 <h2>{editingLog ? "แก้ไขยอดผลิต" : "กรอกยอดผลิต"}</h2>
+                {isEmployeeEntry && !editingLog && (
+                  <button className="ghost-button machine-menu-back" onClick={() => setEmployeeMachineSelected(false)} type="button">
+                    <ArrowLeft size={16} /> เลือกเครื่อง
+                  </button>
+                )}
               </div>
 
               <div className="form-grid">
