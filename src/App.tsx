@@ -140,22 +140,55 @@ const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
+const maxShiftWorkMinutes = 630;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
+const shiftBreakSchedules = {
+  [SHIFT_DAY]: [
+    { label: "10:00-10:10", minutes: 10 },
+    { label: "12:00-13:00", minutes: 60 },
+    { label: "15:00-15:10", minutes: 10 },
+    { label: "17:00-17:30", minutes: 30 },
+  ],
+  [SHIFT_NIGHT]: [
+    { label: "22:00-22:10", minutes: 10 },
+    { label: "00:00-01:00", minutes: 60 },
+    { label: "03:00-03:10", minutes: 10 },
+    { label: "05:00-05:30", minutes: 30 },
+  ],
+} as const;
+
+const getShiftBreakItems = (shift: string) =>
+  normalizeShiftCode(shift) === SHIFT_NIGHT ? shiftBreakSchedules[SHIFT_NIGHT] : shiftBreakSchedules[SHIFT_DAY];
+const getShiftBreakMinutes = (shift: string) => getShiftBreakItems(shift).reduce((sum, item) => sum + item.minutes, 0);
+const getShiftBreakLabel = (shift: string) =>
+  `${getShiftBreakItems(shift)
+    .map((item) => item.label)
+    .join(", ")} รวม ${getShiftBreakMinutes(shift)} นาที`;
 
 const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
 const numberInputValue = (value: number | undefined) => (Number(value || 0) > 0 ? String(value) : "");
 const roundNumber = (value: number) => Number(value.toFixed(2));
+const clampWorkMinutes = (value: number) => Math.min(roundNumber(Math.max(Number(value) || 0, 0)), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
-  minutesPerSlot > 0 ? roundNumber(workMinutes / minutesPerSlot) : 0;
+  minutesPerSlot > 0 ? roundNumber(clampWorkMinutes(workMinutes) / minutesPerSlot) : 0;
+
+const clampTimeSlots = (slots: number, minutesPerSlot: number) =>
+  minutesPerSlot > 0 ? Math.min(roundNumber(Math.max(Number(slots) || 0, 0)), slotsFromMinutes(maxShiftWorkMinutes, minutesPerSlot)) : 0;
 
 const minutesToSlots = (minutes: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? roundNumber(minutes / minutesPerSlot) : 0;
 
 const slotsToMinutes = (slots: number, minutesPerSlot: number) => roundNumber(slots * minutesPerSlot);
+const workMinutesFromSlots = (slots: number, minutesPerSlot: number) => clampWorkMinutes(slotsToMinutes(slots, minutesPerSlot));
+const applyAutomaticBreakMinutes = <T extends { meetingMinutes: number; shift: string }>(draft: T): T => ({
+  ...draft,
+  meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(draft.shift)),
+});
 
 function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
   const minutesPerSlot = defaultMinutesPerSlot;
+  const workMinutes = clampWorkMinutes(machine.capacityMinutes);
   return {
     date: getTodayInputValue(),
     recordDate: getTodayInputValue(),
@@ -169,8 +202,8 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     step: product.step,
     machineSpeed: 0,
     cavityQty: 0,
-    workMinutes: machine.capacityMinutes,
-    timeSlots: slotsFromMinutes(machine.capacityMinutes, minutesPerSlot),
+    workMinutes,
+    timeSlots: slotsFromMinutes(workMinutes, minutesPerSlot),
     minutesPerSlot,
     changeoverMinutes: 0,
     inspectionMinutes: 0,
@@ -178,7 +211,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     moldRepairMinutes: 0,
     materialChangeMinutes: 0,
     emergencyStopMinutes: 0,
-    meetingMinutes: 0,
+    meetingMinutes: getShiftBreakMinutes(SHIFT_DAY),
     plannedStopMinutes: 0,
     goodQty: 0,
     ngQty: 0,
@@ -807,8 +840,8 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   productName: log.productName,
   partNo: log.partNo,
   step: log.step,
-  workMinutes: Number(log.workMinutes || 0) || Number(log.normalMinutes || 0) + totalDowntime(log),
-  timeSlots: Number(log.timeSlots || 0),
+  workMinutes: clampWorkMinutes(Number(log.workMinutes || 0) || Number(log.normalMinutes || 0) + totalDowntime(log)),
+  timeSlots: clampTimeSlots(Number(log.timeSlots || 0), Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot),
   minutesPerSlot: Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot,
   machineSpeed: Number(log.machineSpeed || 0),
   cavityQty: Number(log.cavityQty || 0),
@@ -818,7 +851,7 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   moldRepairMinutes: Number(log.moldRepairMinutes || 0),
   materialChangeMinutes: Number(log.materialChangeMinutes || 0),
   emergencyStopMinutes: Number(log.emergencyStopMinutes || 0),
-  meetingMinutes: Number(log.meetingMinutes || 0),
+  meetingMinutes: Math.max(Number(log.meetingMinutes || 0), getShiftBreakMinutes(log.shift)),
   plannedStopMinutes: Number(log.plannedStopMinutes || 0),
   goodQty: Number(log.goodQty || 0),
   ngQty: Number(log.ngQty || 0),
@@ -934,6 +967,14 @@ function App() {
     const timer = window.setInterval(() => setEmployeeReportNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, [tab]);
+
+  useEffect(() => {
+    setDraft((prev) => {
+      const breakMinutes = getShiftBreakMinutes(prev.shift);
+      if (Number(prev.meetingMinutes || 0) >= breakMinutes) return prev;
+      return { ...prev, meetingMinutes: breakMinutes };
+    });
+  }, [draft.shift]);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const machineProducts = useMemo(
@@ -1077,12 +1118,14 @@ function App() {
           normalizeText(prev.step || "-") === normalizeText(product.step || "-");
         if (!sameProduct) return prev;
         const minutesPerSlot = Number(defaults.minutesPerSlot || prev.minutesPerSlot || defaultMinutesPerSlot);
+        const timeSlots = clampTimeSlots(prev.timeSlots, minutesPerSlot);
         return {
           ...prev,
           machineSpeed: Number(defaults.machineSpeed || 0) > 0 ? roundNumber(Number(defaults.machineSpeed)) : prev.machineSpeed,
           cavityQty: Number(defaults.cavityQty || 0) > 0 ? roundNumber(Number(defaults.cavityQty)) : prev.cavityQty,
           minutesPerSlot,
-          workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
+          timeSlots,
+          workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
         };
       });
     };
@@ -1127,7 +1170,7 @@ function App() {
       ...prev,
       machineId: machine.id,
       ...applyProductToDraft(nextProduct, allLogs, machine),
-      workMinutes: machine.capacityMinutes,
+      workMinutes: clampWorkMinutes(machine.capacityMinutes),
       timeSlots: slotsFromMinutes(machine.capacityMinutes, prev.minutesPerSlot),
     }));
     void loadProductDefaults(nextProduct, machine);
@@ -1170,7 +1213,7 @@ function App() {
   };
 
   const updateWorkMinutes = (value: string) => {
-    const workMinutes = toPositiveNumber(value);
+    const workMinutes = clampWorkMinutes(toPositiveNumber(value));
     setDraft((prev) => ({
       ...prev,
       workMinutes,
@@ -1179,12 +1222,12 @@ function App() {
   };
 
   const updateTimeSlots = (value: string) => {
-    const timeSlots = toPositiveNumber(value);
-    recordEmployeeDraftEvent("แก้จำนวนช่องเวลา", `${formatRate(timeSlots)} ช่อง`);
+    const rawTimeSlots = toPositiveNumber(value);
+    recordEmployeeDraftEvent("แก้จำนวนช่องเวลา", `${formatRate(rawTimeSlots)} ช่อง`);
     setDraft((prev) => ({
       ...prev,
-      timeSlots,
-      workMinutes: roundNumber(timeSlots * prev.minutesPerSlot),
+      timeSlots: clampTimeSlots(rawTimeSlots, prev.minutesPerSlot),
+      workMinutes: workMinutesFromSlots(rawTimeSlots, prev.minutesPerSlot),
     }));
   };
 
@@ -1194,7 +1237,8 @@ function App() {
     setDraft((prev) => ({
       ...prev,
       minutesPerSlot,
-      workMinutes: roundNumber(prev.timeSlots * minutesPerSlot),
+      timeSlots: clampTimeSlots(prev.timeSlots, minutesPerSlot),
+      workMinutes: workMinutesFromSlots(prev.timeSlots, minutesPerSlot),
       ...Object.fromEntries(
         downtimeFields.map((field) => [
           field.key,
@@ -1208,7 +1252,10 @@ function App() {
     const slots = toPositiveNumber(value);
     setDraft((prev) => ({
       ...prev,
-      [key]: slotsToMinutes(slots, prev.minutesPerSlot),
+      [key]:
+        key === "meetingMinutes"
+          ? Math.max(slotsToMinutes(slots, prev.minutesPerSlot), getShiftBreakMinutes(prev.shift))
+          : slotsToMinutes(slots, prev.minutesPerSlot),
     }));
   };
 
@@ -1300,14 +1347,20 @@ function App() {
     const savedDate = targetDraft.date || getTodayInputValue();
     const recordDate = freshRecordTime ? getTodayInputValue() : targetDraft.recordDate || getTodayInputValue();
     const recordTime = freshRecordTime ? getCurrentTimeInputValue() : targetDraft.recordTime || getCurrentTimeInputValue();
-    const nextDraft = {
+    const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
+    const timeSlots = clampTimeSlots(targetDraft.timeSlots, minutesPerSlot);
+    const workMinutes = workMinutesFromSlots(timeSlots, minutesPerSlot);
+    const nextDraft = applyAutomaticBreakMinutes({
       ...targetDraft,
       date: savedDate,
+      minutesPerSlot,
       recordDate,
       recordTime,
       shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
       shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
-    };
+      timeSlots,
+      workMinutes,
+    });
     const entryStartedAt =
       (freshRecordTime ? now : employeeDraftStartedAt ? new Date(employeeDraftStartedAt) : parseLocalDateTime(recordDate, recordTime))?.toISOString() ??
       now.toISOString();
@@ -1369,16 +1422,24 @@ function App() {
     const savedDate = targetDraft.date || getTodayInputValue();
     const savedRecordDate = shouldUpdate ? getDraftRecordDate(options.editingLog) : getDraftRecordDate(targetDraft);
     const savedRecordTime = shouldUpdate ? getDraftRecordTime(options.editingLog) : getDraftRecordTime(targetDraft);
+    const savedMinutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
+    const savedTimeSlots = clampTimeSlots(targetDraft.timeSlots, savedMinutesPerSlot);
+    const savedWorkMinutes = workMinutesFromSlots(savedTimeSlots, savedMinutesPerSlot);
+    const savedMeetingMinutes = Math.max(Number(targetDraft.meetingMinutes || 0), getShiftBreakMinutes(targetDraft.shift));
     const log: ProductionLog = {
       ...targetDraft,
+      meetingMinutes: savedMeetingMinutes,
+      minutesPerSlot: savedMinutesPerSlot,
       recordDate: savedRecordDate,
       recordTime: savedRecordTime,
       date: savedDate,
       shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
       shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
+      timeSlots: savedTimeSlots,
+      workMinutes: savedWorkMinutes,
       id: options.editingLog?.id ?? makeLogId(),
       machineName: machine.name,
-      normalMinutes: Math.max(targetDraft.workMinutes - totalDowntime(targetDraft), 0),
+      normalMinutes: Math.max(savedWorkMinutes - totalDowntime({ ...targetDraft, meetingMinutes: savedMeetingMinutes }), 0),
       createdAt: options.editingLog?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       source: remoteEnabled ? "google-sheet" : "local",
@@ -1440,12 +1501,17 @@ function App() {
         const stored = JSON.parse(raw) as StoredEmployeeDraft;
         if (stored?.draft) {
           const savedDate = stored.draft.date || getTodayInputValue();
-          setDraft({
+          const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
+          const timeSlots = clampTimeSlots(stored.draft.timeSlots, minutesPerSlot);
+          setDraft(applyAutomaticBreakMinutes({
             ...stored.draft,
             date: savedDate,
+            minutesPerSlot,
             shiftStartAt: shiftStartAt(savedDate, stored.draft.shift),
             shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
-          });
+            timeSlots,
+            workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
+          }));
           setDateManuallyEdited(true);
           setProductSearch("");
           setEmployeeDraftActive(true);
@@ -1676,22 +1742,42 @@ function App() {
                     required
                     value={draft.date}
                     onChange={(event) => {
+                      const date = event.target.value;
                       setDateManuallyEdited(true);
-                      setDraft({ ...draft, date: event.target.value });
+                      setDraft({
+                        ...draft,
+                        date,
+                        shiftEndAt: shiftEndAt(date, draft.shift),
+                        shiftStartAt: shiftStartAt(date, draft.shift),
+                      });
                     }}
                     type="date"
                   />
                 </label>
                 <label>
                   <span className="label-text">กะ <RequiredMark /></span>
-                  <select required value={draft.shift} onChange={(event) => setDraft({ ...draft, shift: event.target.value })}>
+                  <select
+                    required
+                    value={draft.shift}
+                    onChange={(event) => {
+                      const shift = event.target.value;
+                      recordEmployeeDraftEvent("เปลี่ยนกะ", shiftLabel(shift));
+                      setDraft({
+                        ...draft,
+                        meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
+                        shift,
+                        shiftEndAt: shiftEndAt(draft.date, shift),
+                        shiftStartAt: shiftStartAt(draft.date, shift),
+                      });
+                    }}
+                  >
                     {orderedShiftOptions.map((shift) => (
                       <option key={shift} value={shift}>
                         {shiftLabel(shift)}
                       </option>
                     ))}
                   </select>
-                  <small className="field-help">เวลาทำงาน: {shiftWindowLabel(draft.date, draft.shift)}</small>
+                  <small className="field-help">เวลาทำงาน: {shiftWindowLabel(draft.date, draft.shift)} | พัก H: {getShiftBreakLabel(draft.shift)}</small>
                 </label>
                 <label>
                   <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>
@@ -1774,6 +1860,7 @@ function App() {
                   <span>จำนวนช่องเวลา <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
+                      max={slotsFromMinutes(maxShiftWorkMinutes, draft.minutesPerSlot)}
                       min="0"
                       onChange={(event) => updateTimeSlots(event.target.value)}
                       required
@@ -1802,6 +1889,7 @@ function App() {
                   <span>เวลาตามกะ <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
+                      max={maxShiftWorkMinutes}
                       min="0"
                       onChange={(event) => {
                         if (!isEmployeeEntry) updateWorkMinutes(event.target.value);
@@ -1814,7 +1902,7 @@ function App() {
                     <b>นาที</b>
                   </div>
                   {isEmployeeEntry && (
-                    <small className="field-help">คำนวณอัตโนมัติ: จำนวนช่องเวลา x นาที/ช่อง</small>
+                    <small className="field-help">คำนวณอัตโนมัติ: จำนวนช่องเวลา x นาที/ช่อง และไม่เกิน 630 นาที (10.5 ชั่วโมง)</small>
                   )}
                 </label>
                 <label className="runtime-input-block">
