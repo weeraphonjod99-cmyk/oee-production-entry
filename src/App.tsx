@@ -333,6 +333,7 @@ const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now =
   if (!shiftStart || !shiftEnd) return 0;
 
   const actualStart = parseStoredDateTime(workStartedAt);
+  if (!actualStart) return 0;
   const workStart = actualStart
     ? new Date(Math.min(Math.max(actualStart.getTime(), shiftStart.getTime()), shiftEnd.getTime()))
     : shiftStart;
@@ -1373,6 +1374,12 @@ function App() {
   };
 
   const pressEmployeeDowntime = (key: DowntimeKey) => {
+    if (!employeeWorkStartedAt) {
+      const message = "กรุณากด A เริ่มงานจริงก่อน จึงจะบันทึกหัวข้อเวลาอื่นได้";
+      setStatus(message);
+      setProblemDialog({ title: "ยังไม่เริ่มงานจริง", message });
+      return;
+    }
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
     const field = downtimeFields.find((item) => item.key === key);
@@ -2154,7 +2161,7 @@ function App() {
                     <div className="employee-work-start-card">
                       <span>A การทำงาน / เริ่มงานจริง</span>
                       <b>{employeeWorkStartedLabel}</b>
-                      <small>{employeeWorkStartedAt ? `นับเวลางานจริง ${employeeWorkElapsed}` : "ถ้ายังไม่กด A ระบบอิงเวลาเริ่มกะ"}</small>
+                      <small>{employeeWorkStartedAt ? `นับเวลางานจริง ${employeeWorkElapsed}` : "ยังไม่กด A ระบบยังไม่นับเวลาผลิต"}</small>
                     </div>
                     <div>
                       <span>อัปเดตล่าสุด</span>
