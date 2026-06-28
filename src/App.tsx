@@ -141,20 +141,20 @@ const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
-const maxShiftWorkMinutes = 630;
+const maxShiftWorkMinutes = 610;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
-    { label: "10:00-10:10", minutes: 10 },
-    { label: "12:00-13:00", minutes: 60 },
-    { label: "15:00-15:10", minutes: 10 },
-    { label: "17:00-17:30", minutes: 30 },
+    { label: "10:00-10:10", start: "10:00", end: "10:10", minutes: 10 },
+    { label: "12:00-13:00", start: "12:00", end: "13:00", minutes: 60 },
+    { label: "15:00-15:10", start: "15:00", end: "15:10", minutes: 10 },
+    { label: "17:00-17:30", start: "17:00", end: "17:30", minutes: 30 },
   ],
   [SHIFT_NIGHT]: [
-    { label: "22:00-22:10", minutes: 10 },
-    { label: "00:00-01:00", minutes: 60 },
-    { label: "03:00-03:10", minutes: 10 },
-    { label: "05:00-05:30", minutes: 30 },
+    { label: "22:00-22:10", start: "22:00", end: "22:10", minutes: 10 },
+    { label: "00:00-01:00", start: "00:00", end: "01:00", minutes: 60 },
+    { label: "03:00-03:10", start: "03:00", end: "03:10", minutes: 10 },
+    { label: "05:00-05:30", start: "05:00", end: "05:30", minutes: 30 },
   ],
 } as const;
 
@@ -284,6 +284,61 @@ const shiftStartAt = (productionDate: string, shift: string) => {
 const shiftEndAt = (productionDate: string, shift: string) => {
   const schedule = getShiftSchedule(productionDate, shift);
   return `${schedule.endDate}T${schedule.endTime}:00`;
+};
+
+const getBreakDateForShift = (productionDate: string, shift: string, time: string) => {
+  const normalized = normalizeShiftCode(shift);
+  const hour = Number(time.split(":")[0] || 0);
+  if (normalized === SHIFT_NIGHT && hour < 20) return addDaysToInputDate(productionDate, 1);
+  return productionDate;
+};
+
+const getShiftBreakWindows = (productionDate: string, shift: string) =>
+  getShiftBreakItems(shift)
+    .map((item) => {
+      const startDate = getBreakDateForShift(productionDate, shift, item.start);
+      let endDate = getBreakDateForShift(productionDate, shift, item.end);
+      const startHour = Number(item.start.split(":")[0] || 0);
+      const endHour = Number(item.end.split(":")[0] || 0);
+      if (endHour < startHour) endDate = addDaysToInputDate(startDate, 1);
+      const startAt = parseLocalDateTime(startDate, item.start);
+      const endAt = parseLocalDateTime(endDate, item.end);
+      return startAt && endAt ? { ...item, endAt, startAt } : null;
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+const overlapMinutes = (startA: Date, endA: Date, startB: Date, endB: Date) => {
+  const start = Math.max(startA.getTime(), startB.getTime());
+  const end = Math.min(endA.getTime(), endB.getTime());
+  return Math.max(roundNumber((end - start) / 60000), 0);
+};
+
+const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date()) => {
+  const schedule = getShiftSchedule(productionDate, shift);
+  const shiftStart = parseLocalDateTime(schedule.startDate, schedule.startTime);
+  const shiftEnd = parseLocalDateTime(schedule.endDate, schedule.endTime);
+  if (!shiftStart || !shiftEnd) return 0;
+
+  const cappedNow = new Date(Math.min(Math.max(now.getTime(), shiftStart.getTime()), shiftEnd.getTime()));
+  const elapsed = Math.max(roundNumber((cappedNow.getTime() - shiftStart.getTime()) / 60000), 0);
+  const breakElapsed = getShiftBreakWindows(schedule.startDate, shift).reduce(
+    (sum, item) => sum + overlapMinutes(shiftStart, cappedNow, item.startAt, item.endAt),
+    0,
+  );
+  return clampWorkMinutes(elapsed - breakElapsed);
+};
+
+const applyShiftClockRuntime = (targetDraft: EntryDraft, now = new Date()) => {
+  const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
+  const workMinutes = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now);
+  return applyAutomaticBreakMinutes({
+    ...targetDraft,
+    minutesPerSlot,
+    shiftStartAt: shiftStartAt(targetDraft.date || getTodayInputValue(), targetDraft.shift),
+    shiftEndAt: shiftEndAt(targetDraft.date || getTodayInputValue(), targetDraft.shift),
+    timeSlots: slotsFromMinutes(workMinutes, minutesPerSlot),
+    workMinutes,
+  });
 };
 
 type ReportRow = {
@@ -970,6 +1025,15 @@ function App() {
   }, [tab]);
 
   useEffect(() => {
+    if (tab !== "employeeEntry" || editingLog) return;
+    setDraft((prev) => applyShiftClockRuntime(prev));
+    const timer = window.setInterval(() => {
+      setDraft((prev) => applyShiftClockRuntime(prev));
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [tab, editingLog, draft.date, draft.shift, draft.minutesPerSlot]);
+
+  useEffect(() => {
     setDraft((prev) => {
       const breakMinutes = getShiftBreakMinutes(prev.shift);
       if (Number(prev.meetingMinutes || 0) >= breakMinutes) return prev;
@@ -1345,20 +1409,21 @@ function App() {
 
   const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
     const now = new Date();
-    const savedDate = targetDraft.date || getTodayInputValue();
-    const recordDate = freshRecordTime ? getTodayInputValue() : targetDraft.recordDate || getTodayInputValue();
-    const recordTime = freshRecordTime ? getCurrentTimeInputValue() : targetDraft.recordTime || getCurrentTimeInputValue();
-    const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
-    const timeSlots = clampTimeSlots(targetDraft.timeSlots, minutesPerSlot);
+    const clockDraft = applyShiftClockRuntime(targetDraft, now);
+    const savedDate = clockDraft.date || getTodayInputValue();
+    const recordDate = freshRecordTime ? getTodayInputValue() : clockDraft.recordDate || getTodayInputValue();
+    const recordTime = freshRecordTime ? getCurrentTimeInputValue() : clockDraft.recordTime || getCurrentTimeInputValue();
+    const minutesPerSlot = clockDraft.minutesPerSlot || defaultMinutesPerSlot;
+    const timeSlots = clampTimeSlots(clockDraft.timeSlots, minutesPerSlot);
     const workMinutes = workMinutesFromSlots(timeSlots, minutesPerSlot);
     const nextDraft = applyAutomaticBreakMinutes({
-      ...targetDraft,
+      ...clockDraft,
       date: savedDate,
       minutesPerSlot,
       recordDate,
       recordTime,
-      shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
-      shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
+      shiftStartAt: shiftStartAt(savedDate, clockDraft.shift),
+      shiftEndAt: shiftEndAt(savedDate, clockDraft.shift),
       timeSlots,
       workMinutes,
     });
@@ -1504,7 +1569,7 @@ function App() {
           const savedDate = stored.draft.date || getTodayInputValue();
           const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
           const timeSlots = clampTimeSlots(stored.draft.timeSlots, minutesPerSlot);
-          setDraft(applyAutomaticBreakMinutes({
+          setDraft(applyShiftClockRuntime(applyAutomaticBreakMinutes({
             ...stored.draft,
             date: savedDate,
             minutesPerSlot,
@@ -1512,7 +1577,7 @@ function App() {
             shiftEndAt: shiftEndAt(savedDate, stored.draft.shift),
             timeSlots,
             workMinutes: workMinutesFromSlots(timeSlots, minutesPerSlot),
-          }));
+          })));
           setDateManuallyEdited(true);
           setProductSearch("");
           setEmployeeDraftActive(true);
@@ -1550,7 +1615,9 @@ function App() {
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
-    await submitProductionDraft(draft, { editingLog, resetAfterSave: true });
+    const targetDraft = isEmployeeEntry && !editingLog ? applyShiftClockRuntime(draft) : draft;
+    if (targetDraft !== draft) setDraft(targetDraft);
+    await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
   };
 
   const submit = (event: FormEvent) => {
@@ -1903,7 +1970,7 @@ function App() {
                     <b>นาที</b>
                   </div>
                   {isEmployeeEntry && (
-                    <small className="field-help">คำนวณอัตโนมัติ: จำนวนช่องเวลา x นาที/ช่อง และไม่เกิน 630 นาที (10.5 ชั่วโมง)</small>
+                    <small className="field-help">คำนวณอัตโนมัติจากเวลาจริงในกะ 08:00-20:00 / 20:00-08:00 หักพัก H แล้ว สูงสุด 610 นาที</small>
                   )}
                 </label>
                 <label className="runtime-input-block">
