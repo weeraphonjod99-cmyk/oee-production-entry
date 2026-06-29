@@ -1199,7 +1199,7 @@ function App() {
   }, [employeeActiveTimer]);
 
   useEffect(() => {
-    if (tab !== "employeeEntry" || editingLog || employeeDraftActive || employeeWorkStartedAt || employeeActiveTimer || dateManuallyEdited) return;
+    if ((tab !== "employeeEntry" && tab !== "entry") || editingLog || employeeDraftActive || employeeWorkStartedAt || employeeActiveTimer) return;
     const currentShift = getCurrentProductionShift(employeeReportNow);
     setDraft((prev) => {
       if (prev.date === currentShift.date && normalizeShiftCode(prev.shift) === currentShift.shift) return prev;
@@ -1212,7 +1212,7 @@ function App() {
         shiftStartAt: shiftStartAt(currentShift.date, currentShift.shift),
       };
     });
-  }, [dateManuallyEdited, editingLog, employeeActiveTimer, employeeDraftActive, employeeReportNow, employeeWorkStartedAt, tab]);
+  }, [editingLog, employeeActiveTimer, employeeDraftActive, employeeReportNow, employeeWorkStartedAt, tab]);
 
   useEffect(() => {
     if (tab !== "employeeEntry" || editingLog) return;
@@ -2517,6 +2517,7 @@ function App() {
                 <label>
                   <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
                   <input
+                    disabled
                     required
                     value={draft.date}
                   onChange={(event) => {
