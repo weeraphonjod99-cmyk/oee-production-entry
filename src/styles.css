@@ -682,38 +682,6 @@ h3 {
   box-shadow: 0 0 0 5px rgba(21, 128, 61, 0.2);
 }
 
-.output-quantity-grid .good-quantity-field .label-text {
-  color: #047857;
-}
-
-.output-quantity-grid .good-quantity-input {
-  background: #ecfdf5;
-  border-color: #16a34a;
-  color: #065f46;
-}
-
-.output-quantity-grid .good-quantity-input:focus {
-  background: #dcfce7;
-  border-color: #15803d;
-  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.24);
-}
-
-.output-quantity-grid .ng-quantity-field .label-text {
-  color: #b91c1c;
-}
-
-.output-quantity-grid .ng-quantity-input {
-  background: #fef2f2;
-  border-color: #ef4444;
-  color: #991b1b;
-}
-
-.output-quantity-grid .ng-quantity-input:focus {
-  background: #fee2e2;
-  border-color: #dc2626;
-  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.22);
-}
-
 .form-grid,
 .downtime-grid,
 .filters-bar {
@@ -783,6 +751,38 @@ textarea:focus {
 input[readonly] {
   background: #f3f7f4;
   color: #314155;
+}
+
+.output-quantity-grid .good-quantity-field .label-text {
+  color: #047857;
+}
+
+.output-quantity-grid input.good-quantity-input {
+  background: #dcfce7 !important;
+  border: 2px solid #16a34a !important;
+  color: #065f46 !important;
+}
+
+.output-quantity-grid input.good-quantity-input:focus {
+  background: #bbf7d0 !important;
+  border-color: #15803d !important;
+  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.24) !important;
+}
+
+.output-quantity-grid .ng-quantity-field .label-text {
+  color: #b91c1c;
+}
+
+.output-quantity-grid input.ng-quantity-input {
+  background: #fee2e2 !important;
+  border: 2px solid #ef4444 !important;
+  color: #991b1b !important;
+}
+
+.output-quantity-grid input.ng-quantity-input:focus {
+  background: #fecaca !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.22) !important;
 }
 
 .production-main-input {
