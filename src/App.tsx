@@ -1725,6 +1725,13 @@ function App() {
       setSuccessDialog({ title: "กำลังนับอยู่แล้ว", message });
       return false;
     }
+    const alreadyUsed = employeeDraftEvents.some((event) => event.key === key);
+    if (alreadyUsed) {
+      const message = `${label} เคยกรอกในร่างนี้แล้ว ห้ามกรอกซ้ำหัวข้อเดิม`;
+      setStatus(message);
+      setProblemDialog({ title: "ห้ามกรอกซ้ำหัวข้อเดิม", message });
+      return false;
+    }
     const now = new Date();
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
