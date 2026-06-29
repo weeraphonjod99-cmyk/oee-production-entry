@@ -2522,7 +2522,7 @@ function App() {
                   onChange={(event) => {
                     const date = event.target.value;
                     const currentShift = getCurrentProductionShift();
-                    const shift = isEmployeeEntry && !editingLog ? currentShift.shift : draft.shift;
+                    const shift = currentShift.shift;
                     setDateManuallyEdited(true);
                     setEmployeeWorkStartedAt("");
                     clearEmployeeActiveTimer();
@@ -2541,7 +2541,7 @@ function App() {
                 <label>
                   <span className="label-text">กะ <RequiredMark /></span>
                   <select
-                    disabled={isEmployeeEntry && !editingLog}
+                    disabled
                     required
                     value={draft.shift}
                   onChange={(event) => {
