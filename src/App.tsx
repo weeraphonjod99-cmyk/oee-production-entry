@@ -1344,7 +1344,11 @@ function App() {
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
   const isEmployeeEntry = tab === "employeeEntry";
   const totalDraftDowntime = totalDowntime(draft);
-  const computedNormalMinutes = Math.max(draft.workMinutes - totalDraftDowntime, 0);
+  const liveClockWorkMinutes =
+    isEmployeeEntry && employeeWorkStartedAt
+      ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, employeeReportNow, employeeWorkStartedAt)
+      : draft.workMinutes;
+  const computedNormalMinutes = Math.max(liveClockWorkMinutes - totalDraftDowntime, 0);
   const employeeEntryStartedAt = useMemo(
     () =>
       employeeDraftStartedAt
@@ -2693,7 +2697,7 @@ function App() {
                   <strong>{formatNumber(totalDraftDowntime)} นาที</strong>
                 </div>
                 <div>
-                  <span>Normal production</span>
+                  <span>เวลาตามจริง (เวลาโลก)</span>
                   <strong>{formatNumber(computedNormalMinutes)} นาที</strong>
                 </div>
               </div>
