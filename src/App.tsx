@@ -228,13 +228,14 @@ const applyAutomaticBreakMinutes = <T extends { meetingMinutes: number; shift: s
 function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
   const minutesPerSlot = defaultMinutesPerSlot;
   const workMinutes = clampWorkMinutes(machine.capacityMinutes);
+  const currentShift = getCurrentProductionShift();
   return {
-    date: getTodayInputValue(),
+    date: currentShift.date,
     recordDate: getTodayInputValue(),
     recordTime: getCurrentTimeInputValue(),
-    shift: SHIFT_DAY,
-    shiftStartAt: shiftStartAt(getTodayInputValue(), SHIFT_DAY),
-    shiftEndAt: shiftEndAt(getTodayInputValue(), SHIFT_DAY),
+    shift: currentShift.shift,
+    shiftStartAt: shiftStartAt(currentShift.date, currentShift.shift),
+    shiftEndAt: shiftEndAt(currentShift.date, currentShift.shift),
     machineId: machine.id,
     productName: product.productName,
     partNo: product.partNo,
@@ -250,7 +251,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     moldRepairMinutes: 0,
     materialChangeMinutes: 0,
     emergencyStopMinutes: 0,
-    meetingMinutes: getShiftBreakMinutes(SHIFT_DAY),
+    meetingMinutes: getShiftBreakMinutes(currentShift.shift),
     plannedStopMinutes: 0,
     goodQty: 0,
     ngQty: 0,
@@ -286,6 +287,18 @@ const addDaysToInputDate = (date: string, days: number) => {
     String(value.getMonth() + 1).padStart(2, "0"),
     String(value.getDate()).padStart(2, "0"),
   ].join("-");
+};
+
+const getCurrentProductionShift = (now = new Date()) => {
+  const today = formatInputDate(now);
+  const hour = now.getHours();
+  if (hour < 8) {
+    return { date: addDaysToInputDate(today, -1), shift: SHIFT_NIGHT };
+  }
+  if (hour >= 20) {
+    return { date: today, shift: SHIFT_NIGHT };
+  }
+  return { date: today, shift: SHIFT_DAY };
 };
 
 const getShiftSchedule = (productionDate: string, shift: string) => {
@@ -1184,6 +1197,22 @@ function App() {
   useEffect(() => {
     employeeActiveTimerRef.current = employeeActiveTimer;
   }, [employeeActiveTimer]);
+
+  useEffect(() => {
+    if (tab !== "employeeEntry" || editingLog || employeeDraftActive || employeeWorkStartedAt || employeeActiveTimer || dateManuallyEdited) return;
+    const currentShift = getCurrentProductionShift(employeeReportNow);
+    setDraft((prev) => {
+      if (prev.date === currentShift.date && normalizeShiftCode(prev.shift) === currentShift.shift) return prev;
+      return {
+        ...prev,
+        date: currentShift.date,
+        meetingMinutes: Math.max(Number(prev.meetingMinutes || 0), getShiftBreakMinutes(currentShift.shift)),
+        shift: currentShift.shift,
+        shiftEndAt: shiftEndAt(currentShift.date, currentShift.shift),
+        shiftStartAt: shiftStartAt(currentShift.date, currentShift.shift),
+      };
+    });
+  }, [dateManuallyEdited, editingLog, employeeActiveTimer, employeeDraftActive, employeeReportNow, employeeWorkStartedAt, tab]);
 
   useEffect(() => {
     if (tab !== "employeeEntry" || editingLog) return;
