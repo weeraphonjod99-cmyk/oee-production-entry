@@ -2517,26 +2517,11 @@ function App() {
                 <label>
                   <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
                   <input
-                    disabled
-                    required
+                    aria-readonly="true"
+                    readOnly
+                    tabIndex={-1}
                     value={draft.date}
-                  onChange={(event) => {
-                    const date = event.target.value;
-                    const currentShift = getCurrentProductionShift();
-                    const shift = currentShift.shift;
-                    setDateManuallyEdited(true);
-                    setEmployeeWorkStartedAt("");
-                    clearEmployeeActiveTimer();
-                    setDraft({
-                      ...draft,
-                      date,
-                        meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
-                        shift,
-                        shiftEndAt: shiftEndAt(date, shift),
-                        shiftStartAt: shiftStartAt(date, shift),
-                      });
-                    }}
-                    type="date"
+                    type="text"
                   />
                 </label>
                 <label>
