@@ -1718,6 +1718,13 @@ function App() {
   };
 
   const switchEmployeeTimerRealtime = (key: EmployeeTimerKey, label: string) => {
+    const activeTimer = employeeActiveTimerRef.current;
+    if (activeTimer?.key === key) {
+      const message = `${label} กำลังนับเวลาอยู่แล้ว ไม่ต้องกดซ้ำ`;
+      setStatus(message);
+      setSuccessDialog({ title: "กำลังนับอยู่แล้ว", message });
+      return false;
+    }
     const now = new Date();
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
