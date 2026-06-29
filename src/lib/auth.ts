@@ -29,6 +29,7 @@ type AppUser = {
 const SESSION_KEY = "oee-production-session-v1";
 const CUSTOM_USERS_KEY = "oee-production-users-v1";
 const PASSWORD_OVERRIDES_KEY = "oee-production-password-overrides-v1";
+const USER_PROFILE_OVERRIDES_KEY = "oee-production-user-profile-overrides-v1";
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL?.trim() ?? "";
 const remoteUsersEnabled = APPS_SCRIPT_URL.length > 0;
 
@@ -112,15 +113,32 @@ function savePasswordOverrides(overrides: Record<string, { passwordHash: string;
   window.localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(overrides));
 }
 
+function loadProfileOverrides(): Record<string, { displayName?: string; changedAt: string }> {
+  try {
+    const raw = window.localStorage.getItem(USER_PROFILE_OVERRIDES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, { displayName?: string; changedAt: string }>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProfileOverrides(overrides: Record<string, { displayName?: string; changedAt: string }>) {
+  window.localStorage.setItem(USER_PROFILE_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
 function getUsers() {
   const overrides = loadPasswordOverrides();
+  const profileOverrides = loadProfileOverrides();
   const mergedBuiltInUsers = builtInUsers.map((user) => {
-    const override = overrides[user.username];
-    if (!override) return user;
+    const passwordOverride = overrides[user.username];
+    const profileOverride = profileOverrides[user.username];
     return {
       ...user,
-      passwordHash: override.passwordHash,
-      passwordChangedAt: override.changedAt,
+      displayName: profileOverride?.displayName || user.displayName,
+      passwordHash: passwordOverride?.passwordHash || user.passwordHash,
+      passwordChangedAt: passwordOverride?.changedAt,
     };
   });
   return [...mergedBuiltInUsers, ...loadCustomUsers()];
@@ -252,6 +270,46 @@ export async function deleteUser(username: string) {
     throw new Error("ไม่สามารถลบบัญชีเริ่มต้นได้");
   }
   saveCustomUsers(loadCustomUsers().filter((user) => user.username !== normalized));
+  return listLocalUsers();
+}
+
+export async function updateUser(input: { username: string; displayName: string }) {
+  const normalized = normalizeUsername(input.username);
+  const displayName = input.displayName.trim();
+  if (!displayName) {
+    throw new Error("กรุณากรอกชื่อแสดงผล");
+  }
+
+  if (remoteUsersEnabled) {
+    const data = await postUserAction<{ ok: boolean; users: AppUserSummary[] }>("updateUser", {
+      username: normalized,
+      displayName,
+    });
+    return Array.isArray(data.users) ? data.users : [];
+  }
+
+  const customUsers = loadCustomUsers();
+  const customUserIndex = customUsers.findIndex((user) => user.username === normalized);
+  const builtInUser = builtInUsers.find((user) => user.username === normalized);
+
+  if (customUserIndex < 0 && !builtInUser) {
+    throw new Error("ไม่พบบัญชีผู้ใช้");
+  }
+
+  const changedAt = new Date().toISOString();
+
+  if (customUserIndex >= 0) {
+    customUsers[customUserIndex] = {
+      ...customUsers[customUserIndex],
+      displayName,
+    };
+    saveCustomUsers(customUsers);
+    return listLocalUsers();
+  }
+
+  const profileOverrides = loadProfileOverrides();
+  profileOverrides[normalized] = { displayName, changedAt };
+  saveProfileOverrides(profileOverrides);
   return listLocalUsers();
 }
 

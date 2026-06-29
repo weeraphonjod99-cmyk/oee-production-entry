@@ -50,6 +50,7 @@ import {
   listUsers,
   loadSession,
   signIn,
+  updateUser,
   type AppRole,
   type AppSession,
   type AppUserSummary,
@@ -3159,13 +3160,20 @@ const createEmptyPasswordForm = (username: string) => ({
   confirmPassword: "",
 });
 
+const createEmptyEditUserForm = (username = "", displayName = "") => ({
+  username,
+  displayName,
+});
+
 function UsersAdmin({ currentUsername }: { currentUsername: string }) {
   const [users, setUsers] = useState<AppUserSummary[]>([]);
   const [form, setForm] = useState(emptyUserForm);
+  const [editUserForm, setEditUserForm] = useState(() => createEmptyEditUserForm());
   const [passwordForm, setPasswordForm] = useState(() => createEmptyPasswordForm(currentUsername));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [savingUser, setSavingUser] = useState(false);
+  const [savingEditUser, setSavingEditUser] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
@@ -3207,6 +3215,35 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       setMessage(`ลบผู้ใช้ ${username} แล้ว`);
     } catch (userError) {
       setError(userError instanceof Error ? userError.message : "ลบผู้ใช้ไม่สำเร็จ");
+    }
+  };
+
+  const selectUserForEdit = (user: AppUserSummary) => {
+    setMessage("");
+    setError("");
+    setEditUserForm(createEmptyEditUserForm(user.username, user.displayName));
+    setPasswordForm(createEmptyPasswordForm(user.username));
+  };
+
+  const submitEditUser = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+    if (!editUserForm.username) {
+      setError("กรุณาเลือกผู้ใช้งานที่ต้องการแก้ไข");
+      return;
+    }
+    setSavingEditUser(true);
+    try {
+      const nextUsers = await updateUser(editUserForm);
+      setUsers(nextUsers);
+      setMessage(`แก้ไขชื่อผู้ใช้งาน ${editUserForm.username} แล้ว`);
+      const updatedUser = nextUsers.find((user) => user.username === editUserForm.username);
+      setEditUserForm(createEmptyEditUserForm(updatedUser?.username || editUserForm.username, updatedUser?.displayName || editUserForm.displayName));
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : "แก้ไขผู้ใช้งานไม่สำเร็จ");
+    } finally {
+      setSavingEditUser(false);
     }
   };
 
@@ -3293,6 +3330,53 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         {error && <p className="form-message error">{error}</p>}
       </form>
 
+      <form className="user-form" onSubmit={submitEditUser}>
+        <div className="section-title">
+          <Pencil size={20} />
+          <h2>แก้ไขชื่อผู้ใช้งาน</h2>
+        </div>
+        <div className="form-grid three">
+          <label>
+            <span className="label-text">บัญชี <RequiredMark /></span>
+            <select
+              onChange={(event) => {
+                const selectedUser = users.find((user) => user.username === event.target.value);
+                setEditUserForm(createEmptyEditUserForm(selectedUser?.username || "", selectedUser?.displayName || ""));
+              }}
+              required
+              value={editUserForm.username}
+            >
+              <option value="">เลือกผู้ใช้งาน</option>
+              {users.map((user) => (
+                <option key={user.username} value={user.username}>
+                  {user.username} - {user.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="label-text">ชื่อแสดงผล <RequiredMark /></span>
+            <input
+              autoComplete="off"
+              onChange={(event) => setEditUserForm({ ...editUserForm, displayName: event.target.value })}
+              placeholder="ชื่อที่แสดงในระบบ"
+              required
+              type="text"
+              value={editUserForm.displayName}
+            />
+          </label>
+          <label>
+            <span className="label-text">Username</span>
+            <input readOnly value={editUserForm.username || "-"} type="text" />
+          </label>
+        </div>
+        <div className="form-actions">
+          <button className="primary-button" disabled={savingEditUser || !editUserForm.username} type="submit">
+            <Save size={18} /> {savingEditUser ? "กำลังบันทึก" : "บันทึกชื่อผู้ใช้งาน"}
+          </button>
+        </div>
+      </form>
+
       <form className="user-form" onSubmit={submitPassword}>
         <div className="section-title">
           <KeyRound size={20} />
@@ -3368,6 +3452,14 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
                   <td>{user.builtIn ? "Default" : "Custom"}</td>
                   <td>{user.createdAt ? new Date(user.createdAt).toLocaleString("th-TH") : "-"}</td>
                   <td>
+                    <button
+                      className="ghost-button compact"
+                      onClick={() => selectUserForEdit(user)}
+                      title="แก้ไขชื่อและรหัสผ่าน"
+                      type="button"
+                    >
+                      <Pencil size={16} /> แก้ไข
+                    </button>
                     <button
                       className="icon-danger-button"
                       disabled={locked}

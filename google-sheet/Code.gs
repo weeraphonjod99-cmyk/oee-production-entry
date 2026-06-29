@@ -260,6 +260,9 @@ function doPost(e) {
     if (body.action === "createUser") {
       return jsonResponse({ ok: true, users: createAppUser(body.payload || {}) });
     }
+    if (body.action === "updateUser") {
+      return jsonResponse({ ok: true, users: updateAppUser(body.payload || {}) });
+    }
     if (body.action === "changePassword") {
       return jsonResponse({ ok: true, users: changeAppUserPassword(body.payload || {}) });
     }
@@ -560,6 +563,22 @@ function changeAppUserPassword(payload) {
   sheet.getRange(found.row, 4).setValue(passwordHash);
   sheet.getRange(found.row, 7).setValue(new Date().toISOString());
   sheet.getRange(found.row, 8).setValue(true);
+  return listAppUsers();
+}
+
+function updateAppUser(payload) {
+  const username = normalizeUsername(payload.username);
+  const displayName = String(payload.displayName || "").trim();
+  if (!displayName) {
+    throw new Error("กรุณากรอกชื่อแสดงผล");
+  }
+  const sheet = ensureUsersSheet();
+  const rows = getUserRows();
+  const found = rows.find(function(item) { return item.user.username === username; });
+  if (!found) {
+    throw new Error("ไม่พบบัญชีผู้ใช้");
+  }
+  sheet.getRange(found.row, 2).setValue(displayName);
   return listAppUsers();
 }
 

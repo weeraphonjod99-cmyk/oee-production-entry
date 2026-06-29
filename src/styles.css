@@ -1314,6 +1314,15 @@ input[readonly] {
   background: #f4f7f4;
 }
 
+.ghost-button.compact {
+  align-items: center;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
 .ghost-button.danger {
   color: #b42318;
 }
@@ -2598,6 +2607,12 @@ input[readonly] {
 
 .users-table table {
   min-width: 760px;
+}
+
+.users-table td:last-child {
+  align-items: center;
+  display: flex;
+  gap: 8px;
 }
 
 .role-pill {
