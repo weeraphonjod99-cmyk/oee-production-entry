@@ -53,6 +53,7 @@ const LOG_HEADERS = [
   "productName",
   "partNo",
   "step",
+  "materialOfProduction",
   "workMinutes",
   "timeSlots",
   "minutesPerSlot",

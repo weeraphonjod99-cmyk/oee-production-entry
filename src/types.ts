@@ -34,6 +34,7 @@ export type ProductionLog = {
   productName: string;
   partNo: string;
   step: string;
+  materialOfProduction?: string;
   workMinutes?: number;
   timeSlots?: number;
   minutesPerSlot?: number;

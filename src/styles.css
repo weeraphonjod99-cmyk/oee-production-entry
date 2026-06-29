@@ -746,6 +746,10 @@ input[readonly] {
   box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.18);
 }
 
+.production-material-field {
+  grid-column: span 2;
+}
+
 .input-with-icon {
   align-items: center;
   display: flex;

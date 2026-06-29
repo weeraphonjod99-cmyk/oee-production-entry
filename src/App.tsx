@@ -240,6 +240,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     productName: product.productName,
     partNo: product.partNo,
     step: product.step,
+    materialOfProduction: "",
     machineSpeed: 0,
     cavityQty: 0,
     workMinutes,
@@ -990,6 +991,7 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   productName: log.productName,
   partNo: log.partNo,
   step: log.step,
+  materialOfProduction: log.materialOfProduction || "",
   workMinutes: clampWorkMinutes(Number(log.workMinutes || 0) || Number(log.normalMinutes || 0) + totalDowntime(log)),
   timeSlots: clampTimeSlots(Number(log.timeSlots || 0), Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot),
   minutesPerSlot: Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot,
@@ -2616,6 +2618,19 @@ function App() {
                     required
                     type="text"
                     value={draft.step}
+                  />
+                </label>
+                <label className="production-material-field">
+                  <span className="label-text">Material of production</span>
+                  <input
+                    className="production-main-input"
+                    onChange={(event) => {
+                      recordEmployeeDraftEvent("แก้ Material of production", event.target.value || "-");
+                      setDraft({ ...draft, materialOfProduction: event.target.value });
+                    }}
+                    placeholder="Material of production"
+                    type="text"
+                    value={draft.materialOfProduction || ""}
                   />
                 </label>
                 <datalist id="product-name-options">
