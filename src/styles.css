@@ -552,6 +552,19 @@ h3 {
   padding: 5px 9px;
 }
 
+.machine-activity-badge {
+  background: #f97316;
+  border: 1px solid #ea580c;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 1000;
+  justify-self: start;
+  line-height: 1.2;
+  padding: 7px 10px;
+}
+
 .machine-submitted-badge {
   background: #ffffff;
   border: 1px solid #ef4444;
@@ -578,6 +591,13 @@ h3 {
   color: #7c2d12;
   font-size: 13px;
   font-weight: 1000;
+}
+
+.machine-shared-status strong {
+  color: #9a3412;
+  font-size: 14px;
+  font-weight: 1000;
+  line-height: 1.2;
 }
 
 .machine-shared-status small {

@@ -163,6 +163,23 @@ const downtimeExcelCodes = {
   plannedStopMinutes: "X",
 } as const;
 const productionWorkExcelCode = "A";
+const employeeMachineActivityLabels: Record<string, string> = {
+  work: "A กำลังผลิตอยู่",
+  changeoverMinutes: "B กำลังเปลี่ยนรุ่น",
+  inspectionMinutes: "C กำลังตรวจงานอยู่",
+  equipmentRepairMinutes: "D กำลังซ่อมเครื่อง",
+  moldRepairMinutes: "E กำลังซ่อมแม่พิมพ์",
+  materialChangeMinutes: "F กำลังเปลี่ยนวัตถุดิบ",
+  emergencyStopMinutes: "G หยุดไม่ทราบสาเหตุ",
+  meetingMinutes: "H ประชุม/5S/เปลี่ยนกะ",
+  plannedStopMinutes: "X หยุดตามแผน",
+};
+const getEmployeeMachineActivityLabel = (status?: Pick<EmployeeMachineStatus, "activeTimerKey" | "activeTimerLabel" | "workStartedAt">) => {
+  if (!status) return "";
+  if (status.activeTimerKey) return employeeMachineActivityLabels[status.activeTimerKey] || status.activeTimerLabel || "กำลังกรอก";
+  if (status.workStartedAt) return "A เริ่มงานแล้ว";
+  return "ร่างรอบันทึก";
+};
 
 const defaultMachine = machines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
@@ -1293,6 +1310,7 @@ function App() {
   const employeeMachineCards = useMemo(
     () =>
       machines.map((machine) => {
+        const sharedStatus = employeeSharedStatusByMachineId.get(machine.id);
         const machineLogs = allLogs.filter((log) => log.machineId === machine.id);
         const latestLog = machineLogs
           .slice()
@@ -1305,7 +1323,8 @@ function App() {
           hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
-          sharedStatus: employeeSharedStatusByMachineId.get(machine.id),
+          sharedStatus,
+          activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
           latestLog,
           logCount: machineLogs.length,
         };
@@ -2491,7 +2510,7 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus }) => (
+              {employeeMachineCards.map(({ activityStatus, hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus }) => (
                 <button
                   className={`machine-icon-card ${hasDraft ? "active-draft" : hasSubmitted ? "submitted-log" : ""}`}
                   key={machine.id}
@@ -2501,6 +2520,7 @@ function App() {
                   <span className="machine-icon-symbol">
                     <StampingPressIcon />
                   </span>
+                  {hasDraft && activityStatus && <span className="machine-activity-badge">{activityStatus}</span>}
                   <span className="machine-card-main">
                     <strong>{machine.name}</strong>
                     <small>
@@ -2511,6 +2531,7 @@ function App() {
                   {!hasDraft && hasSubmitted && <span className="machine-submitted-badge">ส่งยอดแล้ว</span>}
                   {sharedStatus && (
                     <span className="machine-shared-status">
+                      <strong>{activityStatus || "กำลังกรอก"}</strong>
                       <b>{sharedStatus.userName ? `ผู้กรอก: ${sharedStatus.userName}` : "มีผู้ใช้งานกำลังกรอก"}</b>
                       <small>{sharedStatus.productName || "-"} / {sharedStatus.partNo || "-"}</small>
                       <small>
