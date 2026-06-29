@@ -664,6 +664,22 @@ input[readonly] {
   color: #314155;
 }
 
+.production-main-input {
+  background: #ffffff;
+  border-color: #9fb7a9;
+  border-radius: 10px;
+  color: #061635;
+  font-size: 22px;
+  font-weight: 950;
+  min-height: 68px;
+  padding: 16px 18px;
+}
+
+.production-main-input:focus {
+  border-color: #15803d;
+  box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.18);
+}
+
 .input-with-icon {
   align-items: center;
   display: flex;

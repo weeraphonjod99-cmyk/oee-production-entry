@@ -2583,6 +2583,7 @@ function App() {
                 <label>
                   <span className="label-text">รุ่น <RequiredMark /></span>
                   <input
+                    className="production-main-input"
                     list="product-name-options"
                     onChange={(event) => updateProductField("productName", event.target.value)}
                     required
@@ -2593,6 +2594,7 @@ function App() {
                 <label>
                   <span className="label-text">Part No. <RequiredMark /></span>
                   <input
+                    className="production-main-input"
                     list="part-no-options"
                     onChange={(event) => updateProductField("partNo", event.target.value)}
                     required
@@ -2603,6 +2605,7 @@ function App() {
                 <label>
                   <span className="label-text">Step <RequiredMark /></span>
                   <input
+                    className="production-main-input"
                     list="step-options"
                     onChange={(event) => updateProductField("step", event.target.value)}
                     placeholder="-"
