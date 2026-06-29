@@ -2760,9 +2760,9 @@ function App() {
                   <span className="label-text">Good quantity <RequiredMark /></span>
                   <input className="good-quantity-input" value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
                 </label>
-                <label>
+                <label className="ng-quantity-field">
                   <span className="label-text">NG quantity</span>
-                  <input value={numberInputValue(draft.ngQty)} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
+                  <input className="ng-quantity-input" value={numberInputValue(draft.ngQty)} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
                   <span className="label-text">Test / ตรวจชิ้นงาน</span>

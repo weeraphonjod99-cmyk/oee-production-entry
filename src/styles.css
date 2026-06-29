@@ -698,6 +698,22 @@ h3 {
   box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.24);
 }
 
+.output-quantity-grid .ng-quantity-field .label-text {
+  color: #b91c1c;
+}
+
+.output-quantity-grid .ng-quantity-input {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.output-quantity-grid .ng-quantity-input:focus {
+  background: #fee2e2;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.22);
+}
+
 .form-grid,
 .downtime-grid,
 .filters-bar {
