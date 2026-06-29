@@ -40,6 +40,18 @@ export type EmployeeMachineStatus = {
   productName: string;
   partNo: string;
   step: string;
+  materialOfProduction?: string;
+  userName?: string;
+  goodQty?: number;
+  ngQty?: number;
+  testQty?: number;
+  workMinutes?: number;
+  downtimeMinutes?: number;
+  normalMinutes?: number;
+  activeTimerKey?: string;
+  activeTimerLabel?: string;
+  workStartedAt?: string;
+  entryStartedAt?: string;
   status: "active" | "cleared";
   entryUpdatedAt: string;
   updatedAt: string;

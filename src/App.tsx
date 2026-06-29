@@ -371,6 +371,11 @@ const parseStoredDateTime = (value?: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const formatSharedStatusTime = (value?: string) => {
+  const date = parseStoredDateTime(value);
+  return date ? formatClock(date) : "-";
+};
+
 const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date(), workStartedAt?: string) => {
   const schedule = getShiftSchedule(productionDate, shift);
   const shiftStart = parseLocalDateTime(schedule.startDate, schedule.startTime);
@@ -1280,8 +1285,8 @@ function App() {
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
-  const employeeSharedDraftMachineIds = useMemo(
-    () => new Set(employeeSharedMachineStatuses.map((status) => status.machineId)),
+  const employeeSharedStatusByMachineId = useMemo(
+    () => new Map(employeeSharedMachineStatuses.map((status) => [status.machineId, status])),
     [employeeSharedMachineStatuses],
   );
   const employeeMachineCards = useMemo(
@@ -1295,15 +1300,16 @@ function App() {
           hasDraft:
             (draft.machineId === machine.id && employeeDraftActive) ||
             employeeDraftMachineIds.has(machine.id) ||
-            employeeSharedDraftMachineIds.has(machine.id),
+            employeeSharedStatusByMachineId.has(machine.id),
           hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
+          sharedStatus: employeeSharedStatusByMachineId.get(machine.id),
           latestLog,
           logCount: machineLogs.length,
         };
       }),
-    [allLogs, draft.machineId, employeeDraftActive, employeeDraftMachineIds, employeeSharedDraftMachineIds, employeeSubmittedMachineIds],
+    [allLogs, draft.machineId, employeeDraftActive, employeeDraftMachineIds, employeeSharedStatusByMachineId, employeeSubmittedMachineIds],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -1929,6 +1935,7 @@ function App() {
     if (!remoteEnabled) return;
     const expiresAt = parseStoredDateTime(stored.shiftEndAt || stored.draft.shiftEndAt)?.toISOString() || stored.shiftEndAt || stored.draft.shiftEndAt || "";
     const machineName = machines.find((machine) => machine.id === stored.draft.machineId)?.name || stored.draft.machineId;
+    const downtimeMinutes = totalDowntime(stored.draft);
     const status: EmployeeMachineStatus = {
       machineId: stored.draft.machineId,
       machineName,
@@ -1937,6 +1944,18 @@ function App() {
       productName: stored.draft.productName,
       partNo: stored.draft.partNo,
       step: stored.draft.step || "-",
+      materialOfProduction: stored.draft.materialOfProduction || "",
+      userName: session?.displayName || session?.username || "",
+      goodQty: Number(stored.draft.goodQty || 0),
+      ngQty: Number(stored.draft.ngQty || 0),
+      testQty: Number(stored.draft.testQty || 0),
+      workMinutes: Number(stored.draft.workMinutes || 0),
+      downtimeMinutes,
+      normalMinutes: Math.max(Number(stored.draft.workMinutes || 0) - downtimeMinutes, 0),
+      activeTimerKey: stored.activeTimer?.key || "",
+      activeTimerLabel: stored.activeTimer ? getEmployeeTimerLabel(stored.activeTimer.key) : "",
+      workStartedAt: stored.workStartedAt || "",
+      entryStartedAt: stored.entryStartedAt || "",
       status: "active",
       entryUpdatedAt: stored.entryUpdatedAt || stored.savedAt,
       updatedAt: stored.savedAt,
@@ -2471,7 +2490,7 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ hasDraft, hasSubmitted, latestLog, logCount, machine, productCount }) => (
+              {employeeMachineCards.map(({ hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus }) => (
                 <button
                   className={`machine-icon-card ${hasDraft ? "active-draft" : hasSubmitted ? "submitted-log" : ""}`}
                   key={machine.id}
@@ -2489,6 +2508,20 @@ function App() {
                   </span>
                   {hasDraft && <span className="machine-draft-badge">มีร่างค้าง</span>}
                   {!hasDraft && hasSubmitted && <span className="machine-submitted-badge">ส่งยอดแล้ว</span>}
+                  {sharedStatus && (
+                    <span className="machine-shared-status">
+                      <b>{sharedStatus.userName ? `ผู้กรอก: ${sharedStatus.userName}` : "มีผู้ใช้งานกำลังกรอก"}</b>
+                      <small>{sharedStatus.productName || "-"} / {sharedStatus.partNo || "-"}</small>
+                      <small>
+                        {sharedStatus.activeTimerLabel
+                          ? `กำลังนับ: ${sharedStatus.activeTimerLabel}`
+                          : `อัปเดตล่าสุด: ${formatSharedStatusTime(sharedStatus.entryUpdatedAt || sharedStatus.updatedAt)}`}
+                      </small>
+                      <small>
+                        Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT {formatRate(sharedStatus.downtimeMinutes || 0)} นาที
+                      </small>
+                    </span>
+                  )}
                   <span className="machine-card-detail">
                     {latestLog ? `${latestLog.date} · ${shiftLabel(latestLog.shift)} · Good ${formatNumber(latestLog.goodQty)}` : "ยังไม่มีประวัติล่าสุด"}
                   </span>
