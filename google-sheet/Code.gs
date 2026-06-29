@@ -195,6 +195,9 @@ function doGet(e) {
     if (action === "refreshSeedLogs") {
       return jsonResponse({ ok: true, result: refreshSeedLogs() });
     }
+    if (action === "importCncMachineSheets") {
+      return jsonResponse({ ok: true, result: importCncMachineSheets(e.parameter.force === "1") });
+    }
     if (action === "repairOeeFormulas") {
       return jsonResponse({ ok: true, result: repairOeeFormulas() });
     }
@@ -743,7 +746,16 @@ function detectOeeOutputColumns(headers) {
     const text = normalizeHeaderText(header);
     const column = index + 1;
     if (!result.goodQty && text.indexOf("good") >= 0) result.goodQty = column;
-    if (!result.ngQty && (text.indexOf("ng") >= 0 || text.indexOf("不合格") >= 0)) result.ngQty = column;
+    if (
+      !result.ngQty &&
+      (
+        text.indexOf("不合格") >= 0 ||
+        text.indexOf("ng quantity") >= 0 ||
+        text.indexOf("ng quant") >= 0 ||
+        text === "ng" ||
+        /\bng\b/.test(text)
+      )
+    ) result.ngQty = column;
     if (!result.testQty && (text.indexOf("test") >= 0 || text.indexOf("ทดสอบ") >= 0)) result.testQty = column;
     if (!result.totalQty && text.indexOf("total") >= 0 && text.indexOf("quantity") >= 0) result.totalQty = column;
     if (!result.theoreticalImpulse && (text.indexOf("theoretical") >= 0 || text.indexOf("impulse") >= 0)) result.theoreticalImpulse = column;
@@ -2123,6 +2135,232 @@ function refreshSeedLogs() {
     total: keptRows.length + seedRows.length,
     refreshedAt: new Date().toISOString(),
   };
+}
+
+function importCncMachineSheets(force) {
+  const book = getWorkbook();
+  refreshMasterData();
+  refreshSeedLogs();
+
+  const cncIds = ["c1", "c2", "c3", "c4", "c5", "c6"];
+  const csv = UrlFetchApp.fetch(PRODUCTION_LOGS_SEED_CSV_URL).getContentText();
+  const rows = Utilities.parseCsv(csv);
+  if (!rows.length) {
+    return { created: [], skipped: [], rows: 0, refreshedAt: new Date().toISOString() };
+  }
+
+  const csvHeaders = rows[0].map(String);
+  const logsByMachine = {};
+  rows.slice(1).forEach(function(row) {
+    const values = LOG_HEADERS.map(function(header, columnIndex) {
+      const csvIndex = csvHeaders.indexOf(header);
+      return csvIndex >= 0 ? row[csvIndex] : row[columnIndex];
+    });
+    const log = rowToObject(LOG_HEADERS, values);
+    const machineId = String(log.machineId || "").trim().toLowerCase();
+    if (cncIds.indexOf(machineId) < 0) return;
+    if (!logsByMachine[machineId]) logsByMachine[machineId] = [];
+    logsByMachine[machineId].push(log);
+  });
+
+  const machineSheet = ensureSheet(MACHINE_SHEET, MACHINE_HEADERS);
+  const machineRows = machineSheet.getDataRange().getValues();
+  const machinesById = {};
+  machineRows.slice(1).forEach(function(row) {
+    const id = String(row[0] || "").trim().toLowerCase();
+    if (!id) return;
+    machinesById[id] = {
+      id: id,
+      name: String(row[1] || "").trim() || id.toUpperCase(),
+      capacityUnits: numberValue(row[2]),
+      capacityMinutes: numberValue(row[3]),
+      rowCount: numberValue(row[5]),
+    };
+  });
+
+  const created = [];
+  const skipped = [];
+  let importedRows = 0;
+  cncIds.forEach(function(machineId) {
+    const machine = machinesById[machineId] || {
+      id: machineId,
+      name: machineId.toUpperCase(),
+      capacityUnits: 0,
+      capacityMinutes: 0,
+      rowCount: 0,
+    };
+    const sheet = book.getSheetByName(machine.name) || book.insertSheet(machine.name);
+    if (!force && sheet.getLastRow() >= OEE_FIRST_DATA_ROW && sheet.getRange(OEE_FIRST_DATA_ROW, 1, sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, 7).getDisplayValues().some(function(row) {
+      return row.some(function(value) { return String(value || "").trim(); });
+    })) {
+      skipped.push({ machine: machine.name, reason: "sheet already has data" });
+      return;
+    }
+
+    const logs = (logsByMachine[machineId] || []).sort(function(a, b) {
+      return String(a.date || "").localeCompare(String(b.date || "")) || String(a.shift || "").localeCompare(String(b.shift || ""));
+    });
+    writeCncMachineSheet(sheet, machine, logs);
+    importedRows += logs.length;
+    created.push({ machine: machine.name, rows: logs.length });
+  });
+
+  return {
+    spreadsheetId: book.getId(),
+    spreadsheetUrl: book.getUrl(),
+    created: created,
+    skipped: skipped,
+    rows: importedRows,
+    refreshedAt: new Date().toISOString(),
+  };
+}
+
+function writeCncMachineSheet(sheet, machine, logs) {
+  const headers = getCncMachineSheetHeaders();
+  const totalRows = Math.max(OEE_FIRST_DATA_ROW + logs.length - 1, OEE_FIRST_DATA_ROW);
+  const totalColumns = headers.length;
+  ensureSheetSize(sheet, totalRows, totalColumns);
+  sheet.clear();
+  sheet.setFrozenRows(OEE_HEADER_ROW);
+  sheet.setFrozenColumns(7);
+
+  const noteRow = new Array(totalColumns).fill("");
+  noteRow[1] = "只填写黄色区域表格";
+  noteRow[17] = "表中每小格代表5分钟，总个数132";
+  noteRow[31] = "X2";
+  const codeRow = new Array(totalColumns).fill("");
+  const timeCodes = ["A", "B", "C", "D", "E", "F", "G", "H", "X", "A", "B", "C", "D", "E", "F", "G", "H", "X"];
+  for (let index = 0; index < timeCodes.length; index++) {
+    codeRow[7 + index] = timeCodes[index];
+  }
+  const values = [noteRow, codeRow, headers].concat(logs.map(function(log, index) {
+    return buildCncMachineSheetRow(log, index + OEE_FIRST_DATA_ROW);
+  }));
+
+  sheet.getRange(1, 1, values.length, totalColumns).setValues(values);
+  sheet.getRange(OEE_HEADER_ROW, 1, 1, totalColumns)
+    .setBackground("#fbbc04")
+    .setFontWeight("bold")
+    .setFontColor("#000000")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setWrap(true);
+  sheet.getRange(1, 1, 2, totalColumns)
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setWrap(true);
+  sheet.getRange(1, 32, 1, 1).setBackground("#ff0000").setFontWeight("bold");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 2, Math.max(logs.length, 1), 1).setNumberFormat("@");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 3, Math.max(logs.length, 1), 1).setNumberFormat("@");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 4, Math.max(logs.length, 1), 1).setNumberFormat("@");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 5, Math.max(logs.length, 1), 3).setNumberFormat("@");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 8, Math.max(logs.length, 1), totalColumns - 7).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 34, Math.max(logs.length, 1), 4).setNumberFormat("0.00%");
+  sheet.autoResizeColumns(1, totalColumns);
+  sheet.setColumnWidths(1, 1, 55);
+  sheet.setColumnWidths(2, 3, 105);
+  sheet.setColumnWidths(6, 2, 145);
+}
+
+function getCncMachineSheetHeaders() {
+  return [
+    "序号No",
+    OEE_ENTRY_DATE_HEADER,
+    OEE_ENTRY_TIME_HEADER,
+    "日期 Date",
+    "D/N",
+    "产品名称 Product Name",
+    "Part No.",
+    "正常生产normal production",
+    "换产 Cheng Production line",
+    "检验 Inspection",
+    "设备维修 Equipment Repair",
+    "模具维修Mold repair",
+    "换料 Cheng materil",
+    "不明停机 Emergency stop",
+    "换班、前会、5s, Cheng shift",
+    "计划停机Stop at plan",
+    "正常生产ormal production",
+    "换产 cheng shift",
+    "检验 Inspection",
+    "设备维修Equipment Repair",
+    "模具维修Mold repair",
+    "换料Cheng material",
+    "不明停机Emergency stop",
+    "Meeting or Shot Breack",
+    "计划停机 stop at plan",
+    "合格数     Good quantity",
+    "不合格 NG quantity",
+    OEE_TEST_HEADER,
+    "总生产数 Total quantity",
+    "理论冲次Theoretical impulse",
+    "模腔数 Quantityof cavities",
+    "理论有效生产时间Theoretical effective production time",
+    "总生产时间          Total production time",
+    "设备稼动率 Equipment utilization rate",
+    "合格率 Pass rate",
+    "时间利用率Time utilization",
+    "理论冲次设备OEE",
+    "模具维修次数Quantity of repair mold",
+    "模具MTTR(分钟)",
+    "模具MTBF（分钟）",
+  ];
+}
+
+function buildCncMachineSheetRow(log, rowNumber) {
+  const minutesPerSlot = numberValue(log.minutesPerSlot) || OEE_MINUTES_PER_SLOT;
+  const workSlots = roundNumber(numberValue(log.workMinutes) / minutesPerSlot);
+  const downtimeSlots = [
+    minutesToSheetSlots(log.changeoverMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.inspectionMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.equipmentRepairMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.moldRepairMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.materialChangeMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.emergencyStopMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.meetingMinutes, minutesPerSlot),
+    minutesToSheetSlots(log.plannedStopMinutes, minutesPerSlot),
+  ];
+  const normalSlotFormula = "=" + workSlots + "-" + downtimeSlots.map(function(_value, index) {
+    return columnToLetter(9 + index) + rowNumber;
+  }).join("-");
+  const totalFormula = "=Z" + rowNumber + "+AA" + rowNumber + "+AB" + rowNumber;
+  return [
+    "=ROW()-ROW($A$3)",
+    formatRecordDate(log.recordDate),
+    formatRecordTime(log.recordTime),
+    formatRecordDate(log.date),
+    toOriginalShift(log.shift),
+    String(log.productName || ""),
+    String(log.partNo || ""),
+    normalSlotFormula,
+  ]
+    .concat(downtimeSlots)
+    .concat([
+      numberValue(log.normalMinutes),
+      numberValue(log.changeoverMinutes),
+      numberValue(log.inspectionMinutes),
+      numberValue(log.equipmentRepairMinutes),
+      numberValue(log.moldRepairMinutes),
+      numberValue(log.materialChangeMinutes),
+      numberValue(log.emergencyStopMinutes),
+      numberValue(log.meetingMinutes),
+      numberValue(log.plannedStopMinutes),
+      numberValue(log.goodQty),
+      numberValue(log.ngQty),
+      numberValue(log.testQty) > 0 ? numberValue(log.testQty) : "",
+      totalFormula,
+      numberValue(log.machineSpeed),
+      numberValue(log.cavityQty),
+      "=IFERROR(AC" + rowNumber + "/AD" + rowNumber + ",\"\")",
+      numberValue(log.workMinutes),
+      "=IFERROR(AF" + rowNumber + "/AG" + rowNumber + ",\"\")",
+      "=IFERROR(Z" + rowNumber + "/AC" + rowNumber + ",\"\")",
+      "=IFERROR(Q" + rowNumber + "/AG" + rowNumber + ",\"\")",
+      "=IFERROR(AH" + rowNumber + "*AI" + rowNumber + "*AJ" + rowNumber + ",\"\")",
+      "=IF(L" + rowNumber + ">0,1,0)",
+      "=IF(AL" + rowNumber + ">0,U" + rowNumber + "/AL" + rowNumber + ",\"\")",
+      "=IF(AL" + rowNumber + ">0,Q" + rowNumber + "/AL" + rowNumber + ",\"\")",
+    ]);
 }
 
 function ensureSheetSize(sheet, rowCount, columnCount) {
