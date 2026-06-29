@@ -1447,9 +1447,25 @@ function App() {
     employeeActiveTimerRef.current = null;
   };
 
+  const hasEmployeeStoredDraftActivity = (stored: StoredEmployeeDraft) =>
+    Boolean(stored.workStartedAt || stored.activeTimer || (Array.isArray(stored.entryEvents) && stored.entryEvents.length > 0));
+
   const refreshEmployeeDraftMachineIds = () => {
     const ids = machines
-      .filter((machine) => Boolean(window.localStorage.getItem(getEmployeeDraftStorageKey(machine.id))))
+      .filter((machine) => {
+        const key = getEmployeeDraftStorageKey(machine.id);
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return false;
+        try {
+          const stored = JSON.parse(raw) as StoredEmployeeDraft;
+          const hasActivity = Boolean(stored?.draft) && hasEmployeeStoredDraftActivity(stored);
+          if (!hasActivity) window.localStorage.removeItem(key);
+          return hasActivity;
+        } catch {
+          window.localStorage.removeItem(key);
+          return false;
+        }
+      })
       .map((machine) => machine.id);
     setEmployeeDraftMachineIds(new Set(ids));
   };
@@ -1473,6 +1489,11 @@ function App() {
     try {
       const stored = JSON.parse(raw) as StoredEmployeeDraft;
       if (!stored?.draft) return false;
+      if (!hasEmployeeStoredDraftActivity(stored)) {
+        window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
+        refreshEmployeeDraftMachineIds();
+        return false;
+      }
       const savedDate = stored.draft.date || getTodayInputValue();
       const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
       const workMinutes = clampWorkMinutes(stored.draft.workMinutes);
@@ -1538,28 +1559,15 @@ function App() {
         ...nextDraft,
         ...applyProductToDraft(nextProduct, allLogs, machine),
       };
-      const now = new Date();
-      const stored: StoredEmployeeDraft = {
-        draft: preparedDraft,
-        entryEvents: [],
-        entryStartedAt: now.toISOString(),
-        entryUpdatedAt: now.toISOString(),
-        savedAt: now.toISOString(),
-        shiftEndAt: preparedDraft.shiftEndAt || shiftEndAt(preparedDraft.date, preparedDraft.shift),
-        workStartedAt: "",
-        activeTimer: null,
-      };
-      window.localStorage.setItem(getEmployeeDraftStorageKey(preparedDraft.machineId), JSON.stringify(stored));
-      publishEmployeeMachineStatus(stored);
       refreshEmployeeDraftMachineIds();
       setDraft(preparedDraft);
       setDateManuallyEdited(false);
       setProductSearch("");
       setDowntimePressTimes({});
-      setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
-      setEmployeeDraftActive(true);
-      setEmployeeDraftStartedAt(stored.entryStartedAt || "");
-      setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || "");
+      setEmployeeDraftSavedAt("");
+      setEmployeeDraftActive(false);
+      setEmployeeDraftStartedAt("");
+      setEmployeeDraftUpdatedAt("");
       setEmployeeDraftEvents([]);
       setEmployeeWorkStartedAt("");
       clearEmployeeActiveTimer();
