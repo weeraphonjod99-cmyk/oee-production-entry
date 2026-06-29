@@ -1478,6 +1478,7 @@ function App() {
       setEmployeeActiveTimer(stored.activeTimer ?? null);
       employeeActiveTimerRef.current = stored.activeTimer ?? null;
       if (stored.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
+      publishEmployeeMachineStatus(stored);
       return true;
     } catch {
       window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
@@ -1509,17 +1510,32 @@ function App() {
       const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
       const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
       const nextDraft = createEmptyDraft(machine, nextProduct);
-      setDraft({
+      const preparedDraft = {
         ...nextDraft,
         ...applyProductToDraft(nextProduct, allLogs, machine),
-      });
+      };
+      const now = new Date();
+      const stored: StoredEmployeeDraft = {
+        draft: preparedDraft,
+        entryEvents: [],
+        entryStartedAt: now.toISOString(),
+        entryUpdatedAt: now.toISOString(),
+        savedAt: now.toISOString(),
+        shiftEndAt: preparedDraft.shiftEndAt || shiftEndAt(preparedDraft.date, preparedDraft.shift),
+        workStartedAt: "",
+        activeTimer: null,
+      };
+      window.localStorage.setItem(getEmployeeDraftStorageKey(preparedDraft.machineId), JSON.stringify(stored));
+      publishEmployeeMachineStatus(stored);
+      refreshEmployeeDraftMachineIds();
+      setDraft(preparedDraft);
       setDateManuallyEdited(false);
       setProductSearch("");
       setDowntimePressTimes({});
-      setEmployeeDraftSavedAt("");
-      setEmployeeDraftActive(false);
-      setEmployeeDraftStartedAt("");
-      setEmployeeDraftUpdatedAt("");
+      setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
+      setEmployeeDraftActive(true);
+      setEmployeeDraftStartedAt(stored.entryStartedAt || "");
+      setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || "");
       setEmployeeDraftEvents([]);
       setEmployeeWorkStartedAt("");
       clearEmployeeActiveTimer();
