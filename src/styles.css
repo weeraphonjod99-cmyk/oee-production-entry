@@ -811,7 +811,7 @@ input[readonly] {
 
 .downtime-label-row {
   align-items: flex-start;
-  display: flex;
+  display: none;
   gap: 8px;
   justify-content: space-between;
   min-height: 68px;
