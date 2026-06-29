@@ -737,13 +737,18 @@ input[readonly] {
 }
 
 .downtime-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
 }
 
 .downtime-card {
   background: #ffffff;
   border: 1px solid #dfe8df;
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 310px;
   padding: 8px;
 }
 
@@ -767,17 +772,18 @@ input[readonly] {
 }
 
 .downtime-label-row {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   gap: 8px;
   justify-content: space-between;
+  min-height: 68px;
 }
 
 .downtime-field-title {
   color: #061635;
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 950;
-  line-height: 1.25;
+  line-height: 1.18;
 }
 
 .downtime-label-row b,
@@ -829,12 +835,14 @@ input[readonly] {
   border-radius: 8px;
   color: #ffffff;
   cursor: pointer;
-  display: inline-flex;
-  font-weight: 800;
+  display: flex;
+  flex: 1 1 auto;
+  font-size: 20px;
+  font-weight: 950;
   justify-content: center;
   line-height: 1.25;
-  min-height: 44px;
-  padding: 8px 10px;
+  min-height: 150px;
+  padding: 16px;
   text-align: center;
   width: 100%;
 }
@@ -870,12 +878,14 @@ input[readonly] {
 
 .downtime-grid small {
   color: #667085;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.3;
 }
 
 .downtime-grid .downtime-press-time {
   color: #177245;
+  font-size: 18px;
   font-weight: 900;
 }
 
