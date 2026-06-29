@@ -2698,7 +2698,7 @@ function App() {
                 <TableProperties size={19} />
                 <h2>ยอดผลิต</h2>
               </div>
-              <div className="form-grid three">
+              <div className="form-grid three output-quantity-grid">
                 <label>
                   <span className="label-text">Good quantity <RequiredMark /></span>
                   <input value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />

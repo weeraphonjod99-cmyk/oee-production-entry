@@ -627,6 +627,38 @@ h3 {
   box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.18);
 }
 
+.output-quantity-grid {
+  gap: 16px;
+}
+
+.output-quantity-grid label {
+  color: #061635;
+  font-size: 18px;
+  font-weight: 1000;
+  gap: 10px;
+}
+
+.output-quantity-grid .label-text {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.output-quantity-grid input {
+  background: #ffffff;
+  border-color: #8fb39d;
+  border-radius: 12px;
+  color: #061635;
+  font-size: 32px;
+  font-weight: 1000;
+  min-height: 88px;
+  padding: 20px 22px;
+}
+
+.output-quantity-grid input:focus {
+  border-color: #15803d;
+  box-shadow: 0 0 0 5px rgba(21, 128, 61, 0.2);
+}
+
 .form-grid,
 .downtime-grid,
 .filters-bar {
