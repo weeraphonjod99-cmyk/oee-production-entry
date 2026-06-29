@@ -553,16 +553,23 @@ h3 {
 }
 
 .machine-activity-badge {
-  background: #f97316;
-  border: 1px solid #ea580c;
-  border-radius: 8px;
+  align-items: center;
+  background: #fb923c;
+  border: 2px solid #ea580c;
+  border-radius: 10px;
   color: #ffffff;
-  display: inline-flex;
-  font-size: 14px;
+  display: flex;
+  font-size: 19px;
   font-weight: 1000;
-  justify-self: start;
-  line-height: 1.2;
-  padding: 7px 10px;
+  justify-content: center;
+  justify-self: stretch;
+  letter-spacing: 0;
+  line-height: 1.25;
+  min-height: 46px;
+  padding: 10px 12px;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(124, 45, 18, 0.32);
+  width: 100%;
 }
 
 .machine-submitted-badge {
