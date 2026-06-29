@@ -2287,13 +2287,19 @@ function App() {
                 </label>
                 <label>
                   <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>
-                  <select required value={draft.machineId} onChange={(event) => (isEmployeeEntry ? openEmployeeMachineEntry(event.target.value) : selectMachine(event.target.value))}>
+                  <select
+                    disabled={isEmployeeEntry}
+                    required
+                    value={draft.machineId}
+                    onChange={(event) => (isEmployeeEntry ? openEmployeeMachineEntry(event.target.value) : selectMachine(event.target.value))}
+                  >
                     {machines.map((machine) => (
                       <option key={machine.id} value={machine.id}>
                         {machine.name}
                       </option>
                     ))}
                   </select>
+                  {isEmployeeEntry && <small className="field-help">ล็อกเครื่องที่เลือกแล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>}
                 </label>
                 <label>
                   ค้นหารุ่น
