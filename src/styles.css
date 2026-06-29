@@ -2635,6 +2635,11 @@ input[readonly] {
   color: #177245;
 }
 
+.role-pill.qc {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 table {
   border-collapse: collapse;
   min-width: 980px;

@@ -3306,6 +3306,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
               value={form.role}
             >
               <option value="production">Production</option>
+              <option value="qc">QC</option>
               <option value="admin">Admin</option>
             </select>
           </label>
