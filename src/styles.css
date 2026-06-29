@@ -797,7 +797,7 @@ input[readonly] {
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-height: 310px;
   padding: 8px;
 }
@@ -811,10 +811,21 @@ input[readonly] {
 
 .downtime-label-row {
   align-items: flex-start;
-  display: none;
+  display: none !important;
   gap: 8px;
+  height: 0 !important;
   justify-content: space-between;
+  margin: 0 !important;
   min-height: 68px;
+  overflow: hidden !important;
+  padding: 0 !important;
+  visibility: hidden !important;
+}
+
+.downtime-card > .downtime-label-row,
+.downtime-card > .downtime-label-row *,
+.downtime-card > span:first-child:not(.downtime-button-code):not(.downtime-button-title):not(.downtime-button-action) {
+  display: none !important;
 }
 
 .downtime-field-title {
