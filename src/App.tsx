@@ -29,11 +29,15 @@ import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } fro
 import { machines, products, seedLogs } from "./data/oeeMasterData.generated";
 import {
   appendRemoteLog,
+  clearEmployeeMachineStatus,
+  fetchEmployeeMachineStatuses,
   fetchPdSheets,
   fetchProductDefaults,
   fetchRemoteLogs,
   remoteEnabled,
   updateRemoteLog,
+  upsertEmployeeMachineStatus,
+  type EmployeeMachineStatus,
   type PdWorkbook,
   type ProductDefaults,
 } from "./lib/api";
@@ -1058,6 +1062,7 @@ function App() {
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
+  const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
   const [employeeSubmittedMachineIds, setEmployeeSubmittedMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
@@ -1090,6 +1095,27 @@ function App() {
     };
     const timer = window.setInterval(() => {
       void refreshRemoteLogs();
+    }, realtimeRemoteRefreshMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!remoteEnabled) return;
+    let cancelled = false;
+    const refreshSharedMachineStatuses = async () => {
+      try {
+        const statuses = await fetchEmployeeMachineStatuses();
+        if (!cancelled) setEmployeeSharedMachineStatuses(statuses);
+      } catch {
+        // Keep the last known shared machine statuses visible.
+      }
+    };
+    void refreshSharedMachineStatuses();
+    const timer = window.setInterval(() => {
+      void refreshSharedMachineStatuses();
     }, realtimeRemoteRefreshMs);
     return () => {
       cancelled = true;
@@ -1200,6 +1226,10 @@ function App() {
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
+  const employeeSharedDraftMachineIds = useMemo(
+    () => new Set(employeeSharedMachineStatuses.map((status) => status.machineId)),
+    [employeeSharedMachineStatuses],
+  );
   const employeeMachineCards = useMemo(
     () =>
       machines.map((machine) => {
@@ -1208,7 +1238,10 @@ function App() {
           .slice()
           .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
         return {
-          hasDraft: (draft.machineId === machine.id && employeeDraftActive) || employeeDraftMachineIds.has(machine.id),
+          hasDraft:
+            (draft.machineId === machine.id && employeeDraftActive) ||
+            employeeDraftMachineIds.has(machine.id) ||
+            employeeSharedDraftMachineIds.has(machine.id),
           hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
           productCount: products.filter((product) => product.machineId === machine.id).length,
@@ -1216,7 +1249,7 @@ function App() {
           logCount: machineLogs.length,
         };
       }),
-    [allLogs, draft.machineId, employeeDraftActive, employeeDraftMachineIds, employeeSubmittedMachineIds],
+    [allLogs, draft.machineId, employeeDraftActive, employeeDraftMachineIds, employeeSharedDraftMachineIds, employeeSubmittedMachineIds],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
@@ -1646,6 +1679,8 @@ function App() {
     const nextTimer = { key, startedAt };
     setEmployeeActiveTimer(nextTimer);
     employeeActiveTimerRef.current = nextTimer;
+    if (!employeeDraftActive) setEmployeeDraftStartedAt(startedAt);
+    setEmployeeDraftActive(true);
     setEmployeeDraftUpdatedAt(startedAt);
     recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`);
     if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
@@ -1732,6 +1767,10 @@ function App() {
   const clearEmployeeStoredDraft = (machineId = draft.machineId) => {
     window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+    if (remoteEnabled) {
+      setEmployeeSharedMachineStatuses((items) => items.filter((item) => item.machineId !== machineId));
+      void clearEmployeeMachineStatus(machineId).catch(() => undefined);
+    }
     refreshEmployeeDraftMachineIds();
     if (machineId !== draft.machineId) return;
     setEmployeeDraftSavedAt("");
@@ -1741,6 +1780,27 @@ function App() {
     setEmployeeDraftEvents([]);
     setEmployeeWorkStartedAt("");
     clearEmployeeActiveTimer();
+  };
+
+  const publishEmployeeMachineStatus = (stored: StoredEmployeeDraft) => {
+    if (!remoteEnabled) return;
+    const expiresAt = parseStoredDateTime(stored.shiftEndAt || stored.draft.shiftEndAt)?.toISOString() || stored.shiftEndAt || stored.draft.shiftEndAt || "";
+    const machineName = machines.find((machine) => machine.id === stored.draft.machineId)?.name || stored.draft.machineId;
+    const status: EmployeeMachineStatus = {
+      machineId: stored.draft.machineId,
+      machineName,
+      date: stored.draft.date,
+      shift: stored.draft.shift,
+      productName: stored.draft.productName,
+      partNo: stored.draft.partNo,
+      step: stored.draft.step || "-",
+      status: "active",
+      entryUpdatedAt: stored.entryUpdatedAt || stored.savedAt,
+      updatedAt: stored.savedAt,
+      expiresAt,
+    };
+    setEmployeeSharedMachineStatuses((items) => [status, ...items.filter((item) => item.machineId !== status.machineId)]);
+    void upsertEmployeeMachineStatus(status).catch(() => undefined);
   };
 
   const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
@@ -1784,6 +1844,7 @@ function App() {
   const writeEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false) => {
     const stored = buildEmployeeStoredDraft(targetDraft, freshRecordTime);
     window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+    publishEmployeeMachineStatus(stored);
     refreshEmployeeDraftMachineIds();
     setEmployeeDraftActive(true);
     setEmployeeDraftStartedAt(stored.entryStartedAt || "");

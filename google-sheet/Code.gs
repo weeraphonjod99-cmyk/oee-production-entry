@@ -5,6 +5,7 @@ const MACHINE_SHEET = "machines";
 const PRODUCT_MASTER_SHEET = "product_master";
 const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 const USER_SHEET = "app_users";
+const EMPLOYEE_STATUS_SHEET = "employee_machine_status";
 const KPI_DASHBOARD_SHEET = "kpi_dashboard";
 const KPI_MACHINE_SHEET = "kpi_machine";
 const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
@@ -95,6 +96,20 @@ const LOG_NUMBER_HEADERS = [
   "testQty",
 ];
 
+const EMPLOYEE_STATUS_HEADERS = [
+  "machineId",
+  "machineName",
+  "date",
+  "shift",
+  "productName",
+  "partNo",
+  "step",
+  "status",
+  "entryUpdatedAt",
+  "updatedAt",
+  "expiresAt",
+];
+
 const LOG_DATE_HEADERS = ["recordDate", "date"];
 
 const MACHINE_NUMBER_HEADERS = ["capacityUnits", "capacityMinutes", "rowCount"];
@@ -156,6 +171,9 @@ function doGet(e) {
       const limit = Number(e.parameter.limit || 500);
       return jsonResponse({ ok: true, logs: getLogs(limit) });
     }
+    if (action === "employeeMachineStatuses") {
+      return jsonResponse({ ok: true, statuses: getEmployeeMachineStatuses() });
+    }
     if (action === "pdSheets") {
       return jsonResponse({ ok: true, sources: getPdExternalSheets() });
     }
@@ -205,6 +223,14 @@ function doPost(e) {
     if (body.action === "upsertLog") {
       const log = upsertLog(body.payload || {});
       return jsonResponse({ ok: true, log });
+    }
+    if (body.action === "upsertEmployeeMachineStatus") {
+      const status = upsertEmployeeMachineStatus(body.payload || {});
+      return jsonResponse({ ok: true, status });
+    }
+    if (body.action === "clearEmployeeMachineStatus") {
+      clearEmployeeMachineStatus(body.payload || {});
+      return jsonResponse({ ok: true });
     }
     if (body.action === "getProductDefaults") {
       return jsonResponse({ ok: true, defaults: getProductDefaults(body.payload || {}) });
@@ -278,6 +304,77 @@ function upsertLog(payload) {
 
   writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
   return log;
+}
+
+function getEmployeeMachineStatuses() {
+  const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  const now = new Date();
+  const rows = [];
+  for (let i = 1; i < values.length; i++) {
+    const item = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
+    if (!item.machineId || item.status !== "active") continue;
+    if (item.expiresAt) {
+      const expiresAt = new Date(item.expiresAt);
+      if (!isNaN(expiresAt.getTime()) && expiresAt.getTime() < now.getTime()) continue;
+    }
+    rows.push(item);
+  }
+  return rows.sort(function(a, b) {
+    return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
+  });
+}
+
+function upsertEmployeeMachineStatus(payload) {
+  const now = new Date();
+  const status = {
+    machineId: String(payload.machineId || ""),
+    machineName: String(payload.machineName || ""),
+    date: String(payload.date || ""),
+    shift: String(payload.shift || ""),
+    productName: String(payload.productName || ""),
+    partNo: String(payload.partNo || ""),
+    step: String(payload.step || "-"),
+    status: "active",
+    entryUpdatedAt: String(payload.entryUpdatedAt || now.toISOString()),
+    updatedAt: now.toISOString(),
+    expiresAt: String(payload.expiresAt || payload.shiftEndAt || new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString()),
+  };
+  if (!status.machineId) {
+    throw new Error("machineId is required");
+  }
+
+  const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === status.machineId) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  const row = EMPLOYEE_STATUS_HEADERS.map(function(header) {
+    return status[header] || "";
+  });
+  if (rowIndex > 0) {
+    sheet.getRange(rowIndex, 1, 1, EMPLOYEE_STATUS_HEADERS.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
+  return status;
+}
+
+function clearEmployeeMachineStatus(payload) {
+  const machineId = String(payload.machineId || "");
+  if (!machineId) return;
+  const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === machineId) {
+      sheet.getRange(i + 1, 8, 1, 4).setValues([["cleared", "", new Date().toISOString(), new Date().toISOString()]]);
+      return;
+    }
+  }
 }
 
 function assertNoDuplicateOeeLog(log, ignoredId, includeMachineSheet) {

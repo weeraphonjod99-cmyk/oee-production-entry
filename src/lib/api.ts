@@ -32,6 +32,20 @@ export type PdWorkbook = {
   sheets: PdWorksheet[];
 };
 
+export type EmployeeMachineStatus = {
+  machineId: string;
+  machineName: string;
+  date: string;
+  shift: string;
+  productName: string;
+  partNo: string;
+  step: string;
+  status: "active" | "cleared";
+  entryUpdatedAt: string;
+  updatedAt: string;
+  expiresAt: string;
+};
+
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
   try {
@@ -53,6 +67,46 @@ export async function fetchRemoteLogs(limit = 3000): Promise<ProductionLog[]> {
     throw new Error(data.error || "โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.logs) ? data.logs : [];
+}
+
+export async function fetchEmployeeMachineStatuses(): Promise<EmployeeMachineStatus[]> {
+  if (!remoteEnabled) return [];
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "employeeMachineStatuses");
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดสถานะเครื่องจาก Google Sheet ไม่สำเร็จ");
+  }
+  return Array.isArray(data.statuses) ? data.statuses : [];
+}
+
+export async function upsertEmployeeMachineStatus(status: EmployeeMachineStatus): Promise<EmployeeMachineStatus> {
+  if (!remoteEnabled) return status;
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "upsertEmployeeMachineStatus", payload: status }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "บันทึกสถานะเครื่องลง Google Sheet ไม่สำเร็จ");
+  }
+  return data.status ?? status;
+}
+
+export async function clearEmployeeMachineStatus(machineId: string): Promise<void> {
+  if (!remoteEnabled || !machineId) return;
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "clearEmployeeMachineStatus", payload: { machineId } }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "ล้างสถานะเครื่องใน Google Sheet ไม่สำเร็จ");
+  }
 }
 
 export async function fetchPdSheets(): Promise<PdWorkbook[]> {
