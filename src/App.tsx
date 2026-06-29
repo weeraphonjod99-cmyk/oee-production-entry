@@ -2639,35 +2639,6 @@ function App() {
 
               <div className="runtime-panel">
                 <label className="runtime-input-block">
-                  <span>จำนวนช่องเวลา <RequiredMark /></span>
-                  <div className="runtime-input-row">
-                    <input
-                      max={slotsFromMinutes(maxShiftWorkMinutes, draft.minutesPerSlot)}
-                      min="0"
-                      onChange={(event) => updateTimeSlots(event.target.value)}
-                      required
-                      step="1"
-                      type="number"
-                      value={draft.timeSlots}
-                    />
-                    <b>ช่อง</b>
-                  </div>
-                </label>
-                <label className="runtime-input-block">
-                  <span>นาที/ช่อง <RequiredMark /></span>
-                  <div className="runtime-input-row">
-                    <input
-                      min="0"
-                      onChange={(event) => updateMinutesPerSlot(event.target.value)}
-                      required
-                      step="0.01"
-                      type="number"
-                      value={draft.minutesPerSlot}
-                    />
-                    <b>นาที</b>
-                  </div>
-                </label>
-                <label className="runtime-input-block">
                   <span>เวลาตามกะ <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
