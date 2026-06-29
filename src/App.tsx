@@ -83,6 +83,7 @@ type EmployeeTimerKey = "work" | DowntimeKey;
 type EmployeeActiveTimer = {
   key: EmployeeTimerKey;
   startedAt: string;
+  originalStartedAt?: string;
 };
 type PendingEmployeeTimer = {
   key: EmployeeTimerKey;
@@ -127,6 +128,16 @@ const formatClock = (date: Date) =>
 
 const formatElapsedTime = (milliseconds: number) => {
   const totalSeconds = Math.max(Math.floor(milliseconds / 1000), 0);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours} ชม. ${minutes} นาที ${seconds} วิ`;
+  if (minutes > 0) return `${minutes} นาที ${seconds} วิ`;
+  return `${seconds} วิ`;
+};
+
+const formatDurationMinutes = (minutesValue: number) => {
+  const totalSeconds = Math.max(Math.round(Number(minutesValue || 0) * 60), 0);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -1185,7 +1196,13 @@ function App() {
         ? applyShiftClockRuntime(withActiveDowntime, employeeReportNow, employeeWorkStartedAt)
         : withActiveDowntime;
     });
-    if (activeTimer) setEmployeeActiveTimer({ ...activeTimer, startedAt: employeeReportNow.toISOString() });
+    if (activeTimer) {
+      setEmployeeActiveTimer({
+        ...activeTimer,
+        startedAt: employeeReportNow.toISOString(),
+        originalStartedAt: activeTimer.originalStartedAt ?? activeTimer.startedAt,
+      });
+    }
   }, [employeeReportNow, tab, editingLog, employeeWorkStartedAt]);
 
   useEffect(() => {
@@ -1716,8 +1733,8 @@ function App() {
 
   const getEmployeeTimerDuration = (timer: EmployeeActiveTimer, endedAt: Date) =>
     timer.key === "work"
-      ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, endedAt, timer.startedAt)
-      : getElapsedWallMinutes(timer.startedAt, endedAt);
+      ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, endedAt, timer.originalStartedAt ?? timer.startedAt)
+      : getElapsedWallMinutes(timer.originalStartedAt ?? timer.startedAt, endedAt);
 
   const confirmEmployeeTimer = () => {
     if (!pendingEmployeeTimer) return;
@@ -1727,13 +1744,14 @@ function App() {
     const noteLine = `[${pressedDate} ${pressedTime}] เริ่ม ${label}`;
     if (activeTimer) {
       const previousLabel = getEmployeeTimerLabel(activeTimer.key);
-      const previousStart = parseStoredDateTime(activeTimer.startedAt);
+      const previousStartedAt = activeTimer.originalStartedAt ?? activeTimer.startedAt;
+      const previousStart = parseStoredDateTime(previousStartedAt);
       const previousStartTime = previousStart ? formatClock(previousStart) : "-";
       recordEmployeeDraftEvent(`จบ ${previousLabel}`, `${previousStartTime} - ${pressedTime}`, {
         at: startedAt,
         key: activeTimer.key,
         reason: previousLabel,
-        startedAt: activeTimer.startedAt,
+        startedAt: previousStartedAt,
         endedAt: startedAt,
         durationMinutes: getEmployeeTimerDuration(activeTimer, now),
       });
@@ -1747,7 +1765,7 @@ function App() {
         note: withRuntime.note.trim() ? `${withRuntime.note.trim()}\n${noteLine}` : noteLine,
       };
     });
-    const nextTimer = { key, startedAt };
+    const nextTimer = { key, startedAt, originalStartedAt: startedAt };
     setEmployeeActiveTimer(nextTimer);
     employeeActiveTimerRef.current = nextTimer;
     if (!employeeDraftActive) setEmployeeDraftStartedAt(startedAt);
@@ -2256,7 +2274,8 @@ function App() {
   const getEmployeeTimerEventMinutes = (event: EmployeeDraftEvent) => {
     const activeTimer = employeeActiveTimer;
     if (typeof event.durationMinutes === "number") return event.durationMinutes;
-    if (!event.startedAt || !activeTimer || activeTimer.key !== event.key || activeTimer.startedAt !== event.startedAt) return null;
+    const activeStartedAt = activeTimer?.originalStartedAt ?? activeTimer?.startedAt;
+    if (!event.startedAt || !activeTimer || activeTimer.key !== event.key || activeStartedAt !== event.startedAt) return null;
     if (event.key === "work") {
       return getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, employeeReportNow, event.startedAt);
     }
@@ -2265,10 +2284,11 @@ function App() {
 
   const getEmployeeTimerEventRange = (event: EmployeeDraftEvent) => {
     const activeTimer = employeeActiveTimer;
+    const activeStartedAt = activeTimer?.originalStartedAt ?? activeTimer?.startedAt;
     const started = parseStoredDateTime(event.startedAt);
     const ended = parseStoredDateTime(event.endedAt);
     if (started && ended) return `${formatClock(started)} - ${formatClock(ended)}`;
-    if (started && activeTimer && activeTimer.key === event.key && activeTimer.startedAt === event.startedAt) {
+    if (started && activeTimer && activeTimer.key === event.key && activeStartedAt === event.startedAt) {
       return `${formatClock(started)} - กำลังนับ`;
     }
     return new Date(event.at).toLocaleTimeString("th-TH");
@@ -2276,20 +2296,22 @@ function App() {
 
   const renderEmployeeTimerHistory = (key: EmployeeTimerKey) => {
     const activeTimer = employeeActiveTimer;
+    const activeStartedAt = activeTimer?.originalStartedAt ?? activeTimer?.startedAt;
     const events = (employeeTimerEventsByKey.get(key) ?? [])
-      .filter((event) => Boolean(event.endedAt) || (activeTimer?.key === key && activeTimer.startedAt === event.startedAt))
+      .filter((event) => Boolean(event.endedAt) || (activeTimer?.key === key && activeStartedAt === event.startedAt))
       .slice(0, 4);
     if (events.length === 0) return null;
     return (
       <div className="employee-timer-history">
         {events.map((event) => {
           const minutes = getEmployeeTimerEventMinutes(event);
-          const isActive = employeeActiveTimer?.key === key && employeeActiveTimer.startedAt === event.startedAt && !event.endedAt;
+          const currentStartedAt = employeeActiveTimer?.originalStartedAt ?? employeeActiveTimer?.startedAt;
+          const isActive = employeeActiveTimer?.key === key && currentStartedAt === event.startedAt && !event.endedAt;
           return (
             <div className={`employee-timer-history-item ${isActive ? "is-active" : ""}`} key={event.id}>
               <div className="employee-timer-history-range">
                 <b>ช่วงเวลา: {getEmployeeTimerEventRange(event)}</b>
-                {minutes !== null && <strong>{formatRate(minutes)} นาที</strong>}
+                {minutes !== null && <strong>ใช้เวลา {formatDurationMinutes(minutes)}</strong>}
               </div>
               <span>ผู้กรอก: {event.user || employeeOperatorName}</span>
               <span>เหตุผล: {event.reason || event.label}</span>
