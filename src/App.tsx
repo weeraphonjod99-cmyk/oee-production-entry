@@ -1023,6 +1023,12 @@ type EmployeeDraftEvent = {
   id: string;
   label: string;
   value?: string;
+  key?: EmployeeTimerKey;
+  user?: string;
+  reason?: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMinutes?: number;
 };
 
 function App() {
@@ -1312,6 +1318,17 @@ function App() {
     : "ยังไม่กดเริ่มงานจริง";
   const employeeDraftUpdatedLabel = employeeDraftUpdatedAt ? new Date(employeeDraftUpdatedAt).toLocaleString("th-TH") : "-";
   const employeeDraftTimeline = employeeDraftEvents.slice(0, 8);
+  const employeeOperatorName = session?.displayName || session?.username || "ไม่ระบุผู้กรอก";
+  const employeeTimerEventsByKey = useMemo(() => {
+    const grouped = new Map<EmployeeTimerKey, EmployeeDraftEvent[]>();
+    employeeDraftEvents.forEach((event) => {
+      if (!event.key) return;
+      const list = grouped.get(event.key) ?? [];
+      list.push(event);
+      grouped.set(event.key, list);
+    });
+    return grouped;
+  }, [employeeDraftEvents]);
   const employeeDowntimeDetails = useMemo(
     () =>
       downtimeFields
@@ -1405,14 +1422,21 @@ function App() {
     }
   };
 
-  const recordEmployeeDraftEvent = (label: string, value?: string) => {
+  const recordEmployeeDraftEvent = (
+    label: string,
+    value?: string,
+    details: Partial<Omit<EmployeeDraftEvent, "id" | "label" | "value">> = {},
+  ) => {
     if (!isEmployeeEntry) return;
     const now = new Date();
+    const { at = now.toISOString(), ...eventDetails } = details;
     const event: EmployeeDraftEvent = {
-      at: now.toISOString(),
+      at,
       id: `evt-${now.getTime()}-${Math.random().toString(16).slice(2)}`,
       label,
       value,
+      ...eventDetails,
+      user: eventDetails.user || employeeOperatorName,
     };
     setEmployeeDraftUpdatedAt(event.at);
     setEmployeeDraftEvents((prev) => [event, ...prev].slice(0, 30));
@@ -1677,12 +1701,35 @@ function App() {
     return true;
   };
 
+  const getEmployeeTimerLabel = (key: EmployeeTimerKey) => {
+    if (key === "work") return "A การทำงาน / เริ่มงานจริง";
+    return downtimeFields.find((field) => field.key === key)?.label ?? key;
+  };
+
+  const getEmployeeTimerDuration = (timer: EmployeeActiveTimer, endedAt: Date) =>
+    timer.key === "work"
+      ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, endedAt, timer.startedAt)
+      : getElapsedWallMinutes(timer.startedAt, endedAt);
+
   const confirmEmployeeTimer = () => {
     if (!pendingEmployeeTimer) return;
     const { key, label, pressedDate, pressedTime, startedAt } = pendingEmployeeTimer;
     const activeTimer = employeeActiveTimerRef.current;
     const now = parseStoredDateTime(startedAt) ?? new Date();
     const noteLine = `[${pressedDate} ${pressedTime}] เริ่ม ${label}`;
+    if (activeTimer) {
+      const previousLabel = getEmployeeTimerLabel(activeTimer.key);
+      const previousStart = parseStoredDateTime(activeTimer.startedAt);
+      const previousStartTime = previousStart ? formatClock(previousStart) : "-";
+      recordEmployeeDraftEvent(`จบ ${previousLabel}`, `${previousStartTime} - ${pressedTime}`, {
+        at: startedAt,
+        key: activeTimer.key,
+        reason: previousLabel,
+        startedAt: activeTimer.startedAt,
+        endedAt: startedAt,
+        durationMinutes: getEmployeeTimerDuration(activeTimer, now),
+      });
+    }
     setDraft((prev) => {
       const workStart = employeeWorkStartedAt || startedAt;
       const finalized = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(prev, activeTimer, now) : prev;
@@ -1698,7 +1745,12 @@ function App() {
     if (!employeeDraftActive) setEmployeeDraftStartedAt(startedAt);
     setEmployeeDraftActive(true);
     setEmployeeDraftUpdatedAt(startedAt);
-    recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`);
+    recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`, {
+      at: startedAt,
+      key,
+      reason: label,
+      startedAt,
+    });
     if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
     if (key !== "work") setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setStatus(`บันทึกเวลา ${label} เริ่ม ${pressedTime}`);
@@ -2193,6 +2245,53 @@ function App() {
     setHistoryFilters((prev) => ({ ...prev, from: "", to: "" }));
   };
 
+  const getEmployeeTimerEventMinutes = (event: EmployeeDraftEvent) => {
+    const activeTimer = employeeActiveTimer;
+    if (typeof event.durationMinutes === "number") return event.durationMinutes;
+    if (!event.startedAt || !activeTimer || activeTimer.key !== event.key || activeTimer.startedAt !== event.startedAt) return null;
+    if (event.key === "work") {
+      return getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, employeeReportNow, event.startedAt);
+    }
+    return getElapsedWallMinutes(event.startedAt, employeeReportNow);
+  };
+
+  const getEmployeeTimerEventRange = (event: EmployeeDraftEvent) => {
+    const activeTimer = employeeActiveTimer;
+    const started = parseStoredDateTime(event.startedAt);
+    const ended = parseStoredDateTime(event.endedAt);
+    if (started && ended) return `${formatClock(started)} - ${formatClock(ended)}`;
+    if (started && activeTimer && activeTimer.key === event.key && activeTimer.startedAt === event.startedAt) {
+      return `${formatClock(started)} - กำลังนับ`;
+    }
+    return new Date(event.at).toLocaleTimeString("th-TH");
+  };
+
+  const renderEmployeeTimerHistory = (key: EmployeeTimerKey) => {
+    const activeTimer = employeeActiveTimer;
+    const events = (employeeTimerEventsByKey.get(key) ?? [])
+      .filter((event) => Boolean(event.endedAt) || (activeTimer?.key === key && activeTimer.startedAt === event.startedAt))
+      .slice(0, 4);
+    if (events.length === 0) return null;
+    return (
+      <div className="employee-timer-history">
+        {events.map((event) => {
+          const minutes = getEmployeeTimerEventMinutes(event);
+          const isActive = employeeActiveTimer?.key === key && employeeActiveTimer.startedAt === event.startedAt && !event.endedAt;
+          return (
+            <div className={`employee-timer-history-item ${isActive ? "is-active" : ""}`} key={event.id}>
+              <div className="employee-timer-history-range">
+                <b>ช่วงเวลา: {getEmployeeTimerEventRange(event)}</b>
+                {minutes !== null && <strong>{formatRate(minutes)} นาที</strong>}
+              </div>
+              <span>ผู้กรอก: {event.user || employeeOperatorName}</span>
+              <span>เหตุผล: {event.reason || event.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (!session) return <LoginScreen onSignedIn={setSession} />;
 
   return (
@@ -2604,6 +2703,7 @@ function App() {
                     <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
                     {employeeActiveTimer?.key === "work" && <small className="downtime-press-time">กำลังนับ A อยู่</small>}
                     {employeeWorkStartedAt && <small className="downtime-press-time">นับเวลางานจริงแล้ว {employeeWorkElapsed}</small>}
+                    {renderEmployeeTimerHistory("work")}
                   </label>
                 )}
                 {downtimeFields.map((field) => (
@@ -2640,6 +2740,7 @@ function App() {
                       <small className="downtime-press-time">กดล่าสุด {downtimePressTimes[field.key]}</small>
                     )}
                     {isEmployeeEntry && employeeActiveTimer?.key === field.key && <small className="downtime-press-time">กำลังนับหัวข้อนี้อยู่</small>}
+                    {isEmployeeEntry && renderEmployeeTimerHistory(field.key)}
                   </label>
                 ))}
               </div>
