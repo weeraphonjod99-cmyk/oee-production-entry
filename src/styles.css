@@ -682,6 +682,22 @@ h3 {
   box-shadow: 0 0 0 5px rgba(21, 128, 61, 0.2);
 }
 
+.output-quantity-grid .good-quantity-field .label-text {
+  color: #047857;
+}
+
+.output-quantity-grid .good-quantity-input {
+  background: #ecfdf5;
+  border-color: #16a34a;
+  color: #065f46;
+}
+
+.output-quantity-grid .good-quantity-input:focus {
+  background: #dcfce7;
+  border-color: #15803d;
+  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.24);
+}
+
 .form-grid,
 .downtime-grid,
 .filters-bar {

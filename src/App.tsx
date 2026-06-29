@@ -2756,9 +2756,9 @@ function App() {
                 <h2>ยอดผลิต</h2>
               </div>
               <div className="form-grid three output-quantity-grid">
-                <label>
+                <label className="good-quantity-field">
                   <span className="label-text">Good quantity <RequiredMark /></span>
-                  <input value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
+                  <input className="good-quantity-input" value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
                   <span className="label-text">NG quantity</span>
