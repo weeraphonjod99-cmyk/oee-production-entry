@@ -876,6 +876,34 @@ input[readonly] {
   background: #0284c7;
 }
 
+.downtime-press-button.active-timer,
+.downtime-press-button.active-timer:hover {
+  animation: activeTimerButtonPulse 0.85s ease-in-out infinite;
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2), 0 16px 34px rgba(220, 38, 38, 0.32);
+}
+
+@keyframes activeTimerButtonPulse {
+  0%,
+  100% {
+    background: #dc2626;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.18), 0 16px 34px rgba(220, 38, 38, 0.3);
+  }
+
+  50% {
+    background: #991b1b;
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.3), 0 20px 42px rgba(153, 27, 27, 0.42);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .downtime-press-button.active-timer,
+  .downtime-press-button.active-timer:hover {
+    animation: none;
+  }
+}
+
 .downtime-grid small {
   color: #667085;
   font-size: 20px;

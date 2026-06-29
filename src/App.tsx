@@ -2488,7 +2488,11 @@ function App() {
                       <span className="downtime-field-title">A การทำงาน / เริ่มงานจริง</span>
                       <b className={`excel-code-badge ${getExcelCodeTone(productionWorkExcelCode)}`}>Excel {productionWorkExcelCode}</b>
                     </span>
-                    <button className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)}`} onClick={pressEmployeeWorkStartRealtime} type="button">
+                    <button
+                      className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""}`}
+                      onClick={pressEmployeeWorkStartRealtime}
+                      type="button"
+                    >
                       กดเริ่มงานจริงเวลาปัจจุบัน
                     </button>
                     <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
@@ -2503,7 +2507,11 @@ function App() {
                       <b className={`excel-code-badge ${getExcelCodeTone(downtimeExcelCodes[field.key])}`}>Excel {downtimeExcelCodes[field.key]}</b>
                     </span>
                     {isEmployeeEntry ? (
-                      <button className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} onClick={() => pressEmployeeDowntimeRealtime(field.key)} type="button">
+                      <button
+                        className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""}`}
+                        onClick={() => pressEmployeeDowntimeRealtime(field.key)}
+                        type="button"
+                      >
                         กดบันทึกเวลาปัจจุบัน
                       </button>
                     ) : (
