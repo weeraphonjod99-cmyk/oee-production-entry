@@ -2521,14 +2521,18 @@ function App() {
                     value={draft.date}
                   onChange={(event) => {
                     const date = event.target.value;
+                    const currentShift = getCurrentProductionShift();
+                    const shift = isEmployeeEntry && !editingLog ? currentShift.shift : draft.shift;
                     setDateManuallyEdited(true);
                     setEmployeeWorkStartedAt("");
                     clearEmployeeActiveTimer();
                     setDraft({
                       ...draft,
                       date,
-                        shiftEndAt: shiftEndAt(date, draft.shift),
-                        shiftStartAt: shiftStartAt(date, draft.shift),
+                        meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
+                        shift,
+                        shiftEndAt: shiftEndAt(date, shift),
+                        shiftStartAt: shiftStartAt(date, shift),
                       });
                     }}
                     type="date"
@@ -2537,6 +2541,7 @@ function App() {
                 <label>
                   <span className="label-text">กะ <RequiredMark /></span>
                   <select
+                    disabled={isEmployeeEntry && !editingLog}
                     required
                     value={draft.shift}
                   onChange={(event) => {
