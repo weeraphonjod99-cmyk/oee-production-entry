@@ -2725,10 +2725,6 @@ function App() {
               <div className="downtime-grid">
                 {isEmployeeEntry && (
                   <label className={`downtime-card ${getExcelCodeTone(productionWorkExcelCode)}`}>
-                    <span className="downtime-label-row">
-                      <span className="downtime-field-title">A การทำงาน / เริ่มงานจริง</span>
-                      <b className={`excel-code-badge ${getExcelCodeTone(productionWorkExcelCode)}`}>Excel {productionWorkExcelCode}</b>
-                    </span>
                     <button
                       className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""}`}
                       onClick={pressEmployeeWorkStartRealtime}
@@ -2747,10 +2743,6 @@ function App() {
                 )}
                 {downtimeFields.map((field) => (
                   <label className={`downtime-card ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} key={field.key}>
-                    <span className="downtime-label-row">
-                      <span className="downtime-field-title">{field.label}</span>
-                      <b className={`excel-code-badge ${getExcelCodeTone(downtimeExcelCodes[field.key])}`}>Excel {downtimeExcelCodes[field.key]}</b>
-                    </span>
                     {isEmployeeEntry ? (
                       <button
                         className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""}`}
