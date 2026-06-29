@@ -793,6 +793,30 @@ input[readonly] {
   font-size: 22px;
 }
 
+.runtime-current-clock {
+  background: #061635;
+  border: 1px solid #102a56;
+  border-radius: 10px;
+  color: #ffffff;
+  grid-column: span 2;
+  min-height: 92px;
+  padding: 14px 16px;
+}
+
+.runtime-current-clock span {
+  color: #b7c8e6;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.runtime-current-clock strong {
+  color: #ffffff;
+  font-size: 44px;
+  font-weight: 1000;
+  line-height: 1;
+}
+
 .runtime-input-block {
   margin: 0;
 }
@@ -2682,6 +2706,10 @@ td:nth-child(10) {
   .pd-target-summary,
   .pd-search-controls {
     grid-template-columns: 1fr;
+  }
+
+  .runtime-current-clock {
+    grid-column: 1;
   }
 
   .pd-source-card,

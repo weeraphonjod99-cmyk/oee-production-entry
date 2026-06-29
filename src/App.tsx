@@ -2638,6 +2638,10 @@ function App() {
               )}
 
               <div className="runtime-panel">
+                <div className="runtime-current-clock">
+                  <span>เวลาปัจจุบัน</span>
+                  <strong>{formatClock(employeeReportNow)}</strong>
+                </div>
                 <label className="runtime-input-block">
                   <span>เวลาตามกะ <RequiredMark /></span>
                   <div className="runtime-input-row">
