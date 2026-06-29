@@ -1981,14 +1981,15 @@ function App() {
   };
 
   const submitProductionDraft = async (targetDraft: EntryDraft, options: { autoSubmit?: boolean; editingLog?: ProductionLog | null; resetAfterSave?: boolean } = {}) => {
-    const missingFields = getMissingSaveFields(targetDraft);
+    const shouldValidateBeforeSave = !options.autoSubmit;
+    const missingFields = shouldValidateBeforeSave ? getMissingSaveFields(targetDraft) : [];
     if (missingFields.length > 0) {
       showMissingSaveFields(missingFields);
       return false;
     }
     const machine = machines.find((item) => item.id === targetDraft.machineId) ?? currentMachine;
     const shouldUpdate = Boolean(options.editingLog);
-    const duplicate = findDuplicateForDraft(targetDraft, options.editingLog?.id);
+    const duplicate = shouldValidateBeforeSave ? findDuplicateForDraft(targetDraft, options.editingLog?.id) : null;
     const duplicateMessage = getDuplicateMessage(targetDraft, duplicate);
     if (duplicateMessage) {
       setStatus(duplicateMessage);
