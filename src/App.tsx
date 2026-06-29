@@ -2493,6 +2493,9 @@ function App() {
                       onClick={pressEmployeeWorkStartRealtime}
                       type="button"
                     >
+                      <span className="downtime-button-code">{productionWorkExcelCode}</span>
+                      <span className="downtime-button-title">การทำงาน / เริ่มงานจริง</span>
+                      <span className="downtime-button-action">กดบันทึกเวลาปัจจุบัน</span>
                       กดเริ่มงานจริงเวลาปัจจุบัน
                     </button>
                     <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
@@ -2512,6 +2515,9 @@ function App() {
                         onClick={() => pressEmployeeDowntimeRealtime(field.key)}
                         type="button"
                       >
+                        <span className="downtime-button-code">{downtimeExcelCodes[field.key]}</span>
+                        <span className="downtime-button-title">{field.label}</span>
+                        <span className="downtime-button-action">กดบันทึกเวลาปัจจุบัน</span>
                         กดบันทึกเวลาปัจจุบัน
                       </button>
                     ) : (
