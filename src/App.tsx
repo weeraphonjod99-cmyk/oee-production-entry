@@ -157,6 +157,7 @@ const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
+const realtimeRemoteRefreshMs = 5000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SUBMITTED_KEY_PREFIX = "oee-production-employee-submitted";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
@@ -1077,6 +1078,26 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!remoteEnabled) return;
+    let cancelled = false;
+    const refreshRemoteLogs = async () => {
+      try {
+        const logs = await fetchRemoteLogs();
+        if (!cancelled) setRemoteLogs(logs);
+      } catch {
+        // Keep the last successful data visible if a realtime refresh fails.
+      }
+    };
+    const timer = window.setInterval(() => {
+      void refreshRemoteLogs();
+    }, realtimeRemoteRefreshMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("employeeEntry");
   }, [session, tab]);
 
@@ -1841,6 +1862,11 @@ function App() {
           ? `บันทึกการแก้ไขแล้ว: ${saved.machineName} วันที่ ${saved.date}`
           : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`;
       setLocalLogs(next);
+      if (remoteEnabled) {
+        fetchRemoteLogs()
+          .then((logs) => setRemoteLogs(logs))
+          .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
+      }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
       if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(saved.machineId);

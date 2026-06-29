@@ -46,7 +46,8 @@ export async function fetchRemoteLogs(limit = 3000): Promise<ProductionLog[]> {
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set("action", "logs");
   url.searchParams.set("limit", String(limit));
-  const response = await fetch(url.toString());
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
   const data = await parseJsonResponse(response);
   if (!response.ok || data.ok === false) {
     throw new Error(data.error || "โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ");
