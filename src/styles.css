@@ -570,23 +570,6 @@ h3 {
   box-shadow: 0 12px 26px rgba(100, 116, 139, 0.14);
 }
 
-.machine-icon-card.submitted-log {
-  background: #fff1f2;
-  border-color: #ef4444;
-  box-shadow: 0 12px 26px rgba(239, 68, 68, 0.14);
-}
-
-.machine-icon-card.submitted-log .machine-icon-symbol {
-  background: #dc2626;
-  color: #ffffff;
-}
-
-.machine-icon-card.submitted-log:hover,
-.machine-icon-card.submitted-log:focus-visible {
-  border-color: #b91c1c;
-  box-shadow: 0 14px 28px rgba(185, 28, 28, 0.2);
-}
-
 @keyframes activeDraftPulse {
   0%,
   100% {
@@ -718,18 +701,6 @@ h3 {
     border-color: var(--timer-border, #f59e0b);
     box-shadow: 0 0 0 7px var(--timer-ring, rgba(251, 146, 60, 0.32));
   }
-}
-
-.machine-submitted-badge {
-  background: #ffffff;
-  border: 1px solid #ef4444;
-  border-radius: 999px;
-  color: #b91c1c;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 900;
-  justify-self: start;
-  padding: 5px 9px;
 }
 
 .machine-shared-status {

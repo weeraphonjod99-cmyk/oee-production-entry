@@ -198,7 +198,6 @@ const maxShiftWorkMinutes = 610;
 const realtimeRemoteRefreshMs = 7000;
 const remoteLogsRefreshMs = 120000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
-const EMPLOYEE_SUBMITTED_KEY_PREFIX = "oee-production-employee-submitted";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
@@ -1221,7 +1220,6 @@ function App() {
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
-  const [employeeSubmittedMachineIds, setEmployeeSubmittedMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
@@ -1393,18 +1391,6 @@ function App() {
   }, [draft.shift]);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
-  const employeeSubmittedShiftKey = `${draft.date || getTodayInputValue()}::${normalizeShiftCode(draft.shift)}`;
-  const employeeSubmittedStorageKey = `${EMPLOYEE_SUBMITTED_KEY_PREFIX}::${employeeSubmittedShiftKey}`;
-
-  useEffect(() => {
-    try {
-      window.localStorage.removeItem(employeeSubmittedStorageKey);
-      setEmployeeSubmittedMachineIds(new Set());
-    } catch {
-      setEmployeeSubmittedMachineIds(new Set());
-    }
-  }, [employeeSubmittedStorageKey]);
-
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
@@ -1493,7 +1479,6 @@ function App() {
             (draft.machineId === machine.id && employeeDraftActive) ||
             employeeDraftMachineIds.has(machine.id) ||
             employeeSharedStatusByMachineId.has(machine.id),
-          hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
           productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
@@ -1508,7 +1493,6 @@ function App() {
       employeeDraftActive,
       employeeDraftMachineIds,
       employeeSharedStatusByMachineId,
-      employeeSubmittedMachineIds,
       machineLogSummaryByMachineId,
       productCountByMachineId,
     ],
@@ -1727,15 +1711,6 @@ function App() {
   useEffect(() => {
     refreshEmployeeDraftMachineIds();
   }, []);
-
-  const clearEmployeeMachineSubmitted = (machineId: string) => {
-    setEmployeeSubmittedMachineIds((prev) => {
-      const next = new Set(prev);
-      next.delete(machineId);
-      window.localStorage.setItem(employeeSubmittedStorageKey, JSON.stringify([...next]));
-      return next;
-    });
-  };
 
   const loadEmployeeStoredDraftForMachine = (machineId: string) => {
     const raw = window.localStorage.getItem(getEmployeeDraftStorageKey(machineId));
@@ -2324,7 +2299,6 @@ function App() {
       }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
-      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) clearEmployeeMachineSubmitted(saved.machineId);
       if (!shouldUpdate) clearEmployeeStoredDraft(saved.machineId);
       if (options.resetAfterSave !== false) resetDraft();
       return true;
@@ -2332,7 +2306,6 @@ function App() {
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
-      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) clearEmployeeMachineSubmitted(localLog.machineId);
       if (!shouldUpdate) clearEmployeeStoredDraft(localLog.machineId);
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
       return true;
@@ -2721,9 +2694,9 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus, timerToneClass }) => (
+              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, productCount, sharedStatus, timerToneClass }) => (
                 <button
-                  className={`machine-icon-card ${hasDraft ? `active-draft ${timerToneClass}` : hasSubmitted ? "submitted-log" : ""}`}
+                  className={`machine-icon-card ${hasDraft ? `active-draft ${timerToneClass}` : ""}`}
                   key={machine.id}
                   onClick={() => openEmployeeMachineEntry(machine.id)}
                   type="button"
@@ -2744,7 +2717,6 @@ function App() {
                     </small>
                   </span>
                   {hasDraft && <span className="machine-draft-badge">มีร่างค้าง</span>}
-                  {!hasDraft && hasSubmitted && <span className="machine-submitted-badge">ส่งยอดแล้ว</span>}
                   {sharedStatus && (
                     <span className="machine-shared-status">
                       <strong>{activityStatus || "กำลังกรอก"}</strong>
