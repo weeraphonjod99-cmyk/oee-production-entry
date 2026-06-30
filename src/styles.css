@@ -441,21 +441,99 @@ h3 {
 }
 
 .machine-icon-card.active-draft {
+  --timer-bg: #fff7cc;
+  --timer-bg-strong: #ffec8a;
+  --timer-border: #f59e0b;
+  --timer-border-strong: #d97706;
+  --timer-ring: rgba(245, 158, 11, 0.22);
+  --timer-shadow: rgba(245, 158, 11, 0.18);
+  --timer-shadow-strong: rgba(217, 119, 6, 0.28);
+  --timer-solid: #f59e0b;
+  --timer-text: #3b2600;
   animation: activeDraftPulse 1.15s ease-in-out infinite;
-  background: #fff7cc;
-  border-color: #f59e0b;
-  box-shadow: 0 12px 26px rgba(245, 158, 11, 0.18);
+  background: var(--timer-bg);
+  border-color: var(--timer-border);
+  box-shadow: 0 12px 26px var(--timer-shadow);
 }
 
 .machine-icon-card.active-draft .machine-icon-symbol {
-  background: #f59e0b;
-  color: #3b2600;
+  background: var(--timer-solid);
+  color: var(--timer-text);
 }
 
 .machine-icon-card.active-draft:hover,
 .machine-icon-card.active-draft:focus-visible {
-  border-color: #d97706;
-  box-shadow: 0 14px 28px rgba(217, 119, 6, 0.22);
+  border-color: var(--timer-border-strong);
+  box-shadow: 0 14px 28px var(--timer-shadow-strong);
+}
+
+.timer-tone-a {
+  --timer-bg: #dcfce7;
+  --timer-bg-strong: #86efac;
+  --timer-border: #16a34a;
+  --timer-border-strong: #15803d;
+  --timer-ring: rgba(22, 163, 74, 0.24);
+  --timer-shadow: rgba(22, 163, 74, 0.18);
+  --timer-shadow-strong: rgba(21, 128, 61, 0.32);
+  --timer-solid: #16a34a;
+  --timer-solid-strong: #15803d;
+  --timer-text: #ffffff;
+}
+
+.timer-tone-c {
+  --timer-bg: #fef3c7;
+  --timer-bg-strong: #fde047;
+  --timer-border: #f59e0b;
+  --timer-border-strong: #d97706;
+  --timer-ring: rgba(245, 158, 11, 0.28);
+  --timer-shadow: rgba(245, 158, 11, 0.2);
+  --timer-shadow-strong: rgba(217, 119, 6, 0.34);
+  --timer-solid: #facc15;
+  --timer-solid-strong: #f59e0b;
+  --timer-text: #061635;
+}
+
+.timer-tone-d {
+  --timer-bg: #fee2e2;
+  --timer-bg-strong: #fca5a5;
+  --timer-border: #ef4444;
+  --timer-border-strong: #dc2626;
+  --timer-ring: rgba(239, 68, 68, 0.26);
+  --timer-shadow: rgba(239, 68, 68, 0.18);
+  --timer-shadow-strong: rgba(220, 38, 38, 0.34);
+  --timer-solid: #dc2626;
+  --timer-solid-strong: #b91c1c;
+  --timer-text: #ffffff;
+}
+
+.timer-tone-e {
+  --timer-bg: #e0f2fe;
+  --timer-bg-strong: #7dd3fc;
+  --timer-border: #38bdf8;
+  --timer-border-strong: #0284c7;
+  --timer-ring: rgba(56, 189, 248, 0.28);
+  --timer-shadow: rgba(14, 165, 233, 0.18);
+  --timer-shadow-strong: rgba(2, 132, 199, 0.34);
+  --timer-solid: #0ea5e9;
+  --timer-solid-strong: #0284c7;
+  --timer-text: #ffffff;
+}
+
+.timer-tone-b,
+.timer-tone-f,
+.timer-tone-g,
+.timer-tone-h,
+.timer-tone-x {
+  --timer-bg: #f1f5f9;
+  --timer-bg-strong: #cbd5e1;
+  --timer-border: #94a3b8;
+  --timer-border-strong: #64748b;
+  --timer-ring: rgba(100, 116, 139, 0.24);
+  --timer-shadow: rgba(100, 116, 139, 0.14);
+  --timer-shadow-strong: rgba(51, 65, 85, 0.26);
+  --timer-solid: #64748b;
+  --timer-solid-strong: #475569;
+  --timer-text: #ffffff;
 }
 
 .machine-icon-card.submitted-log {
@@ -478,15 +556,15 @@ h3 {
 @keyframes activeDraftPulse {
   0%,
   100% {
-    background: #fff7cc;
-    border-color: #f59e0b;
-    box-shadow: 0 12px 26px rgba(245, 158, 11, 0.18);
+    background: var(--timer-bg);
+    border-color: var(--timer-border);
+    box-shadow: 0 12px 26px var(--timer-shadow);
   }
 
   50% {
-    background: #ffec8a;
-    border-color: #d97706;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22), 0 16px 34px rgba(217, 119, 6, 0.28);
+    background: var(--timer-bg-strong);
+    border-color: var(--timer-border-strong);
+    box-shadow: 0 0 0 3px var(--timer-ring), 0 16px 34px var(--timer-shadow-strong);
   }
 }
 
@@ -1142,29 +1220,29 @@ input[readonly] {
 .downtime-press-button.active-timer,
 .downtime-press-button.active-timer:hover {
   animation: activeTimerButtonPulse 0.85s ease-in-out infinite;
-  background: #facc15;
-  color: #061635;
-  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.24), 0 16px 34px rgba(245, 158, 11, 0.28);
+  background: var(--timer-solid, #facc15);
+  color: var(--timer-text, #061635);
+  box-shadow: 0 0 0 4px var(--timer-ring, rgba(250, 204, 21, 0.24)), 0 16px 34px var(--timer-shadow-strong, rgba(245, 158, 11, 0.28));
 }
 
 .downtime-press-button.shared-active-timer,
 .downtime-press-button.shared-active-timer:hover {
   animation: activeTimerButtonPulse 0.85s ease-in-out infinite;
-  background: #facc15 !important;
-  color: #061635 !important;
-  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.24), 0 16px 34px rgba(245, 158, 11, 0.28);
+  background: var(--timer-solid, #facc15) !important;
+  color: var(--timer-text, #061635) !important;
+  box-shadow: 0 0 0 4px var(--timer-ring, rgba(250, 204, 21, 0.24)), 0 16px 34px var(--timer-shadow-strong, rgba(245, 158, 11, 0.28));
 }
 
 @keyframes activeTimerButtonPulse {
   0%,
   100% {
-    background: #facc15;
-    box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.22), 0 16px 34px rgba(245, 158, 11, 0.28);
+    background: var(--timer-solid, #facc15);
+    box-shadow: 0 0 0 4px var(--timer-ring, rgba(250, 204, 21, 0.22)), 0 16px 34px var(--timer-shadow-strong, rgba(245, 158, 11, 0.28));
   }
 
   50% {
-    background: #f59e0b;
-    box-shadow: 0 0 0 8px rgba(250, 204, 21, 0.34), 0 20px 42px rgba(245, 158, 11, 0.42);
+    background: var(--timer-solid-strong, #f59e0b);
+    box-shadow: 0 0 0 8px var(--timer-ring, rgba(250, 204, 21, 0.34)), 0 20px 42px var(--timer-shadow-strong, rgba(245, 158, 11, 0.42));
   }
 }
 

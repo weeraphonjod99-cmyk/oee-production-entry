@@ -232,6 +232,15 @@ const getExcelCodeTone = (code: string) => {
   if (code === "E") return "code-e";
   return "code-default";
 };
+const getEmployeeTimerExcelCode = (key?: string) => {
+  if (!key) return "";
+  if (key === "work") return productionWorkExcelCode;
+  return downtimeExcelCodes[key as DowntimeKey] || "";
+};
+const getEmployeeTimerToneClass = (key?: string) => {
+  const code = getEmployeeTimerExcelCode(key).toLowerCase();
+  return code ? `timer-tone-${code}` : "";
+};
 const clampWorkMinutes = (value: number) => Math.min(roundNumber(Math.max(Number(value) || 0, 0)), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
@@ -1455,6 +1464,7 @@ function App() {
       machines.map((machine) => {
         const sharedStatus = employeeSharedStatusByMachineId.get(machine.id);
         const logSummary = machineLogSummaryByMachineId.get(machine.id);
+        const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "");
         return {
           hasDraft:
             (draft.machineId === machine.id && employeeDraftActive) ||
@@ -1464,6 +1474,7 @@ function App() {
           machine,
           productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
+          timerToneClass: getEmployeeTimerToneClass(activeTimerKey),
           activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
           latestLog: logSummary?.latestLog,
           logCount: logSummary?.logCount ?? 0,
@@ -2693,9 +2704,9 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ activityStatus, hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus }) => (
+              {employeeMachineCards.map(({ activityStatus, hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus, timerToneClass }) => (
                 <button
-                  className={`machine-icon-card ${hasDraft ? "active-draft" : hasSubmitted ? "submitted-log" : ""}`}
+                  className={`machine-icon-card ${hasDraft ? `active-draft ${timerToneClass}` : hasSubmitted ? "submitted-log" : ""}`}
                   key={machine.id}
                   onClick={() => openEmployeeMachineEntry(machine.id)}
                   type="button"
@@ -3074,7 +3085,7 @@ function App() {
                 {isEmployeeEntry && (
                   <label className={`downtime-card ${getExcelCodeTone(productionWorkExcelCode)}`}>
                     <button
-                      className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""} ${currentMachineSharedTimerKey === "work" ? "shared-active-timer" : ""}`}
+                      className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${getEmployeeTimerToneClass("work")} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""} ${currentMachineSharedTimerKey === "work" ? "shared-active-timer" : ""}`}
                       onClick={pressEmployeeWorkStartRealtime}
                       type="button"
                     >
@@ -3098,7 +3109,7 @@ function App() {
                   <label className={`downtime-card ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} key={field.key}>
                     {isEmployeeEntry ? (
                       <button
-                        className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""} ${currentMachineSharedTimerKey === field.key ? "shared-active-timer" : ""}`}
+                        className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${getEmployeeTimerToneClass(field.key)} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""} ${currentMachineSharedTimerKey === field.key ? "shared-active-timer" : ""}`}
                         onClick={() => pressEmployeeDowntimeRealtime(field.key)}
                         type="button"
                       >
