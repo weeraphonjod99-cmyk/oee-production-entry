@@ -4826,6 +4826,7 @@ function formatDailyMachineNames(row: DailyPerformanceRow): string {
 function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
   const rows = useMemo(() => buildDailyPerformanceRows(logs).slice(-14), [logs]);
   const latest = rows.at(-1);
+  const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
 
   return (
     <div className="analysis-panel daily-performance-panel">
@@ -4863,20 +4864,24 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
           <div className="daily-performance-legend">
             <span><i className="utilization" /> อัตราการใช้เครื่อง / Utilization</span>
             <span><i className="availability" /> ประสิทธิภาพเครื่อง / Availability</span>
+            <span><i className="output" /> จำนวนงาน / Output</span>
           </div>
-          <div className="daily-performance-column-chart" role="img" aria-label="Daily machine utilization and availability bar chart">
+          <div className="daily-performance-column-chart" role="img" aria-label="Daily machine utilization, availability, and output bar chart">
             {rows.map((row) => {
               const utilizationHeight = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
               const availabilityHeight = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
+              const outputHeight = `${Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 100}%`;
               return (
                 <div className="daily-performance-column" key={row.date}>
                   <div className="daily-performance-value-labels">
                     <span>{formatPercent(row.utilization)}</span>
                     <span>{formatPercent(row.availability)}</span>
+                    <span>{formatNumber(row.actualOutput)}</span>
                   </div>
                   <div className="daily-performance-column-bars">
                     <i className="utilization"><b style={{ height: utilizationHeight }} /></i>
                     <i className="availability"><b style={{ height: availabilityHeight }} /></i>
+                    <i className="output"><b style={{ height: outputHeight }} /></i>
                   </div>
                   <div className="daily-performance-column-date">
                     <strong>{row.date.slice(5)}</strong>

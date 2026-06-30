@@ -2714,6 +2714,10 @@ input[readonly] {
   background: #2563eb;
 }
 
+.daily-performance-legend .output {
+  background: #f97316;
+}
+
 .daily-performance-column-chart {
   align-items: end;
   background:
@@ -2724,7 +2728,7 @@ input[readonly] {
   display: grid;
   gap: 12px;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(76px, 1fr);
+  grid-auto-columns: minmax(96px, 1fr);
   min-height: 320px;
   overflow-x: auto;
   padding: 14px;
@@ -2735,14 +2739,14 @@ input[readonly] {
   display: grid;
   gap: 8px;
   grid-template-rows: auto 190px auto;
-  min-width: 76px;
+  min-width: 96px;
 }
 
 .daily-performance-value-labels {
   align-items: end;
   display: grid;
   gap: 4px;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   min-height: 34px;
   text-align: center;
 }
@@ -2750,14 +2754,16 @@ input[readonly] {
 .daily-performance-value-labels span {
   color: #061635;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   font-weight: 1000;
+  overflow-wrap: anywhere;
 }
 
 .daily-performance-column-bars {
   align-items: end;
   display: grid;
   gap: 7px;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .daily-performance-column-bars i {
@@ -2782,6 +2788,10 @@ input[readonly] {
 
 .daily-performance-column-bars .availability b {
   background: #2563eb;
+}
+
+.daily-performance-column-bars .output b {
+  background: #f97316;
 }
 
 .daily-performance-column-date {
@@ -3367,7 +3377,7 @@ td:nth-child(10) {
   }
 
   .daily-performance-column-chart {
-    grid-auto-columns: minmax(64px, 76px);
+    grid-auto-columns: minmax(86px, 96px);
     min-height: 300px;
   }
 
