@@ -36,6 +36,7 @@ const PRODUCTION_LOGS_SEED_CSV_URL = "https://raw.githubusercontent.com/weerapho
 const OEE_HEADER_ROW = 3;
 const OEE_FIRST_DATA_ROW = 4;
 const OEE_MINUTES_PER_SLOT = 5;
+const OEE_SHIFT_BREAK_MINUTES = 110;
 const OEE_ENTRY_DATE_HEADER = "วันที่กรอกยอด\nEntry Date";
 const OEE_ENTRY_TIME_HEADER = "เวลากรอก\nEntry Time";
 const OEE_TEST_HEADER = "งาน\nทดสอบ\n/Test";
@@ -740,48 +741,55 @@ function getOeeLayout(sheet) {
   const offset = hasEntryTimestamp ? 2 : 0;
   const hasStep = String(headers[5 + offset] || "").toLowerCase().indexOf("step") >= 0;
   const detected = detectOeeOutputColumns(headers);
-  return hasStep
+  const layout = hasStep
     ? {
-        hasStep: true,
-        hasEntryTimestamp: hasEntryTimestamp,
-        sequence: 1,
-        entryDate: hasEntryTimestamp ? 2 : 0,
-        entryTime: hasEntryTimestamp ? 3 : 0,
-        date: 2 + offset,
-        shift: 3 + offset,
-        productName: 4 + offset,
-        partNo: 5 + offset,
-        step: 6 + offset,
-        normalSlot: 7 + offset,
-        downtimeStart: 8 + offset,
-        normalMinutes: 16 + offset,
-        goodQty: detected.goodQty || 25 + offset,
-        ngQty: detected.ngQty || 26 + offset,
-        testQty: detected.testQty || 27 + offset,
-        totalQty: detected.totalQty || 28 + offset,
-        theoreticalImpulse: detected.theoreticalImpulse || 29 + offset,
-        cavityQty: detected.cavityQty || 30 + offset,
-      }
+      hasStep: true,
+      hasEntryTimestamp: hasEntryTimestamp,
+      sequence: 1,
+      entryDate: hasEntryTimestamp ? 2 : 0,
+      entryTime: hasEntryTimestamp ? 3 : 0,
+      date: 2 + offset,
+      shift: 3 + offset,
+      productName: 4 + offset,
+      partNo: 5 + offset,
+      step: 6 + offset,
+      normalSlot: 7 + offset,
+      downtimeStart: 8 + offset,
+      normalMinutes: 16 + offset,
+      goodQty: detected.goodQty || 25 + offset,
+      ngQty: detected.ngQty || 26 + offset,
+      testQty: detected.testQty || 27 + offset,
+      totalQty: detected.totalQty || 28 + offset,
+      theoreticalImpulse: detected.theoreticalImpulse || 29 + offset,
+      cavityQty: detected.cavityQty || 30 + offset,
+    }
     : {
-        hasStep: false,
-        hasEntryTimestamp: hasEntryTimestamp,
-        sequence: 1,
-        entryDate: hasEntryTimestamp ? 2 : 0,
-        entryTime: hasEntryTimestamp ? 3 : 0,
-        date: 2 + offset,
-        shift: 3 + offset,
-        productName: 4 + offset,
-        partNo: 5 + offset,
-        normalSlot: 6 + offset,
-        downtimeStart: 7 + offset,
-        normalMinutes: 15 + offset,
-        goodQty: detected.goodQty || 24 + offset,
-        ngQty: detected.ngQty || 25 + offset,
-        testQty: detected.testQty || 26 + offset,
-        totalQty: detected.totalQty || 27 + offset,
-        theoreticalImpulse: detected.theoreticalImpulse || 28 + offset,
-        cavityQty: detected.cavityQty || 29 + offset,
-      };
+      hasStep: false,
+      hasEntryTimestamp: hasEntryTimestamp,
+      sequence: 1,
+      entryDate: hasEntryTimestamp ? 2 : 0,
+      entryTime: hasEntryTimestamp ? 3 : 0,
+      date: 2 + offset,
+      shift: 3 + offset,
+      productName: 4 + offset,
+      partNo: 5 + offset,
+      normalSlot: 6 + offset,
+      downtimeStart: 7 + offset,
+      normalMinutes: 15 + offset,
+      goodQty: detected.goodQty || 24 + offset,
+      ngQty: detected.ngQty || 25 + offset,
+      testQty: detected.testQty || 26 + offset,
+      totalQty: detected.totalQty || 27 + offset,
+      theoreticalImpulse: detected.theoreticalImpulse || 28 + offset,
+      cavityQty: detected.cavityQty || 29 + offset,
+    };
+  layout.theoreticalEffectiveTime = detected.theoreticalEffectiveTime || layout.cavityQty + 1;
+  layout.totalProductionTime = detected.totalProductionTime || layout.cavityQty + 2;
+  layout.equipmentUtilizationRate = detected.equipmentUtilizationRate || layout.cavityQty + 3;
+  layout.passRate = detected.passRate || layout.cavityQty + 4;
+  layout.timeUtilizationRate = detected.timeUtilizationRate || layout.cavityQty + 5;
+  layout.oeeRate = detected.oeeRate || layout.cavityQty + 6;
+  return layout;
 }
 
 function detectOeeOutputColumns(headers) {
@@ -804,6 +812,12 @@ function detectOeeOutputColumns(headers) {
     if (!result.totalQty && text.indexOf("total") >= 0 && text.indexOf("quantity") >= 0) result.totalQty = column;
     if (!result.theoreticalImpulse && (text.indexOf("theoretical") >= 0 || text.indexOf("impulse") >= 0)) result.theoreticalImpulse = column;
     if (!result.cavityQty && (text.indexOf("cavity") >= 0 || text.indexOf("cavities") >= 0)) result.cavityQty = column;
+    if (!result.theoreticalEffectiveTime && text.indexOf("theoretical effective production time") >= 0) result.theoreticalEffectiveTime = column;
+    if (!result.totalProductionTime && text.indexOf("total production time") >= 0) result.totalProductionTime = column;
+    if (!result.equipmentUtilizationRate && text.indexOf("equipment utilization") >= 0) result.equipmentUtilizationRate = column;
+    if (!result.passRate && text.indexOf("pass rate") >= 0) result.passRate = column;
+    if (!result.timeUtilizationRate && text.indexOf("time utilization") >= 0) result.timeUtilizationRate = column;
+    if (!result.oeeRate && text.indexOf("oee") >= 0) result.oeeRate = column;
   });
   return result;
 }
@@ -1005,6 +1019,11 @@ function writeOeeInputRow(sheet, layout, row, log) {
   sheet.getRange(row, layout.normalSlot).setFormula(buildNormalSlotFormula(row, layout, workSlots));
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setNumberFormat("0.##");
   sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
+  sheet.getRange(row, layout.normalMinutes, 1, 9).setFormulas([
+    Array.from({ length: 9 }, function(_, index) {
+      return buildSlotToMinuteFormula(row, layout.normalSlot + index);
+    }),
+  ]);
   sheet.getRange(row, layout.goodQty).setNumberFormat("0.##").setValue(numberValue(log.goodQty));
   sheet.getRange(row, layout.ngQty).setNumberFormat("0.##").setValue(numberValue(log.ngQty));
   sheet
@@ -1012,9 +1031,13 @@ function writeOeeInputRow(sheet, layout, row, log) {
     .setNumberFormat("0.##")
     .setValue(numberValue(log.testQty) > 0 ? numberValue(log.testQty) : "");
   sheet.getRange(row, layout.totalQty).setFormula(buildTotalQuantityFormula(row, layout));
+  sheet.getRange(row, layout.theoreticalEffectiveTime, 1, 6).setFormulas([
+    buildOeeComputedFormulas(row, layout),
+  ]);
 
   sheet.getRange(row, layout.theoreticalImpulse).setNumberFormat("0.##").setValue(numberValue(log.machineSpeed));
   sheet.getRange(row, layout.cavityQty).setNumberFormat("0.##").setValue(numberValue(log.cavityQty));
+  sheet.getRange(row, layout.equipmentUtilizationRate, 1, 4).setNumberFormat("0.00%");
 }
 
 function repairOeeFormulas() {
@@ -1023,7 +1046,10 @@ function repairOeeFormulas() {
   const loggedTestValues = getLoggedTestValueMap();
   let sheetCount = 0;
   let testValueCount = 0;
+  let normalFormulaCount = 0;
+  let minuteFormulaCount = 0;
   let totalFormulaCount = 0;
+  let computedFormulaCount = 0;
 
   book.getSheets().forEach(function(sheet) {
     const machine = machineByName[normalizeSheetName(sheet.getName())];
@@ -1040,10 +1066,21 @@ function repairOeeFormulas() {
     const testRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.testQty, rowCount, 1);
     const testValues = testRange.getValues();
     const testFormulas = testRange.getFormulas();
+    const normalSlotRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalSlot, rowCount, 1);
+    const normalSlotValues = normalSlotRange.getValues();
+    const normalSlotFormulas = normalSlotRange.getFormulas();
+    const downtimeSlotValues = sheet.getRange(OEE_FIRST_DATA_ROW, layout.downtimeStart, rowCount, 8).getValues();
+    const minuteRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalMinutes, rowCount, 9);
+    const minuteFormulas = minuteRange.getFormulas();
     const totalRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.totalQty, rowCount, 1);
     const totalFormulas = totalRange.getFormulas();
+    const computedRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.theoreticalEffectiveTime, rowCount, 6);
+    const computedFormulas = computedRange.getFormulas();
     let testChanged = false;
+    let normalChanged = false;
+    let minuteChanged = false;
     let totalChanged = false;
+    let computedChanged = false;
 
     sheetCount++;
     for (let index = 0; index < rowCount; index++) {
@@ -1052,21 +1089,49 @@ function repairOeeFormulas() {
       const partNo = String(identityValues[index][width - 1] || "").trim();
       if (!productName || !partNo) continue;
 
-      const loggedTest = loggedTestValues[
-        buildOeeLogKey({
-          date: formatLegacyDate(sourceValues[index][layout.date - 1]),
-          shift: toOriginalShift(sourceValues[index][layout.shift - 1]),
-          machineName: machine.name,
-          productName: productName,
-          partNo: partNo,
-          step: layout.hasStep ? String(sourceValues[index][layout.step - 1] || "-").trim() || "-" : "-",
-        })
-      ];
-      const nextTestValue = numberValue(loggedTest) > 0 ? numberValue(loggedTest) : "";
-      if (testFormulas[index][0] || testValues[index][0] !== nextTestValue) {
-        testValues[index][0] = nextTestValue;
+      const logKey = buildOeeLogKey({
+        date: formatLegacyDate(sourceValues[index][layout.date - 1]),
+        shift: toOriginalShift(sourceValues[index][layout.shift - 1]),
+        machineName: machine.name,
+        productName: productName,
+        partNo: partNo,
+        step: layout.hasStep ? String(sourceValues[index][layout.step - 1] || "-").trim() || "-" : "-",
+      });
+      if (Object.prototype.hasOwnProperty.call(loggedTestValues, logKey)) {
+        const loggedTest = loggedTestValues[logKey];
+        const nextTestValue = numberValue(loggedTest) > 0 ? numberValue(loggedTest) : "";
+        if (testFormulas[index][0] || testValues[index][0] !== nextTestValue) {
+          testValues[index][0] = nextTestValue;
+          testValueCount++;
+          testChanged = true;
+        }
+      } else if (testFormulas[index][0]) {
+        testValues[index][0] = "";
         testValueCount++;
         testChanged = true;
+      }
+
+      const workSlots = readWorkSlotsFromNormalFormula(
+        normalSlotFormulas[index][0],
+        normalSlotValues[index][0],
+        downtimeSlotValues[index],
+      );
+      const expectedNormalFormula = buildNormalSlotFormula(row, layout, workSlots);
+      if (normalSlotFormulas[index][0] !== expectedNormalFormula) {
+        normalSlotFormulas[index][0] = expectedNormalFormula;
+        normalFormulaCount++;
+        normalChanged = true;
+      }
+
+      const expectedMinuteFormulas = Array.from({ length: 9 }, function(_, minuteIndex) {
+        return buildSlotToMinuteFormula(row, layout.normalSlot + minuteIndex);
+      });
+      for (let minuteIndex = 0; minuteIndex < expectedMinuteFormulas.length; minuteIndex++) {
+        if (minuteFormulas[index][minuteIndex] !== expectedMinuteFormulas[minuteIndex]) {
+          minuteFormulas[index][minuteIndex] = expectedMinuteFormulas[minuteIndex];
+          minuteFormulaCount++;
+          minuteChanged = true;
+        }
       }
 
       const expectedFormula = buildTotalQuantityFormula(row, layout);
@@ -1075,17 +1140,43 @@ function repairOeeFormulas() {
         totalFormulaCount++;
         totalChanged = true;
       }
+
+      const expectedComputedFormulas = buildOeeComputedFormulas(row, layout);
+      for (let computedIndex = 0; computedIndex < expectedComputedFormulas.length; computedIndex++) {
+        if (computedFormulas[index][computedIndex] !== expectedComputedFormulas[computedIndex]) {
+          computedFormulas[index][computedIndex] = expectedComputedFormulas[computedIndex];
+          computedFormulaCount++;
+          computedChanged = true;
+        }
+      }
     }
 
     if (testChanged) {
       testRange.setValues(testValues);
     }
+    if (normalChanged) {
+      normalSlotRange.setFormulas(normalSlotFormulas);
+    }
+    if (minuteChanged) {
+      minuteRange.setFormulas(minuteFormulas).setNumberFormat("0.00");
+    }
     if (totalChanged) {
       totalRange.setFormulas(totalFormulas);
     }
+    if (computedChanged) {
+      computedRange.setFormulas(computedFormulas);
+      sheet.getRange(OEE_FIRST_DATA_ROW, layout.equipmentUtilizationRate, rowCount, 4).setNumberFormat("0.00%");
+    }
   });
 
-  return { sheets: sheetCount, testValues: testValueCount, totalFormulas: totalFormulaCount };
+  return {
+    sheets: sheetCount,
+    testValues: testValueCount,
+    normalFormulas: normalFormulaCount,
+    minuteFormulas: minuteFormulaCount,
+    totalFormulas: totalFormulaCount,
+    computedFormulas: computedFormulaCount,
+  };
 }
 
 function repairSheetTypes() {
@@ -1198,10 +1289,19 @@ function roundNumber(value) {
 
 function buildNormalSlotFormula(row, layout, workSlots) {
   const parts = [];
-  for (let column = layout.downtimeStart; column < layout.downtimeStart + 8; column++) {
-    parts.push(columnToLetter(column) + row);
+  for (let index = 0; index < 8; index++) {
+    const cell = columnToLetter(layout.downtimeStart + index) + row;
+    if (index === 6) {
+      parts.push("MAX(" + cell + "-" + getBreakSlots() + ",0)");
+    } else {
+      parts.push(cell);
+    }
   }
   return "=" + workSlots + "-" + parts.join("-");
+}
+
+function buildSlotToMinuteFormula(row, slotColumn) {
+  return "=" + columnToLetter(slotColumn) + row + "*" + OEE_MINUTES_PER_SLOT;
 }
 
 function buildTotalQuantityFormula(row, layout) {
@@ -1216,6 +1316,79 @@ function buildTotalQuantityFormula(row, layout) {
     columnToLetter(layout.testQty),
     row,
   ].join("");
+}
+
+function buildTheoreticalEffectiveTimeFormula(row, layout) {
+  return "=IFERROR(" +
+    columnToLetter(layout.totalQty) + row +
+    "/(" + columnToLetter(layout.theoreticalImpulse) + row +
+    "*" + columnToLetter(layout.cavityQty) + row + "),0)";
+}
+
+function buildTotalProductionTimeFormula(row, layout) {
+  const normalColumn = layout.normalMinutes;
+  const downtimeColumn = layout.normalMinutes + 1;
+  const cells = [
+    columnToLetter(normalColumn) + row,
+    columnToLetter(downtimeColumn) + row,
+    columnToLetter(downtimeColumn + 1) + row,
+    columnToLetter(downtimeColumn + 2) + row,
+    columnToLetter(downtimeColumn + 3) + row,
+    columnToLetter(downtimeColumn + 4) + row,
+    columnToLetter(downtimeColumn + 5) + row,
+    "MAX(" + columnToLetter(downtimeColumn + 6) + row + "-" + OEE_SHIFT_BREAK_MINUTES + ",0)",
+    columnToLetter(downtimeColumn + 7) + row,
+  ];
+  return "=IFERROR(" + cells.join("+") + ",0)";
+}
+
+function buildEquipmentUtilizationRateFormula(row, layout) {
+  return "=IFERROR(" +
+    columnToLetter(layout.theoreticalEffectiveTime) + row +
+    "/" + columnToLetter(layout.normalMinutes) + row +
+    ",0)";
+}
+
+function buildPassRateFormula(row, layout) {
+  return "=IFERROR(" +
+    columnToLetter(layout.goodQty) + row +
+    "/(" + columnToLetter(layout.goodQty) + row +
+    "+" + columnToLetter(layout.ngQty) + row + "),0)";
+}
+
+function buildTimeUtilizationRateFormula(row, layout) {
+  return "=IFERROR(" +
+    columnToLetter(layout.normalMinutes) + row +
+    "/" + columnToLetter(layout.totalProductionTime) + row +
+    ",0)";
+}
+
+function buildOeeRateFormula(row, layout) {
+  return "=IFERROR(" +
+    columnToLetter(layout.passRate) + row +
+    "*" + columnToLetter(layout.timeUtilizationRate) + row +
+    ",0)";
+}
+
+function buildOeeComputedFormulas(row, layout) {
+  return [
+    buildTheoreticalEffectiveTimeFormula(row, layout),
+    buildTotalProductionTimeFormula(row, layout),
+    buildEquipmentUtilizationRateFormula(row, layout),
+    buildPassRateFormula(row, layout),
+    buildTimeUtilizationRateFormula(row, layout),
+    buildOeeRateFormula(row, layout),
+  ];
+}
+
+function readWorkSlotsFromNormalFormula(formula, normalSlotValue, downtimeSlots) {
+  const match = String(formula || "").match(/^=\s*([0-9]+(?:\.[0-9]+)?)/);
+  if (match) return numberValue(match[1]);
+  return roundNumber(numberValue(normalSlotValue) + sumValues(downtimeSlots || []));
+}
+
+function getBreakSlots() {
+  return roundNumber(OEE_SHIFT_BREAK_MINUTES / OEE_MINUTES_PER_SLOT);
 }
 
 function columnToLetter(column) {
