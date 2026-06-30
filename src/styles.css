@@ -2804,6 +2804,15 @@ input[readonly] {
   font-weight: 800;
 }
 
+.daily-performance-column-date .daily-performance-machine-name {
+  color: #061635;
+  font-size: 12px;
+  font-weight: 1000;
+  line-height: 1.2;
+  min-height: 28px;
+  overflow-wrap: anywhere;
+}
+
 .capacity-table td strong {
   color: #061635;
   font-weight: 900;

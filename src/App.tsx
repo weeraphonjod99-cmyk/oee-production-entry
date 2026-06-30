@@ -4765,6 +4765,7 @@ type DailyPerformanceRow = {
   count: number;
   date: string;
   machineCount: number;
+  machineNames: string[];
   normalMinutes: number;
   targetQty: number;
   utilization: number;
@@ -4772,6 +4773,7 @@ type DailyPerformanceRow = {
 };
 
 function buildDailyPerformanceRows(logs: ProductionLog[]): DailyPerformanceRow[] {
+  const machineNameLookup = new Map(machines.map((machine) => [machine.id, machine.name]));
   const rows = logs.reduce((map, log) => {
     const current =
       map.get(log.date) ??
@@ -4780,28 +4782,45 @@ function buildDailyPerformanceRows(logs: ProductionLog[]): DailyPerformanceRow[]
         count: 0,
         date: log.date,
         machineIds: new Set<string>(),
+        machineNames: new Set<string>(),
         normalMinutes: 0,
         targetQty: 0,
         workMinutes: 0,
       };
+    const machineName = machineNameLookup.get(log.machineId) || log.machineName || log.machineId;
     current.actualOutput += totalOutput(log);
     current.count += 1;
     current.machineIds.add(log.machineId);
+    current.machineNames.add(machineName);
     current.normalMinutes += Number(log.normalMinutes || 0);
     current.targetQty += getLogTargetQty(log);
     current.workMinutes += getLogWorkMinutes(log);
     map.set(log.date, current);
     return map;
-  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "utilization"> & { machineIds: Set<string> }>());
+  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "machineNames" | "utilization"> & { machineIds: Set<string>; machineNames: Set<string> }>());
 
   return [...rows.values()]
-    .map(({ machineIds, ...row }) => ({
-      ...row,
-      availability: row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0,
-      machineCount: machineIds.size,
-      utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
-    }))
+    .map(({ machineIds, machineNames, ...row }) => {
+      const sortedMachineNames = [...machineNames].sort((a, b) => a.localeCompare(b, "en"));
+      return {
+        ...row,
+        availability: row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0,
+        machineCount: machineIds.size,
+        machineNames: sortedMachineNames,
+        utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
+      };
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function formatDailyMachineNames(row: DailyPerformanceRow): string {
+  if (row.machineNames.length === 0) {
+    return "-";
+  }
+  if (row.machineNames.length <= 2) {
+    return row.machineNames.join(", ");
+  }
+  return `${row.machineNames.slice(0, 2).join(", ")} +${formatNumber(row.machineNames.length - 2)}`;
 }
 
 function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
@@ -4861,6 +4880,9 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
                   </div>
                   <div className="daily-performance-column-date">
                     <strong>{row.date.slice(5)}</strong>
+                    <span className="daily-performance-machine-name" title={row.machineNames.join(", ")}>
+                      {formatDailyMachineNames(row)}
+                    </span>
                     <span>{formatNumber(row.machineCount)} เครื่อง / Machines</span>
                     <em>Actual {formatNumber(row.actualOutput)}</em>
                   </div>
