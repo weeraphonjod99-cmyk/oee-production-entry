@@ -642,6 +642,7 @@ h3 {
   display: flex;
   font-size: 19px;
   font-weight: 1000;
+  gap: 7px;
   justify-content: center;
   justify-self: stretch;
   letter-spacing: 0;
@@ -651,6 +652,23 @@ h3 {
   text-align: center;
   text-shadow: 0 1px 0 rgba(15, 23, 42, 0.28);
   width: 100%;
+}
+
+.machine-activity-badge b {
+  background: #ffffff;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  color: var(--timer-solid-strong, var(--timer-border-strong, #ea580c));
+  display: inline-flex;
+  font-size: 22px;
+  font-weight: 1000;
+  line-height: 1;
+  padding: 4px 8px;
+  text-shadow: none;
+}
+
+.machine-activity-badge span {
+  min-width: 0;
 }
 
 @keyframes machineActivityBadgePulse {

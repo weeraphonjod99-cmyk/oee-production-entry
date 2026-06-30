@@ -2714,7 +2714,14 @@ function App() {
                   <span className="machine-icon-symbol">
                     <StampingPressIcon />
                   </span>
-                  {hasDraft && activityStatus && <span className="machine-activity-badge">{activityStatus}</span>}
+                  {hasDraft && activityStatus && (
+                    <span className="machine-activity-badge">
+                      {getEmployeeTimerExcelCode(sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "")) && (
+                        <b>{getEmployeeTimerExcelCode(sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : ""))}</b>
+                      )}
+                      <span>{activityStatus.replace(/^[A-Z]\s*/, "")}</span>
+                    </span>
+                  )}
                   <span className="machine-card-main">
                     <strong>{machine.name}</strong>
                     <small>
