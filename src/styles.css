@@ -2683,92 +2683,125 @@ input[readonly] {
   font-weight: 1000;
 }
 
-.daily-performance-chart {
-  display: grid;
-  gap: 9px;
+.daily-performance-legend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
 }
 
-.daily-performance-row {
+.daily-performance-legend span {
   align-items: center;
-  background: #ffffff;
+  color: #344054;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 7px;
+}
+
+.daily-performance-legend i {
+  border-radius: 4px;
+  display: inline-block;
+  height: 13px;
+  width: 24px;
+}
+
+.daily-performance-legend .utilization {
+  background: #16a34a;
+}
+
+.daily-performance-legend .availability {
+  background: #2563eb;
+}
+
+.daily-performance-column-chart {
+  align-items: end;
+  background:
+    linear-gradient(#eef1ee 1px, transparent 1px) 0 0 / 100% 25%,
+    #fbfcfb;
   border: 1px solid #e4e9e4;
   border-radius: 8px;
   display: grid;
   gap: 12px;
-  grid-template-columns: 86px minmax(0, 1fr) 180px;
-  padding: 10px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(76px, 1fr);
+  min-height: 320px;
+  overflow-x: auto;
+  padding: 14px;
 }
 
-.daily-performance-date {
+.daily-performance-column {
+  align-items: stretch;
   display: grid;
-  gap: 3px;
+  gap: 8px;
+  grid-template-rows: auto 190px auto;
+  min-width: 76px;
 }
 
-.daily-performance-date strong {
+.daily-performance-value-labels {
+  align-items: end;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 1fr 1fr;
+  min-height: 34px;
+  text-align: center;
+}
+
+.daily-performance-value-labels span {
   color: #061635;
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 1000;
 }
 
-.daily-performance-date span,
-.daily-performance-output span {
-  color: #53627b;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.daily-performance-bars {
+.daily-performance-column-bars {
+  align-items: end;
   display: grid;
   gap: 7px;
+  grid-template-columns: 1fr 1fr;
 }
 
-.daily-performance-bar {
-  align-items: center;
-  display: grid;
-  gap: 9px;
-  grid-template-columns: 92px minmax(0, 1fr) 58px;
-}
-
-.daily-performance-bar span {
-  color: #344054;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.daily-performance-bar i {
+.daily-performance-column-bars i {
+  align-items: end;
   background: #eef1ee;
-  border-radius: 999px;
-  display: block;
-  height: 12px;
+  border-radius: 8px 8px 4px 4px;
+  display: flex;
+  height: 190px;
   overflow: hidden;
 }
 
-.daily-performance-bar b {
+.daily-performance-column-bars b {
+  border-radius: 8px 8px 4px 4px;
   display: block;
-  height: 100%;
+  min-height: 3px;
+  width: 100%;
 }
 
-.daily-performance-bar.utilization b {
+.daily-performance-column-bars .utilization b {
   background: #16a34a;
 }
 
-.daily-performance-bar.availability b {
+.daily-performance-column-bars .availability b {
   background: #2563eb;
 }
 
-.daily-performance-bar em {
-  color: #061635;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 950;
-  text-align: right;
+.daily-performance-column-date {
+  display: grid;
+  gap: 3px;
+  text-align: center;
 }
 
-.daily-performance-output {
-  display: grid;
-  gap: 5px;
-  justify-items: end;
-  text-align: right;
+.daily-performance-column-date strong {
+  color: #061635;
+  font-size: 15px;
+  font-weight: 1000;
+}
+
+.daily-performance-column-date span,
+.daily-performance-column-date em {
+  color: #53627b;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .capacity-table td strong {
@@ -3324,14 +3357,17 @@ td:nth-child(10) {
     grid-template-columns: 1fr;
   }
 
-  .daily-performance-row,
-  .daily-performance-bar {
-    grid-template-columns: 1fr;
+  .daily-performance-column-chart {
+    grid-auto-columns: minmax(64px, 76px);
+    min-height: 300px;
   }
 
-  .daily-performance-output {
-    justify-items: start;
-    text-align: left;
+  .daily-performance-column {
+    grid-template-rows: auto 170px auto;
+  }
+
+  .daily-performance-column-bars i {
+    height: 170px;
   }
 
   .part-summary-row {

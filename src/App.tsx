@@ -4812,19 +4812,19 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
     <div className="analysis-panel daily-performance-panel">
       <div className="report-table-heading compact-heading">
         <div>
-          <h2>กราฟรายวัน อัตราการใช้เครื่อง / ประสิทธิภาพเครื่อง</h2>
-          <p>อัปเดตตามวันที่มีการกรอกผลิตในระบบ</p>
+          <h2>แผนภูมิแท่งรายวัน / Daily Bar Chart</h2>
+          <p>อัตราการใช้เครื่องและประสิทธิภาพเครื่อง / Utilization and Availability</p>
         </div>
         <span>{formatNumber(rows.length)} วัน</span>
       </div>
       {rows.length === 0 ? (
-        <p className="empty-text">ไม่มีข้อมูลรายวันตามตัวกรองนี้</p>
+        <p className="empty-text">ไม่มีข้อมูลรายวันตามตัวกรองนี้ / No daily data for this filter</p>
       ) : (
         <>
           {latest && (
             <div className="daily-performance-summary">
               <div>
-                <span>วันล่าสุด</span>
+                <span>วันล่าสุด / Latest date</span>
                 <strong>{latest.date}</strong>
               </div>
               <div>
@@ -4841,31 +4841,28 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
               </div>
             </div>
           )}
-          <div className="daily-performance-chart" role="img" aria-label="Daily machine utilization and availability chart">
+          <div className="daily-performance-legend">
+            <span><i className="utilization" /> อัตราการใช้เครื่อง / Utilization</span>
+            <span><i className="availability" /> ประสิทธิภาพเครื่อง / Availability</span>
+          </div>
+          <div className="daily-performance-column-chart" role="img" aria-label="Daily machine utilization and availability bar chart">
             {rows.map((row) => {
-              const utilizationWidth = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
-              const availabilityWidth = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
+              const utilizationHeight = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
+              const availabilityHeight = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
               return (
-                <div className="daily-performance-row" key={row.date}>
-                  <div className="daily-performance-date">
+                <div className="daily-performance-column" key={row.date}>
+                  <div className="daily-performance-value-labels">
+                    <span>{formatPercent(row.utilization)}</span>
+                    <span>{formatPercent(row.availability)}</span>
+                  </div>
+                  <div className="daily-performance-column-bars">
+                    <i className="utilization"><b style={{ height: utilizationHeight }} /></i>
+                    <i className="availability"><b style={{ height: availabilityHeight }} /></i>
+                  </div>
+                  <div className="daily-performance-column-date">
                     <strong>{row.date.slice(5)}</strong>
-                    <span>{formatNumber(row.machineCount)} เครื่อง</span>
-                  </div>
-                  <div className="daily-performance-bars">
-                    <div className="daily-performance-bar utilization">
-                      <span>ใช้เครื่อง</span>
-                      <i><b style={{ width: utilizationWidth }} /></i>
-                      <em>{formatPercent(row.utilization)}</em>
-                    </div>
-                    <div className="daily-performance-bar availability">
-                      <span>ประสิทธิภาพ</span>
-                      <i><b style={{ width: availabilityWidth }} /></i>
-                      <em>{formatPercent(row.availability)}</em>
-                    </div>
-                  </div>
-                  <div className="daily-performance-output">
-                    <span>Actual {formatNumber(row.actualOutput)}</span>
-                    <span>Target {formatNumber(row.targetQty)}</span>
+                    <span>{formatNumber(row.machineCount)} เครื่อง / Machines</span>
+                    <em>Actual {formatNumber(row.actualOutput)}</em>
                   </div>
                 </div>
               );
