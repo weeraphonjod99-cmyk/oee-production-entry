@@ -2969,59 +2969,12 @@ input[readonly] {
   grid-template-columns: minmax(380px, 1fr) minmax(220px, 0.65fr) minmax(320px, 0.9fr);
 }
 
-.oee-gauge-wrap {
-  align-items: center;
-  display: grid;
-  justify-items: center;
-  min-height: 208px;
-  position: relative;
-}
-
-.oee-gauge {
-  height: 190px;
-  transform: rotate(-90deg);
-  width: 190px;
-}
-
-.oee-gauge-bg,
-.oee-gauge-value {
-  fill: none;
-  stroke-linecap: round;
-  stroke-width: 16px;
-}
-
-.oee-gauge-bg {
-  stroke: #eef1ee;
-}
-
-.oee-gauge-value {
-  stroke: #16a34a;
-  transition: stroke-dashoffset 0.2s ease;
-}
-
-.oee-gauge-label {
-  display: grid;
-  gap: 4px;
-  left: 50%;
-  position: absolute;
-  text-align: center;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.oee-gauge-label span,
 .oee-factor span,
 .oee-volume-summary span {
   color: #667085;
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
-}
-
-.oee-gauge-label strong {
-  color: #061635;
-  font-size: 34px;
-  line-height: 1;
 }
 
 .oee-factor-list {
@@ -3943,19 +3896,6 @@ td:nth-child(10) {
   .part-summary-heading {
     align-items: start;
     flex-direction: column;
-  }
-
-  .oee-gauge-wrap {
-    min-height: 170px;
-  }
-
-  .oee-gauge {
-    height: 160px;
-    width: 160px;
-  }
-
-  .oee-gauge-label strong {
-    font-size: 28px;
   }
 
   .oee-summary-layout {
