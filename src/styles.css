@@ -2966,7 +2966,7 @@ input[readonly] {
   align-items: center;
   display: grid;
   gap: 18px;
-  grid-template-columns: 190px minmax(260px, 1fr) minmax(190px, 0.45fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(380px, 1fr) minmax(220px, 0.65fr) minmax(320px, 0.9fr);
 }
 
 .oee-gauge-wrap {

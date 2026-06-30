@@ -4635,10 +4635,6 @@ function OeeSummaryChart({
   summary: ReturnType<typeof summarize>;
 }) {
   const oee = summary.availability * summary.quality;
-  const radius = 72;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(Math.max(oee, 0), 1);
-  const strokeDashoffset = circumference * (1 - progress);
   const factors = [
     { label: "Availability", value: summary.availability, minutes: summary.run, color: "#22c55e", radius: 58 },
     { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#38bdf8", radius: 44 },
@@ -4701,23 +4697,6 @@ function OeeSummaryChart({
         <h2>สรุป OEE</h2>
       </div>
       <div className="oee-summary-layout">
-        <div className="oee-gauge-wrap">
-          <svg aria-label={`OEE ${formatPercent(oee)}`} className="oee-gauge" viewBox="0 0 180 180" role="img">
-            <circle className="oee-gauge-bg" cx="90" cy="90" r={radius} />
-            <circle
-              className="oee-gauge-value"
-              cx="90"
-              cy="90"
-              r={radius}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-            />
-          </svg>
-          <div className="oee-gauge-label">
-            <span>OEE</span>
-            <strong>{formatPercent(oee)}</strong>
-          </div>
-        </div>
         <div className="oee-factor-list">
           <div className="oee-factor-combo">
             <svg aria-label="Availability Quality OEE summary" className="oee-factor-combo-donut" viewBox="0 0 140 140" role="img">
