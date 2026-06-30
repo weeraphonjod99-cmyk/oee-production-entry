@@ -4754,7 +4754,7 @@ function OeeSummaryChart({
               </p>
             ))}
           </div>
-          {factors.map((factor) => {
+          {false && factors.map((factor) => {
             const percent = Math.min(Math.max(factor.value, 0), 1);
             return (
               <div className="oee-factor" key={factor.label}>

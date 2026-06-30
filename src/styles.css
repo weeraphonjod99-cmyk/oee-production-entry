@@ -3025,8 +3025,10 @@ input[readonly] {
 }
 
 .oee-factor-list {
+  align-items: center;
   display: grid;
   gap: 12px;
+  grid-template-columns: 160px minmax(0, 1fr);
 }
 
 .oee-factor-list > .oee-factor {
@@ -3037,23 +3039,23 @@ input[readonly] {
   align-items: center;
   display: grid;
   justify-items: center;
-  min-height: 150px;
+  min-height: 160px;
   position: relative;
 }
 
 .oee-factor-combo-donut {
-  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.08));
-  height: 150px;
+  filter: drop-shadow(0 12px 20px rgba(15, 23, 42, 0.1));
+  height: 160px;
   overflow: visible;
   transform: rotate(-90deg);
-  width: 150px;
+  width: 160px;
 }
 
 .oee-factor-ring-bg,
 .oee-factor-ring-value {
   fill: none;
   stroke-linecap: round;
-  stroke-width: 10px;
+  stroke-width: 12px;
 }
 
 .oee-factor-ring-bg {
@@ -3083,14 +3085,14 @@ input[readonly] {
 
 .oee-factor-combo-label strong {
   color: #061635;
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 1000;
   line-height: 1;
 }
 
 .oee-factor-combo-legend {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .oee-factor-combo-legend p {
@@ -3110,14 +3112,14 @@ input[readonly] {
 
 .oee-factor-combo-legend span {
   color: #667085;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .oee-factor-combo-legend b {
   color: #061635;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 1000;
   line-height: 1.15;
   white-space: nowrap;
