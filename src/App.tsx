@@ -1857,18 +1857,18 @@ function App() {
         durationMinutes: getEmployeeTimerDuration(activeTimer, now),
       });
     }
-    setDraft((prev) => {
-      const workStart = employeeWorkStartedAt || startedAt;
-      const finalized = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(prev, activeTimer, now) : prev;
-      const withRuntime = applyShiftClockRuntime(finalized, now, workStart);
-      return {
-        ...withRuntime,
-        note: withRuntime.note.trim() ? `${withRuntime.note.trim()}\n${noteLine}` : noteLine,
-      };
-    });
     const nextTimer = { key, startedAt, originalStartedAt: startedAt };
+    const workStart = employeeWorkStartedAt || startedAt;
+    const finalizedDraft = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(draft, activeTimer, now) : draft;
+    const runtimeDraft = applyShiftClockRuntime(finalizedDraft, now, workStart);
+    const nextDraft = {
+      ...runtimeDraft,
+      note: runtimeDraft.note.trim() ? `${runtimeDraft.note.trim()}\n${noteLine}` : noteLine,
+    };
+    setDraft(nextDraft);
     setEmployeeActiveTimer(nextTimer);
     employeeActiveTimerRef.current = nextTimer;
+    const entryStartedAt = employeeDraftActive ? employeeDraftStartedAt || startedAt : startedAt;
     if (!employeeDraftActive) setEmployeeDraftStartedAt(startedAt);
     setEmployeeDraftActive(true);
     setEmployeeDraftUpdatedAt(startedAt);
@@ -1879,6 +1879,16 @@ function App() {
       startedAt,
     });
     if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
+    const stored = buildEmployeeStoredDraft(nextDraft, !employeeDraftActive, {
+      activeTimer: nextTimer,
+      entryStartedAt,
+      entryUpdatedAt: startedAt,
+      workStartedAt: workStart,
+    });
+    window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+    publishEmployeeMachineStatus(stored);
+    refreshEmployeeDraftMachineIds();
+    setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
     if (key !== "work") setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setStatus(`บันทึกเวลา ${label} เริ่ม ${pressedTime}`);
     setPendingEmployeeTimer(null);
@@ -2011,11 +2021,22 @@ function App() {
     void upsertEmployeeMachineStatus(status).catch(() => undefined);
   };
 
-  const buildEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false): StoredEmployeeDraft => {
+  const buildEmployeeStoredDraft = (
+    targetDraft: EntryDraft,
+    freshRecordTime = false,
+    options: {
+      activeTimer?: EmployeeActiveTimer | null;
+      entryEvents?: EmployeeDraftEvent[];
+      entryStartedAt?: string;
+      entryUpdatedAt?: string;
+      workStartedAt?: string;
+    } = {},
+  ): StoredEmployeeDraft => {
     const now = new Date();
-    const activeTimer = employeeActiveTimerRef.current;
+    const activeTimer = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
+    const workStartedAt = options.workStartedAt !== undefined ? options.workStartedAt : employeeWorkStartedAt;
     const activeDraft = activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(targetDraft, activeTimer, now) : targetDraft;
-    const clockDraft = employeeWorkStartedAt ? applyShiftClockRuntime(activeDraft, now, employeeWorkStartedAt) : activeDraft;
+    const clockDraft = workStartedAt ? applyShiftClockRuntime(activeDraft, now, workStartedAt) : activeDraft;
     const savedDate = clockDraft.date || getTodayInputValue();
     const recordDate = freshRecordTime ? getTodayInputValue() : clockDraft.recordDate || getTodayInputValue();
     const recordTime = freshRecordTime ? getCurrentTimeInputValue() : clockDraft.recordTime || getCurrentTimeInputValue();
@@ -2034,17 +2055,18 @@ function App() {
       workMinutes,
     });
     const entryStartedAt =
-      (freshRecordTime ? now : employeeDraftStartedAt ? new Date(employeeDraftStartedAt) : parseLocalDateTime(recordDate, recordTime))?.toISOString() ??
-      now.toISOString();
-    const entryUpdatedAt = employeeDraftUpdatedAt || now.toISOString();
+      options.entryStartedAt ||
+      ((freshRecordTime ? now : employeeDraftStartedAt ? new Date(employeeDraftStartedAt) : parseLocalDateTime(recordDate, recordTime))?.toISOString() ??
+        now.toISOString());
+    const entryUpdatedAt = options.entryUpdatedAt || employeeDraftUpdatedAt || now.toISOString();
     return {
       draft: nextDraft,
-      entryEvents: employeeDraftEvents,
+      entryEvents: options.entryEvents || employeeDraftEvents,
       entryStartedAt,
       entryUpdatedAt,
       savedAt: now.toISOString(),
       shiftEndAt: nextDraft.shiftEndAt,
-      workStartedAt: employeeWorkStartedAt,
+      workStartedAt,
       activeTimer: activeTimer ? { ...activeTimer, startedAt: now.toISOString() } : null,
     };
   };
