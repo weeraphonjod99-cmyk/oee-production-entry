@@ -80,6 +80,11 @@ type Filters = {
 };
 
 type ProductFieldKey = "productName" | "partNo" | "step";
+type ProductChoice = ProductMaster & {
+  latestDate?: string;
+  latestGoodQty?: number;
+  source?: "master" | "history";
+};
 type EmployeeTimerKey = "work" | DowntimeKey;
 type EmployeeActiveTimer = {
   key: EmployeeTimerKey;
@@ -957,7 +962,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
   return true;
 }
 
-function uniqueProductValues(items: ProductMaster[], key: ProductFieldKey) {
+function uniqueProductValues(items: Array<Pick<ProductMaster, ProductFieldKey>>, key: ProductFieldKey) {
   return Array.from(new Set(items.map((item) => item[key]).filter(Boolean)))
     .sort((a, b) => a.localeCompare(b))
     .slice(0, 200);
@@ -974,8 +979,61 @@ function uniqueLogs(logs: ProductionLog[]) {
 const sameProductKey = (left: Pick<ProductionLog | ProductMaster, "machineId" | "productName" | "partNo" | "step">) =>
   [left.machineId, left.productName, left.partNo, left.step || "-"].map(normalizeText).join("::");
 
+const productChoiceKey = (item: Pick<ProductionLog | ProductMaster, "machineId" | "productName" | "partNo" | "step">) =>
+  sameProductKey(item);
+
+function buildProductChoices(machineId: string, masterProducts: ProductMaster[], logs: ProductionLog[]) {
+  const choices = new Map<string, ProductChoice>();
+  masterProducts.forEach((product) => {
+    choices.set(productChoiceKey(product), { ...product, source: "master" });
+  });
+
+  logs
+    .filter((log) => log.machineId === machineId && log.productName && log.partNo)
+    .sort((a, b) => `${b.date}-${b.updatedAt || b.createdAt}`.localeCompare(`${a.date}-${a.updatedAt || a.createdAt}`))
+    .forEach((log) => {
+      const key = productChoiceKey(log);
+      const existing = choices.get(key);
+      if (existing?.source === "history") return;
+      const historyChoice: ProductChoice = {
+        id: existing?.id || `history-${key}`,
+        machineId: log.machineId,
+        machineName: log.machineName,
+        productName: log.productName,
+        partNo: log.partNo,
+        step: log.step || "-",
+        sampleGoodQty: Number(log.goodQty || existing?.sampleGoodQty || 0),
+        sampleNgQty: Number(log.ngQty || existing?.sampleNgQty || 0),
+        sampleTestQty: Number(log.testQty || existing?.sampleTestQty || 0),
+        latestDate: log.date,
+        latestGoodQty: Number(log.goodQty || 0),
+        source: existing ? "master" : "history",
+      };
+      choices.set(key, existing ? { ...existing, latestDate: log.date, latestGoodQty: Number(log.goodQty || 0) } : historyChoice);
+    });
+
+  return [...choices.values()].sort((a, b) => {
+    const sourceOrder = Number(b.source === "history") - Number(a.source === "history");
+    if (sourceOrder !== 0) return sourceOrder;
+    const latestOrder = String(b.latestDate || "").localeCompare(String(a.latestDate || ""));
+    if (latestOrder !== 0) return latestOrder;
+    return `${a.productName} ${a.partNo} ${a.step}`.localeCompare(`${b.productName} ${b.partNo} ${b.step}`);
+  });
+}
+
+function productChoiceLabel(product: ProductChoice) {
+  const parts = [
+    product.productName,
+    product.partNo,
+    `Step ${product.step || "-"}`,
+    product.latestDate ? `ล่าสุด ${product.latestDate}` : "",
+    product.latestGoodQty ? `Good ${formatNumber(product.latestGoodQty)}` : "",
+  ].filter(Boolean);
+  return parts.join(" • ");
+}
+
 const findMatchingProduct = (
-  items: ProductMaster[],
+  items: ProductChoice[],
   key: ProductFieldKey,
   value: string,
   current: EntryDraft,
@@ -1330,28 +1388,31 @@ function App() {
     }
   }, [employeeSubmittedStorageKey]);
 
+  const allLogs = useMemo(
+    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
+    [localLogs, remoteLogs],
+  );
   const machineProducts = useMemo(
     () => products.filter((product) => product.machineId === draft.machineId),
     [draft.machineId],
   );
+  const machineProductChoices = useMemo(
+    () => buildProductChoices(draft.machineId, machineProducts, allLogs),
+    [allLogs, draft.machineId, machineProducts],
+  );
   const filteredProducts = useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
-    if (!query) return machineProducts;
-    return machineProducts.filter((product) =>
-      `${product.productName} ${product.partNo} ${product.step}`.toLowerCase().includes(query),
+    if (!query) return machineProductChoices.slice(0, 300);
+    return machineProductChoices.filter((product) =>
+      productChoiceLabel(product).toLowerCase().includes(query),
     );
-  }, [machineProducts, deferredProductSearch]);
+  }, [machineProductChoices, deferredProductSearch]);
   const productNameOptions = useMemo(
     () => uniqueProductValues(filteredProducts, "productName"),
     [filteredProducts],
   );
   const partNoOptions = useMemo(() => uniqueProductValues(filteredProducts, "partNo"), [filteredProducts]);
   const stepOptions = useMemo(() => uniqueProductValues(filteredProducts, "step"), [filteredProducts]);
-
-  const allLogs = useMemo(
-    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
-    [localLogs, remoteLogs],
-  );
   const productCountByMachineId = useMemo(() => {
     const map = new Map<string, number>();
     for (const product of products) {
@@ -1734,7 +1795,7 @@ function App() {
   };
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
-    const matchedProduct = findMatchingProduct(machineProducts, key, value, draft);
+    const matchedProduct = findMatchingProduct(machineProductChoices, key, value, draft);
     const productFieldLabels: Record<ProductFieldKey, string> = {
       partNo: "แก้ Part No.",
       productName: "แก้รุ่น",
@@ -1754,6 +1815,18 @@ function App() {
           },
     );
     if (matchedProduct) void loadProductDefaults(matchedProduct, currentMachine);
+  };
+
+  const selectProductChoice = (productKey: string) => {
+    const selectedProduct = machineProductChoices.find((product) => productChoiceKey(product) === productKey);
+    if (!selectedProduct) return;
+    recordEmployeeDraftEvent("เลือกประวัติงานเก่า", productChoiceLabel(selectedProduct));
+    setProductSearch("");
+    setDraft((prev) => ({
+      ...prev,
+      ...applyProductToDraft(selectedProduct),
+    }));
+    void loadProductDefaults(selectedProduct, currentMachine);
   };
 
   const handleNumber = (key: keyof EntryDraft, value: string) => {
@@ -2740,6 +2813,28 @@ function App() {
                       type="search"
                     />
                   </div>
+                </label>
+                <label className="product-history-field">
+                  <span className="label-text">ประวัติงานเก่าของเครื่องนี้</span>
+                  <select
+                    className="production-history-select"
+                    onChange={(event) => {
+                      selectProductChoice(event.target.value);
+                      event.currentTarget.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="">เลือกงานที่เคยปั๊ม / Part No. / Step</option>
+                    {machineProductChoices.slice(0, 300).map((product) => {
+                      const choiceKey = productChoiceKey(product);
+                      return (
+                        <option key={choiceKey} value={choiceKey}>
+                          {productChoiceLabel(product)}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <small className="field-help">ดึงจากประวัติที่เคยบันทึกของเครื่องนี้ เลือกแล้วเติมรุ่น Part No. และ Step ให้อัตโนมัติ</small>
                 </label>
                 <label>
                   <span className="label-text">รุ่น <RequiredMark /></span>
