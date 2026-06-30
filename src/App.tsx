@@ -4686,6 +4686,13 @@ function OeeSummaryChart({
     summary.downtime > 0 && mainIssue
       ? `${mainIssue.label} สูงสุด ${formatNumber(mainIssue.minutes)} นาที (${formatPercent(mainIssue.minutes / Math.max(summary.downtime, 1))})`
       : "ไม่มี Downtime ตามตัวกรองนี้";
+  const totalTime = summary.run + summary.downtime;
+  const runPercent = totalTime > 0 ? summary.run / totalTime : 0;
+  const downtimePercent = totalTime > 0 ? summary.downtime / totalTime : 0;
+  const timeGradient =
+    totalTime > 0
+      ? `#16a34a 0% ${runPercent * 100}%, #dc2626 ${runPercent * 100}% 100%`
+      : "#e5e7eb 0% 100%";
 
   return (
     <div className="analysis-panel oee-summary-chart">
@@ -4725,17 +4732,28 @@ function OeeSummaryChart({
           ))}
         </div>
         <div className="oee-volume-summary">
-          <div>
-            <span>Run time</span>
-            <strong>{formatNumber(summary.run)} นาที</strong>
+          <div className="oee-time-donut" style={{ background: `conic-gradient(${timeGradient})` }}>
+            <div>
+              <span>เวลารวม</span>
+              <strong>{formatPercent(runPercent)}</strong>
+              <small>Run</small>
+            </div>
           </div>
-          <div>
-            <span>Downtime</span>
-            <strong>{formatNumber(summary.downtime)} นาที</strong>
-          </div>
-          <div>
-            <span>Total output</span>
-            <strong>{formatNumber(summary.total)}</strong>
+          <div className="oee-time-legend">
+            <p>
+              <i className="run" />
+              <span>Run time</span>
+              <b>{formatNumber(summary.run)} นาที · {formatPercent(runPercent)}</b>
+            </p>
+            <p>
+              <i className="down" />
+              <span>Downtime</span>
+              <b>{formatNumber(summary.downtime)} นาที · {formatPercent(downtimePercent)}</b>
+            </p>
+            <p className="total-output">
+              <span>Total output</span>
+              <strong>{formatNumber(summary.total)}</strong>
+            </p>
           </div>
         </div>
         <div className="oee-issue-donut-card">
