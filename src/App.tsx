@@ -4634,11 +4634,11 @@ function OeeSummaryChart({
   const oee = summary.availability * summary.quality;
   const factors = [
     { label: "Availability", value: summary.availability, minutes: summary.run, color: "#22c55e", radius: 58 },
-    { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#38bdf8", radius: 44 },
+    { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#0ea5e9", radius: 44 },
     { label: "OEE", value: oee, minutes: summary.run * summary.quality, color: "#facc15", radius: 30 },
   ];
-  const issueColors = ["#dc2626", "#f97316", "#d97706", "#64748b", "#94a3b8"];
-  const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 4);
+  const issueColors = ["#ef4444", "#fb923c", "#facc15", "#94a3b8"];
+  const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 3);
   const topIssueMinutes = topIssueItems.reduce((total, item) => total + item.minutes, 0);
   const otherIssueMinutes = Math.max(summary.downtime - topIssueMinutes, 0);
   const issueRows =
