@@ -1328,6 +1328,9 @@ function App() {
     () => new Map(employeeSharedMachineStatuses.map((status) => [status.machineId, status])),
     [employeeSharedMachineStatuses],
   );
+  const currentMachineSharedStatus = employeeSharedStatusByMachineId.get(draft.machineId);
+  const currentMachineSharedActivity = getEmployeeMachineActivityLabel(currentMachineSharedStatus);
+  const currentMachineSharedTimerKey = currentMachineSharedStatus?.activeTimerKey || "";
   const employeeMachineCards = useMemo(
     () =>
       machines.map((machine) => {
@@ -2848,11 +2851,28 @@ function App() {
                   ? "กดหัวข้อใดก่อนก็ได้ ปุ่มแรกคือเวลาเริ่มงานจริง จากนั้นกดหัวข้อใหม่เพื่อหยุดหัวข้อก่อนหน้าและเริ่มนับหัวข้อใหม่"
                   : `กรอกเป็นจำนวนช่อง: 1 ช่อง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้`}
               </p>
+              {isEmployeeEntry && currentMachineSharedStatus && (
+                <div className="employee-shared-entry-status" aria-live="polite">
+                  <div>
+                    <span>สถานะสดเครื่องนี้</span>
+                    <strong>{currentMachineSharedActivity || "กำลังกรอกอยู่"}</strong>
+                  </div>
+                  <p>
+                    ผู้กรอก: {currentMachineSharedStatus.userName || "-"} · อัปเดตล่าสุด{" "}
+                    {formatSharedStatusTime(currentMachineSharedStatus.entryUpdatedAt || currentMachineSharedStatus.updatedAt)}
+                  </p>
+                  <p>
+                    {currentMachineSharedStatus.productName || "-"} / {currentMachineSharedStatus.partNo || "-"} · Good{" "}
+                    {formatNumber(currentMachineSharedStatus.goodQty || 0)} · NG {formatNumber(currentMachineSharedStatus.ngQty || 0)} · Downtime{" "}
+                    {formatRate(currentMachineSharedStatus.downtimeMinutes || 0)} นาที
+                  </p>
+                </div>
+              )}
               <div className="downtime-grid">
                 {isEmployeeEntry && (
                   <label className={`downtime-card ${getExcelCodeTone(productionWorkExcelCode)}`}>
                     <button
-                      className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""}`}
+                      className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""} ${currentMachineSharedTimerKey === "work" ? "shared-active-timer" : ""}`}
                       onClick={pressEmployeeWorkStartRealtime}
                       type="button"
                     >
@@ -2861,6 +2881,11 @@ function App() {
                       <span className="downtime-button-action">กดบันทึกเวลาปัจจุบัน</span>
                       กดเริ่มงานจริงเวลาปัจจุบัน
                     </button>
+                    {currentMachineSharedTimerKey === "work" && currentMachineSharedStatus && (
+                      <small className="shared-topic-note">
+                        {currentMachineSharedActivity || "กำลังกรอกอยู่"} · ผู้กรอก {currentMachineSharedStatus.userName || "-"}
+                      </small>
+                    )}
                     <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
                     {employeeActiveTimer?.key === "work" && <small className="downtime-press-time">กำลังนับ A อยู่</small>}
                     {employeeWorkStartedAt && <small className="downtime-press-time">นับเวลางานจริงแล้ว {employeeWorkElapsed}</small>}
@@ -2871,7 +2896,7 @@ function App() {
                   <label className={`downtime-card ${getExcelCodeTone(downtimeExcelCodes[field.key])}`} key={field.key}>
                     {isEmployeeEntry ? (
                       <button
-                        className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""}`}
+                        className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""} ${currentMachineSharedTimerKey === field.key ? "shared-active-timer" : ""}`}
                         onClick={() => pressEmployeeDowntimeRealtime(field.key)}
                         type="button"
                       >
@@ -2895,6 +2920,11 @@ function App() {
                     <small>{formatRate(Number(draft[field.key] || 0))} นาที</small>
                     {isEmployeeEntry && downtimePressTimes[field.key] && (
                       <small className="downtime-press-time">กดล่าสุด {downtimePressTimes[field.key]}</small>
+                    )}
+                    {isEmployeeEntry && currentMachineSharedTimerKey === field.key && currentMachineSharedStatus && (
+                      <small className="shared-topic-note">
+                        {currentMachineSharedActivity || "กำลังกรอกอยู่"} · ผู้กรอก {currentMachineSharedStatus.userName || "-"}
+                      </small>
                     )}
                     {isEmployeeEntry && employeeActiveTimer?.key === field.key && <small className="downtime-press-time">กำลังนับหัวข้อนี้อยู่</small>}
                     {isEmployeeEntry && renderEmployeeTimerHistory(field.key)}

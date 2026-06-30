@@ -614,6 +614,41 @@ h3 {
   line-height: 1.25;
 }
 
+.employee-shared-entry-status {
+  background: #fff7ed;
+  border: 2px solid #f97316;
+  border-radius: 10px;
+  color: #7c2d12;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.employee-shared-entry-status > div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.employee-shared-entry-status span {
+  font-size: 12px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.employee-shared-entry-status strong {
+  font-size: 22px;
+  font-weight: 1000;
+  line-height: 1.2;
+}
+
+.employee-shared-entry-status p {
+  font-size: 13px;
+  font-weight: 850;
+  margin: 0;
+}
+
 .machine-menu-back {
   margin-left: auto;
 }
@@ -1075,6 +1110,14 @@ input[readonly] {
   box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.24), 0 16px 34px rgba(245, 158, 11, 0.28);
 }
 
+.downtime-press-button.shared-active-timer,
+.downtime-press-button.shared-active-timer:hover {
+  animation: activeTimerButtonPulse 0.85s ease-in-out infinite;
+  background: #facc15 !important;
+  color: #061635 !important;
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.24), 0 16px 34px rgba(245, 158, 11, 0.28);
+}
+
 @keyframes activeTimerButtonPulse {
   0%,
   100% {
@@ -1090,6 +1133,8 @@ input[readonly] {
 
 @media (prefers-reduced-motion: reduce) {
   .downtime-press-button.active-timer,
+  .downtime-press-button.shared-active-timer,
+  .downtime-press-button.shared-active-timer:hover,
   .downtime-press-button.active-timer:hover {
     animation: none;
   }
@@ -1106,6 +1151,17 @@ input[readonly] {
   color: #177245;
   font-size: 18px;
   font-weight: 900;
+}
+
+.downtime-grid .shared-topic-note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  color: #9a3412;
+  display: block;
+  font-size: 16px;
+  font-weight: 1000;
+  padding: 7px 9px;
 }
 
 .employee-timer-history {
