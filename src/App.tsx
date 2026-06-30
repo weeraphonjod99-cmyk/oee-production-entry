@@ -190,8 +190,8 @@ const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
-const realtimeRemoteRefreshMs = 5000;
-const remoteLogsRefreshMs = 30000;
+const realtimeRemoteRefreshMs = 7000;
+const remoteLogsRefreshMs = 120000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SUBMITTED_KEY_PREFIX = "oee-production-employee-submitted";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
@@ -394,6 +394,32 @@ const formatSharedStatusTime = (value?: string) => {
   const date = parseStoredDateTime(value);
   return date ? formatClock(date) : "-";
 };
+
+const getRemoteLogsSignature = (logs: ProductionLog[]) =>
+  logs.map((log) => `${log.id}:${log.updatedAt || log.createdAt || ""}`).join("|");
+
+const isFreshEmployeeMachineStatus = (status: EmployeeMachineStatus) => {
+  if (status.status !== "active") return false;
+  const expiresAt = parseStoredDateTime(status.expiresAt);
+  return !expiresAt || expiresAt.getTime() >= Date.now();
+};
+
+const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
+  statuses
+    .filter(isFreshEmployeeMachineStatus)
+    .sort((a, b) => a.machineId.localeCompare(b.machineId))
+    .map((status) =>
+      [
+        status.machineId,
+        status.activeTimerKey || "",
+        status.activeTimerLabel || "",
+        status.userName || "",
+        status.entryUpdatedAt || "",
+        status.updatedAt || "",
+        status.expiresAt || "",
+      ].join(":"),
+    )
+    .join("|");
 
 const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date(), workStartedAt?: string) => {
   const schedule = getShiftSchedule(productionDate, shift);
@@ -1125,12 +1151,15 @@ function App() {
   const autoSubmittingEmployeeDraft = useRef(false);
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
   const employeeAutoSubmitKeyRef = useRef("");
+  const remoteLogsSignatureRef = useRef("");
+  const employeeStatusesSignatureRef = useRef("");
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
     if (!remoteEnabled) return;
     fetchRemoteLogs()
       .then((logs) => {
+        remoteLogsSignatureRef.current = getRemoteLogsSignature(logs);
         setRemoteLogs(logs);
         setStatus(`เชื่อมต่อ Google Sheet แล้ว (${logs.length} records)`);
       })
@@ -1141,12 +1170,21 @@ function App() {
   useEffect(() => {
     if (!remoteEnabled) return;
     let cancelled = false;
+    let refreshing = false;
     const refreshRemoteLogs = async () => {
+      if (refreshing || document.hidden) return;
+      refreshing = true;
       try {
         const logs = await fetchRemoteLogs();
-        if (!cancelled) setRemoteLogs(logs);
+        const signature = getRemoteLogsSignature(logs);
+        if (!cancelled && signature !== remoteLogsSignatureRef.current) {
+          remoteLogsSignatureRef.current = signature;
+          setRemoteLogs(logs);
+        }
       } catch {
         // Keep the last successful data visible if a realtime refresh fails.
+      } finally {
+        refreshing = false;
       }
     };
     const timer = window.setInterval(() => {
@@ -1159,14 +1197,24 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!remoteEnabled) return;
+    if (!remoteEnabled || tab !== "employeeEntry") return;
     let cancelled = false;
+    let refreshing = false;
     const refreshSharedMachineStatuses = async () => {
+      if (refreshing || document.hidden) return;
+      refreshing = true;
       try {
         const statuses = await fetchEmployeeMachineStatuses();
-        if (!cancelled) setEmployeeSharedMachineStatuses(statuses);
+        const freshStatuses = statuses.filter(isFreshEmployeeMachineStatus);
+        const signature = getEmployeeStatusesSignature(freshStatuses);
+        if (!cancelled && signature !== employeeStatusesSignatureRef.current) {
+          employeeStatusesSignatureRef.current = signature;
+          setEmployeeSharedMachineStatuses(freshStatuses);
+        }
       } catch {
         // Keep the last known shared machine statuses visible.
+      } finally {
+        refreshing = false;
       }
     };
     void refreshSharedMachineStatuses();
@@ -1177,7 +1225,7 @@ function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("employeeEntry");
@@ -1815,13 +1863,6 @@ function App() {
       setSuccessDialog({ title: "กำลังนับอยู่แล้ว", message });
       return false;
     }
-    const alreadyUsed = employeeDraftEvents.some((event) => event.key === key);
-    if (alreadyUsed) {
-      const message = `${label} เคยกรอกในร่างนี้แล้ว ห้ามกรอกซ้ำหัวข้อเดิม`;
-      setStatus(message);
-      setProblemDialog({ title: "ห้ามกรอกซ้ำหัวข้อเดิม", message });
-      return false;
-    }
     const now = new Date();
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
@@ -1976,7 +2017,11 @@ function App() {
     window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
     if (remoteEnabled) {
-      setEmployeeSharedMachineStatuses((items) => items.filter((item) => item.machineId !== machineId));
+      setEmployeeSharedMachineStatuses((items) => {
+        const next = items.filter((item) => item.machineId !== machineId);
+        employeeStatusesSignatureRef.current = getEmployeeStatusesSignature(next);
+        return next;
+      });
       void clearEmployeeMachineStatus(machineId).catch(() => undefined);
     }
     refreshEmployeeDraftMachineIds();
@@ -2020,7 +2065,11 @@ function App() {
       updatedAt: stored.savedAt,
       expiresAt,
     };
-    setEmployeeSharedMachineStatuses((items) => [status, ...items.filter((item) => item.machineId !== status.machineId)]);
+    setEmployeeSharedMachineStatuses((items) => {
+      const next = [status, ...items.filter((item) => item.machineId !== status.machineId)].filter(isFreshEmployeeMachineStatus);
+      employeeStatusesSignatureRef.current = getEmployeeStatusesSignature(next);
+      return next;
+    });
     void upsertEmployeeMachineStatus(status).catch(() => undefined);
   };
 
