@@ -4655,12 +4655,20 @@ function OeeSummaryChart({
             color: issueColors[index],
             label: item.label,
             minutes: item.minutes,
+            percent: item.minutes / Math.max(summary.downtime, 1),
           })),
           ...(otherIssueMinutes > 0
-            ? [{ color: issueColors[4], label: "อื่นๆ / Other", minutes: otherIssueMinutes }]
+            ? [
+                {
+                  color: issueColors[4],
+                  label: "อื่นๆ / Other",
+                  minutes: otherIssueMinutes,
+                  percent: otherIssueMinutes / Math.max(summary.downtime, 1),
+                },
+              ]
             : []),
         ]
-      : [{ color: "#16a34a", label: "ไม่มี Downtime", minutes: 1 }];
+      : [{ color: "#16a34a", label: "ไม่มี Downtime", minutes: 1, percent: 0 }];
   let issueCursor = 0;
   const issueGradient =
     summary.downtime > 0
@@ -4676,7 +4684,7 @@ function OeeSummaryChart({
   const mainIssue = topIssueItems[0];
   const issueSummary =
     summary.downtime > 0 && mainIssue
-      ? `${mainIssue.label} สูงสุด ${formatNumber(mainIssue.minutes)} นาที`
+      ? `${mainIssue.label} สูงสุด ${formatNumber(mainIssue.minutes)} นาที (${formatPercent(mainIssue.minutes / Math.max(summary.downtime, 1))})`
       : "ไม่มี Downtime ตามตัวกรองนี้";
 
   return (
@@ -4746,7 +4754,11 @@ function OeeSummaryChart({
                 <p key={item.label}>
                   <i style={{ background: item.color }} />
                   <span>{item.label}</span>
-                  <b>{summary.downtime > 0 ? `${formatNumber(item.minutes)} นาที` : "ปกติ"}</b>
+                  <b>
+                    {summary.downtime > 0
+                      ? `${formatNumber(item.minutes)} นาที · ${formatPercent(item.percent)}`
+                      : "ปกติ"}
+                  </b>
                 </p>
               ))}
             </div>
