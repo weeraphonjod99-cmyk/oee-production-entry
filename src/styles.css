@@ -878,6 +878,40 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.selected-machine-lock {
+  align-items: start;
+  background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);
+  border: 2px solid #16a34a;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(22, 163, 74, 0.12);
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  margin-bottom: 14px;
+  max-width: 520px;
+  padding: 16px 18px;
+}
+
+.selected-machine-lock span {
+  color: #047857;
+  font-size: 14px;
+  font-weight: 1000;
+  letter-spacing: 0;
+}
+
+.selected-machine-lock strong {
+  color: #061635;
+  font-size: 36px;
+  font-weight: 1000;
+  line-height: 1.05;
+}
+
+.selected-machine-lock small {
+  color: #047857;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 label {
   color: #405066;
   display: grid;
@@ -932,6 +966,15 @@ textarea:focus {
 input[readonly] {
   background: #f3f7f4;
   color: #314155;
+}
+
+select:disabled {
+  background: #eef5f1;
+  border-color: #b9cbbf;
+  color: #25344a;
+  cursor: not-allowed;
+  font-weight: 900;
+  opacity: 1;
 }
 
 .output-quantity-grid .good-quantity-field .label-text {
@@ -3582,6 +3625,14 @@ td:nth-child(10) {
 
   h1 {
     font-size: 22px;
+  }
+
+  .selected-machine-lock {
+    max-width: none;
+  }
+
+  .selected-machine-lock strong {
+    font-size: 28px;
   }
 
   .form-grid,

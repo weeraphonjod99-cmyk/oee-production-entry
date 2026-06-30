@@ -2754,6 +2754,14 @@ function App() {
                 )}
               </div>
 
+              {isEmployeeEntry && (
+                <div className="selected-machine-lock" aria-live="polite">
+                  <span>เครื่อง / ไลน์ที่เลือก</span>
+                  <strong>{currentMachine.name}</strong>
+                  <small>ล็อกเครื่องนี้แล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>
+                </div>
+              )}
+
               <div className="form-grid">
                 <label>
                   <span className="label-text">วันที่กรอกยอด</span>
