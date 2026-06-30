@@ -3301,7 +3301,7 @@ function App() {
             <DailyMachinePerformanceChart logs={dashboardLogs} />
             <MachineCapacityDashboard logs={dashboardLogs} />
             <PartNoSummary logs={dashboardLogs} />
-            <OeeSummaryChart summary={summary} />
+            <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <div className="analytics-grid">
               <DowntimeChart items={downtime} />
               <MachineRanking logs={dashboardLogs} />
@@ -4328,7 +4328,7 @@ function ReportsView({
         <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
         <Kpi label="Run Time" value={`${formatNumber(summary.run)} นาที`} tone="neutral" />
       </div>
-      <OeeSummaryChart summary={summary} />
+      <OeeSummaryChart downtimeItems={downtimeRows} summary={summary} />
       <DowntimeInsightPanel rows={downtimeStats} summary={summary} />
 
       <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
@@ -4627,7 +4627,13 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
   );
 }
 
-function OeeSummaryChart({ summary }: { summary: ReturnType<typeof summarize> }) {
+function OeeSummaryChart({
+  downtimeItems = [],
+  summary,
+}: {
+  downtimeItems?: ReturnType<typeof groupDowntime>;
+  summary: ReturnType<typeof summarize>;
+}) {
   const oee = summary.availability * summary.quality;
   const radius = 72;
   const circumference = 2 * Math.PI * radius;
@@ -4638,6 +4644,40 @@ function OeeSummaryChart({ summary }: { summary: ReturnType<typeof summarize> })
     { label: "Quality", value: summary.quality, tone: "blue" },
     { label: "OEE", value: oee, tone: "green" },
   ];
+  const issueColors = ["#dc2626", "#f97316", "#d97706", "#64748b", "#94a3b8"];
+  const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 4);
+  const topIssueMinutes = topIssueItems.reduce((total, item) => total + item.minutes, 0);
+  const otherIssueMinutes = Math.max(summary.downtime - topIssueMinutes, 0);
+  const issueRows =
+    summary.downtime > 0
+      ? [
+          ...topIssueItems.map((item, index) => ({
+            color: issueColors[index],
+            label: item.label,
+            minutes: item.minutes,
+          })),
+          ...(otherIssueMinutes > 0
+            ? [{ color: issueColors[4], label: "อื่นๆ / Other", minutes: otherIssueMinutes }]
+            : []),
+        ]
+      : [{ color: "#16a34a", label: "ไม่มี Downtime", minutes: 1 }];
+  let issueCursor = 0;
+  const issueGradient =
+    summary.downtime > 0
+      ? issueRows
+          .map((item) => {
+            const start = issueCursor;
+            const size = (item.minutes / Math.max(summary.downtime, 1)) * 100;
+            issueCursor += size;
+            return `${item.color} ${start}% ${issueCursor}%`;
+          })
+          .join(", ")
+      : "#16a34a 0% 100%";
+  const mainIssue = topIssueItems[0];
+  const issueSummary =
+    summary.downtime > 0 && mainIssue
+      ? `${mainIssue.label} สูงสุด ${formatNumber(mainIssue.minutes)} นาที`
+      : "ไม่มี Downtime ตามตัวกรองนี้";
 
   return (
     <div className="analysis-panel oee-summary-chart">
@@ -4688,6 +4728,28 @@ function OeeSummaryChart({ summary }: { summary: ReturnType<typeof summarize> })
           <div>
             <span>Total output</span>
             <strong>{formatNumber(summary.total)}</strong>
+          </div>
+        </div>
+        <div className="oee-issue-donut-card">
+          <div className="oee-issue-donut" style={{ background: `conic-gradient(${issueGradient})` }}>
+            <div>
+              <span>ปัญหา</span>
+              <strong>{summary.downtime > 0 ? formatNumber(summary.downtime) : "0"}</strong>
+              <small>นาที</small>
+            </div>
+          </div>
+          <div className="oee-issue-summary">
+            <span>วิเคราะห์ปัญหา / Problem</span>
+            <strong>{issueSummary}</strong>
+            <div className="oee-issue-legend">
+              {issueRows.map((item) => (
+                <p key={item.label}>
+                  <i style={{ background: item.color }} />
+                  <span>{item.label}</span>
+                  <b>{summary.downtime > 0 ? `${formatNumber(item.minutes)} นาที` : "ปกติ"}</b>
+                </p>
+              ))}
+            </div>
           </div>
         </div>
       </div>
