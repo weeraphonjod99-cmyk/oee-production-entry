@@ -191,6 +191,7 @@ const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
 const realtimeRemoteRefreshMs = 5000;
+const remoteLogsRefreshMs = 30000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SUBMITTED_KEY_PREFIX = "oee-production-employee-submitted";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
@@ -1150,7 +1151,7 @@ function App() {
     };
     const timer = window.setInterval(() => {
       void refreshRemoteLogs();
-    }, realtimeRemoteRefreshMs);
+    }, remoteLogsRefreshMs);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -1213,11 +1214,11 @@ function App() {
   }, [tab]);
 
   useEffect(() => {
-    if (tab !== "employeeEntry") return;
+    if (tab !== "employeeEntry" || !employeeMachineSelected) return;
     setEmployeeReportNow(new Date());
     const timer = window.setInterval(() => setEmployeeReportNow(new Date()), 1000);
     return () => window.clearInterval(timer);
-  }, [tab]);
+  }, [employeeMachineSelected, tab]);
 
   useEffect(() => {
     employeeActiveTimerRef.current = employeeActiveTimer;
@@ -1303,6 +1304,26 @@ function App() {
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
+  const productCountByMachineId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const product of products) {
+      map.set(product.machineId, (map.get(product.machineId) ?? 0) + 1);
+    }
+    return map;
+  }, []);
+  const machineLogSummaryByMachineId = useMemo(() => {
+    const map = new Map<string, { latestLog?: ProductionLog; logCount: number }>();
+    for (const log of allLogs) {
+      const current = map.get(log.machineId) ?? { logCount: 0 };
+      const currentLatestKey = current.latestLog ? `${current.latestLog.date} ${current.latestLog.updatedAt || current.latestLog.createdAt || ""}` : "";
+      const nextKey = `${log.date} ${log.updatedAt || log.createdAt || ""}`;
+      map.set(log.machineId, {
+        latestLog: !current.latestLog || nextKey.localeCompare(currentLatestKey) > 0 ? log : current.latestLog,
+        logCount: current.logCount + 1,
+      });
+    }
+    return map;
+  }, [allLogs]);
   const employeeSharedStatusByMachineId = useMemo(
     () => new Map(employeeSharedMachineStatuses.map((status) => [status.machineId, status])),
     [employeeSharedMachineStatuses],
@@ -1311,10 +1332,7 @@ function App() {
     () =>
       machines.map((machine) => {
         const sharedStatus = employeeSharedStatusByMachineId.get(machine.id);
-        const machineLogs = allLogs.filter((log) => log.machineId === machine.id);
-        const latestLog = machineLogs
-          .slice()
-          .sort((a, b) => `${b.date} ${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date} ${a.updatedAt || a.createdAt || ""}`))[0];
+        const logSummary = machineLogSummaryByMachineId.get(machine.id);
         return {
           hasDraft:
             (draft.machineId === machine.id && employeeDraftActive) ||
@@ -1322,14 +1340,22 @@ function App() {
             employeeSharedStatusByMachineId.has(machine.id),
           hasSubmitted: employeeSubmittedMachineIds.has(machine.id),
           machine,
-          productCount: products.filter((product) => product.machineId === machine.id).length,
+          productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
           activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
-          latestLog,
-          logCount: machineLogs.length,
+          latestLog: logSummary?.latestLog,
+          logCount: logSummary?.logCount ?? 0,
         };
       }),
-    [allLogs, draft.machineId, employeeDraftActive, employeeDraftMachineIds, employeeSharedStatusByMachineId, employeeSubmittedMachineIds],
+    [
+      draft.machineId,
+      employeeDraftActive,
+      employeeDraftMachineIds,
+      employeeSharedStatusByMachineId,
+      employeeSubmittedMachineIds,
+      machineLogSummaryByMachineId,
+      productCountByMachineId,
+    ],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
