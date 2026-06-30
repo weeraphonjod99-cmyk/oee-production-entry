@@ -2759,6 +2759,10 @@ input[readonly] {
   overflow-wrap: anywhere;
 }
 
+.daily-performance-value-labels .output-value {
+  color: #c2410c;
+}
+
 .daily-performance-column-bars {
   align-items: end;
   display: grid;
@@ -2792,6 +2796,21 @@ input[readonly] {
 
 .daily-performance-column-bars .output b {
   background: #f97316;
+}
+
+.daily-performance-bar-labels {
+  color: #475467;
+  display: grid;
+  font-size: 10px;
+  font-weight: 900;
+  gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  line-height: 1.1;
+  text-align: center;
+}
+
+.daily-performance-bar-labels span:last-child {
+  color: #c2410c;
 }
 
 .daily-performance-column-date {

@@ -4874,14 +4874,19 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
               return (
                 <div className="daily-performance-column" key={row.date}>
                   <div className="daily-performance-value-labels">
-                    <span>{formatPercent(row.utilization)}</span>
-                    <span>{formatPercent(row.availability)}</span>
-                    <span>{formatNumber(row.actualOutput)}</span>
+                    <span className="utilization-value">{formatPercent(row.utilization)}</span>
+                    <span className="availability-value">{formatPercent(row.availability)}</span>
+                    <span className="output-value">{formatNumber(row.actualOutput)}</span>
                   </div>
                   <div className="daily-performance-column-bars">
-                    <i className="utilization"><b style={{ height: utilizationHeight }} /></i>
-                    <i className="availability"><b style={{ height: availabilityHeight }} /></i>
-                    <i className="output"><b style={{ height: outputHeight }} /></i>
+                    <i className="utilization" title="อัตราการใช้เครื่อง / Utilization"><b style={{ height: utilizationHeight }} /></i>
+                    <i className="availability" title="ประสิทธิภาพเครื่อง / Availability"><b style={{ height: availabilityHeight }} /></i>
+                    <i className="output" title="จำนวนงาน / Output"><b style={{ height: outputHeight }} /></i>
+                  </div>
+                  <div className="daily-performance-bar-labels" aria-hidden="true">
+                    <span>ใช้</span>
+                    <span>ประสิทธิภาพ</span>
+                    <span>งาน</span>
                   </div>
                   <div className="daily-performance-column-date">
                     <strong>{row.date.slice(5)}</strong>
