@@ -3302,10 +3302,7 @@ function App() {
             <MachineCapacityDashboard logs={dashboardLogs} />
             <PartNoSummary logs={dashboardLogs} />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
-            <div className="analytics-grid">
-              <DowntimeChart items={downtime} />
-              <MachineRanking logs={dashboardLogs} />
-            </div>
+            <MachineRanking logs={dashboardLogs} />
             <Trend logs={dashboardLogs} />
           </section>
         )}
@@ -4804,26 +4801,6 @@ function OeeSummaryChart({
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function DowntimeChart({ items }: { items: ReturnType<typeof groupDowntime> }) {
-  const max = Math.max(...items.map((item) => item.minutes), 1);
-  return (
-    <div className="analysis-panel">
-      <h2>Downtime Pareto</h2>
-      <div className="bar-list">
-        {items.map((item) => (
-          <div className="bar-row" key={item.key}>
-            <span>{item.label}</span>
-            <div className="bar-track">
-              <div style={{ width: `${(item.minutes / max) * 100}%` }} />
-            </div>
-            <b>{formatNumber(item.minutes)}</b>
-          </div>
-        ))}
       </div>
     </div>
   );
