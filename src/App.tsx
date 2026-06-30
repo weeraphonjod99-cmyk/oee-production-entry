@@ -4864,9 +4864,9 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
           <div className="daily-performance-legend">
             <span><i className="utilization" /> อัตราการใช้เครื่อง / Utilization</span>
             <span><i className="availability" /> ประสิทธิภาพเครื่อง / Availability</span>
-            <span><i className="output" /> จำนวนงาน / Output</span>
+            <span><i className="output" /> จำนวนงาน / Quantity</span>
           </div>
-          <div className="daily-performance-column-chart" role="img" aria-label="Daily machine utilization, availability, and output bar chart">
+          <div className="daily-performance-column-chart" role="img" aria-label="Daily machine utilization, availability, and quantity bar chart">
             {rows.map((row) => {
               const utilizationHeight = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
               const availabilityHeight = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
@@ -4881,7 +4881,7 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
                   <div className="daily-performance-column-bars">
                     <i className="utilization" title="อัตราการใช้เครื่อง / Utilization"><b style={{ height: utilizationHeight }} /></i>
                     <i className="availability" title="ประสิทธิภาพเครื่อง / Availability"><b style={{ height: availabilityHeight }} /></i>
-                    <i className="output" title="จำนวนงาน / Output"><b style={{ height: outputHeight }} /></i>
+                    <i className="output" title="จำนวนงาน / Quantity"><b style={{ height: outputHeight }} /></i>
                   </div>
                   <div className="daily-performance-bar-labels" aria-hidden="true">
                     <span>ใช้</span>
@@ -4894,7 +4894,7 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
                       {formatDailyMachineNames(row)}
                     </span>
                     <span>{formatNumber(row.machineCount)} เครื่อง / Machines</span>
-                    <em>Actual {formatNumber(row.actualOutput)}</em>
+                    <em>Quantity {formatNumber(row.actualOutput)}</em>
                   </div>
                 </div>
               );
