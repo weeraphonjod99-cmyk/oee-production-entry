@@ -1011,10 +1011,6 @@ input[readonly] {
   box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.18);
 }
 
-.product-history-field {
-  grid-column: span 2;
-}
-
 .pending-order-panel {
   background: #fff7ed;
   border: 2px solid #f97316;
@@ -1144,22 +1140,6 @@ input[readonly] {
   color: #9a3412;
   font-weight: 900;
   margin: 0;
-}
-
-.production-history-select {
-  background: #ecfdf5;
-  border: 2px solid #16a34a;
-  border-radius: 12px;
-  color: #061635;
-  font-size: 18px;
-  font-weight: 900;
-  min-height: 64px;
-  padding: 14px 16px;
-}
-
-.production-history-select:focus {
-  border-color: #047857;
-  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.2);
 }
 
 .production-inline-history-select {
@@ -3190,7 +3170,6 @@ td:nth-child(10) {
     grid-column: 1;
   }
 
-  .product-history-field,
   .production-material-field {
     grid-column: 1;
   }

@@ -974,7 +974,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
 function uniqueProductValues(items: Array<Pick<ProductMaster, ProductFieldKey>>, key: ProductFieldKey) {
   return Array.from(new Set(items.map((item) => item[key]).filter(Boolean)))
     .sort((a, b) => a.localeCompare(b))
-    .slice(0, 200);
+    .slice(0, 100);
 }
 
 function uniqueLogs(logs: ProductionLog[]) {
@@ -990,6 +990,15 @@ const sameProductKey = (left: Pick<ProductionLog | ProductMaster, "machineId" | 
 
 const productChoiceKey = (item: Pick<ProductionLog | ProductMaster, "machineId" | "productName" | "partNo" | "step">) =>
   sameProductKey(item);
+
+const duplicateEntryLookupKey = (item: Pick<ProductionLog | EntryDraft, "date" | "shift" | "machineId" | "partNo" | "step">) =>
+  [
+    item.date,
+    normalizeShiftCode(item.shift),
+    item.machineId,
+    normalizeText(item.partNo),
+    normalizeText(item.step || "-"),
+  ].join("::");
 
 function buildProductChoices(machineId: string, masterProducts: ProductMaster[], logs: ProductionLog[]) {
   const choices = new Map<string, ProductChoice>();
@@ -1401,6 +1410,16 @@ function App() {
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
   );
+  const duplicateLogsByKey = useMemo(() => {
+    const map = new Map<string, ProductionLog[]>();
+    for (const log of allLogs) {
+      const key = duplicateEntryLookupKey(log);
+      const current = map.get(key);
+      if (current) current.push(log);
+      else map.set(key, [log]);
+    }
+    return map;
+  }, [allLogs]);
   const machineProducts = useMemo(
     () => products.filter((product) => product.machineId === draft.machineId),
     [draft.machineId],
@@ -1408,6 +1427,10 @@ function App() {
   const machineProductChoices = useMemo(
     () => buildProductChoices(draft.machineId, machineProducts, allLogs),
     [allLogs, draft.machineId, machineProducts],
+  );
+  const machineProductChoiceByKey = useMemo(
+    () => new Map(machineProductChoices.map((product) => [productChoiceKey(product), product])),
+    [machineProductChoices],
   );
   const pendingOrderChoices = useMemo(() => machineProductChoices.slice(0, 8), [machineProductChoices]);
   const selectedProductChoiceKey = productChoiceKey(draft);
@@ -1418,10 +1441,7 @@ function App() {
       productChoiceLabel(product).toLowerCase().includes(query),
     );
   }, [machineProductChoices, deferredProductSearch]);
-  const productNameOptions = useMemo(
-    () => uniqueProductValues(filteredProducts, "productName"),
-    [filteredProducts],
-  );
+  const productNameOptions = useMemo(() => uniqueProductValues(filteredProducts, "productName"), [filteredProducts]);
   const productScopedChoices = useMemo(() => {
     const productName = normalizeText(draft.productName);
     if (!productName) return filteredProducts;
@@ -1583,23 +1603,17 @@ function App() {
   );
   const findDuplicateForDraft = (targetDraft: EntryDraft, ignoredId?: string) => {
     if (!targetDraft.date || !targetDraft.shift || !targetDraft.machineId || !normalizeText(targetDraft.partNo)) return null;
-    return (
-      allLogs.find(
-        (log) =>
-          log.id !== ignoredId &&
-          log.date === targetDraft.date &&
-          normalizeShiftCode(log.shift) === normalizeShiftCode(targetDraft.shift) &&
-          log.machineId === targetDraft.machineId &&
-          normalizeText(log.partNo) === normalizeText(targetDraft.partNo) &&
-          normalizeText(log.step || "-") === normalizeText(targetDraft.step || "-"),
-      ) ?? null
-    );
+    const matches = duplicateLogsByKey.get(duplicateEntryLookupKey(targetDraft));
+    return matches?.find((log) => log.id !== ignoredId) ?? null;
   };
   const getDuplicateMessage = (targetDraft: EntryDraft, duplicate: ProductionLog | null) =>
     duplicate
       ? `วันที่ผลิต ${targetDraft.date} กะ ${shiftLabel(targetDraft.shift)} (${shiftWindowLabel(targetDraft.date, targetDraft.shift)}) เครื่อง ${duplicate.machineName} Part No. ${duplicate.partNo} Step ${duplicate.step || "-"} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
       : "";
-  const duplicateEntry = useMemo(() => findDuplicateForDraft(draft, editingLog?.id), [allLogs, draft.date, draft.machineId, draft.partNo, draft.shift, draft.step, editingLog?.id]);
+  const duplicateEntry = useMemo(
+    () => findDuplicateForDraft(draft, editingLog?.id),
+    [duplicateLogsByKey, draft.date, draft.machineId, draft.partNo, draft.shift, draft.step, editingLog?.id],
+  );
   const duplicateEntryKey = duplicateEntry
     ? `${draft.date}::${normalizeShiftCode(draft.shift)}::${draft.machineId}::${normalizeText(draft.partNo)}::${normalizeText(draft.step || "-")}`
     : "";
@@ -1843,7 +1857,7 @@ function App() {
   };
 
   const selectProductChoice = (productKey: string) => {
-    const selectedProduct = machineProductChoices.find((product) => productChoiceKey(product) === productKey);
+    const selectedProduct = machineProductChoiceByKey.get(productKey);
     if (!selectedProduct) return;
     recordEmployeeDraftEvent("เลือกประวัติงานเก่า", productChoiceLabel(selectedProduct));
     setProductSearch("");
@@ -2881,33 +2895,10 @@ function App() {
                     />
                   </div>
                 </label>
-                <label className="product-history-field">
-                  <span className="label-text">ประวัติงานเก่าของเครื่องนี้</span>
-                  <select
-                    className="production-history-select"
-                    onChange={(event) => {
-                      selectProductChoice(event.target.value);
-                      event.currentTarget.value = "";
-                    }}
-                    value=""
-                  >
-                    <option value="">เลือกงานที่เคยปั๊ม / Part No. / Step</option>
-                    {machineProductChoices.slice(0, 300).map((product) => {
-                      const choiceKey = productChoiceKey(product);
-                      return (
-                        <option key={choiceKey} value={choiceKey}>
-                          {productChoiceLabel(product)}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <small className="field-help">ดึงจากประวัติที่เคยบันทึกของเครื่องนี้ เลือกแล้วเติมรุ่น Part No. และ Step ให้อัตโนมัติ</small>
-                </label>
                 <label>
                   <span className="label-text">รุ่น <RequiredMark /></span>
                   <input
                     className="production-main-input"
-                    list="product-name-options"
                     onChange={(event) => updateProductField("productName", event.target.value)}
                     required
                     type="text"
@@ -2934,7 +2925,6 @@ function App() {
                   <span className="label-text">Part No. <RequiredMark /></span>
                   <input
                     className="production-main-input"
-                    list="part-no-options"
                     onChange={(event) => updateProductField("partNo", event.target.value)}
                     required
                     type="text"
@@ -2961,7 +2951,6 @@ function App() {
                   <span className="label-text">Step <RequiredMark /></span>
                   <input
                     className="production-main-input"
-                    list="step-options"
                     onChange={(event) => updateProductField("step", event.target.value)}
                     placeholder="-"
                     required
@@ -2998,21 +2987,6 @@ function App() {
                     value={draft.materialOfProduction || ""}
                   />
                 </label>
-                <datalist id="product-name-options">
-                  {productNameOptions.map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-                <datalist id="part-no-options">
-                  {partNoOptions.map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-                <datalist id="step-options">
-                  {stepOptions.map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
               </div>
               {duplicateEntryMessage && (
                 <div className="duplicate-warning" role="alert">
