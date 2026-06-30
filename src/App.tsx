@@ -1398,9 +1398,8 @@ function App() {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(employeeSubmittedStorageKey);
-      const ids = raw ? (JSON.parse(raw) as string[]) : [];
-      setEmployeeSubmittedMachineIds(new Set(Array.isArray(ids) ? ids : []));
+      window.localStorage.removeItem(employeeSubmittedStorageKey);
+      setEmployeeSubmittedMachineIds(new Set());
     } catch {
       setEmployeeSubmittedMachineIds(new Set());
     }
@@ -1729,10 +1728,10 @@ function App() {
     refreshEmployeeDraftMachineIds();
   }, []);
 
-  const markEmployeeMachineSubmitted = (machineId: string) => {
+  const clearEmployeeMachineSubmitted = (machineId: string) => {
     setEmployeeSubmittedMachineIds((prev) => {
       const next = new Set(prev);
-      next.add(machineId);
+      next.delete(machineId);
       window.localStorage.setItem(employeeSubmittedStorageKey, JSON.stringify([...next]));
       return next;
     });
@@ -2325,7 +2324,7 @@ function App() {
       }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
-      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(saved.machineId);
+      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) clearEmployeeMachineSubmitted(saved.machineId);
       if (!shouldUpdate) clearEmployeeStoredDraft(saved.machineId);
       if (options.resetAfterSave !== false) resetDraft();
       return true;
@@ -2333,7 +2332,7 @@ function App() {
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
-      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) markEmployeeMachineSubmitted(localLog.machineId);
+      if (!shouldUpdate && (options.autoSubmit || isEmployeeEntry)) clearEmployeeMachineSubmitted(localLog.machineId);
       if (!shouldUpdate) clearEmployeeStoredDraft(localLog.machineId);
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
       return true;
