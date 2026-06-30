@@ -3298,10 +3298,10 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
+            <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <DailyMachinePerformanceChart logs={dashboardLogs} />
             <MachineCapacityDashboard logs={dashboardLogs} />
             <PartNoSummary logs={dashboardLogs} />
-            <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <MachineRanking logs={dashboardLogs} />
             <Trend logs={dashboardLogs} />
           </section>
