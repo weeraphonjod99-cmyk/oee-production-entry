@@ -4640,9 +4640,9 @@ function OeeSummaryChart({
   const progress = Math.min(Math.max(oee, 0), 1);
   const strokeDashoffset = circumference * (1 - progress);
   const factors = [
-    { label: "Availability", value: summary.availability, minutes: summary.run },
-    { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality },
-    { label: "OEE", value: oee, minutes: summary.run * summary.quality },
+    { label: "Availability", value: summary.availability, minutes: summary.run, color: "#22c55e", radius: 58 },
+    { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#38bdf8", radius: 44 },
+    { label: "OEE", value: oee, minutes: summary.run * summary.quality, color: "#facc15", radius: 30 },
   ];
   const issueColors = ["#dc2626", "#f97316", "#d97706", "#64748b", "#94a3b8"];
   const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 4);
@@ -4719,6 +4719,41 @@ function OeeSummaryChart({
           </div>
         </div>
         <div className="oee-factor-list">
+          <div className="oee-factor-combo">
+            <svg aria-label="Availability Quality OEE summary" className="oee-factor-combo-donut" viewBox="0 0 140 140" role="img">
+              {factors.map((factor) => {
+                const percent = Math.min(Math.max(factor.value, 0), 1);
+                const ringLength = 2 * Math.PI * factor.radius;
+                return (
+                  <g key={factor.label}>
+                    <circle className="oee-factor-ring-bg" cx="70" cy="70" r={factor.radius} />
+                    <circle
+                      className="oee-factor-ring-value"
+                      cx="70"
+                      cy="70"
+                      r={factor.radius}
+                      stroke={factor.color}
+                      strokeDasharray={ringLength}
+                      strokeDashoffset={ringLength * (1 - percent)}
+                    />
+                  </g>
+                );
+              })}
+            </svg>
+            <div className="oee-factor-combo-label">
+              <span>รวม</span>
+              <strong>3 KPI</strong>
+            </div>
+          </div>
+          <div className="oee-factor-combo-legend">
+            {factors.map((factor) => (
+              <p key={factor.label}>
+                <i style={{ background: factor.color }} />
+                <span>{factor.label}</span>
+                <b>{formatNumber(factor.minutes)} นาที · {formatPercent(factor.value)}</b>
+              </p>
+            ))}
+          </div>
           {factors.map((factor) => {
             const percent = Math.min(Math.max(factor.value, 0), 1);
             return (
