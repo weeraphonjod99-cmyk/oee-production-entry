@@ -883,6 +883,23 @@ input[readonly] {
   box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.2);
 }
 
+.production-inline-history-select {
+  background: #f0fdf4;
+  border: 2px solid #16a34a;
+  border-radius: 10px;
+  color: #064e3b;
+  font-size: 16px;
+  font-weight: 900;
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 10px 14px;
+}
+
+.production-inline-history-select:focus {
+  border-color: #047857;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+}
+
 .production-material-field {
   grid-column: span 2;
 }

@@ -1411,8 +1411,18 @@ function App() {
     () => uniqueProductValues(filteredProducts, "productName"),
     [filteredProducts],
   );
-  const partNoOptions = useMemo(() => uniqueProductValues(filteredProducts, "partNo"), [filteredProducts]);
-  const stepOptions = useMemo(() => uniqueProductValues(filteredProducts, "step"), [filteredProducts]);
+  const productScopedChoices = useMemo(() => {
+    const productName = normalizeText(draft.productName);
+    if (!productName) return filteredProducts;
+    return filteredProducts.filter((product) => normalizeText(product.productName) === productName);
+  }, [draft.productName, filteredProducts]);
+  const partScopedChoices = useMemo(() => {
+    const partNo = normalizeText(draft.partNo);
+    if (!partNo) return productScopedChoices;
+    return productScopedChoices.filter((product) => normalizeText(product.partNo) === partNo);
+  }, [draft.partNo, productScopedChoices]);
+  const partNoOptions = useMemo(() => uniqueProductValues(productScopedChoices, "partNo"), [productScopedChoices]);
+  const stepOptions = useMemo(() => uniqueProductValues(partScopedChoices, "step"), [partScopedChoices]);
   const productCountByMachineId = useMemo(() => {
     const map = new Map<string, number>();
     for (const product of products) {
@@ -2846,6 +2856,22 @@ function App() {
                     type="text"
                     value={draft.productName}
                   />
+                  <select
+                    aria-label="เลือกรุ่นจากประวัติเก่า"
+                    className="production-inline-history-select"
+                    onChange={(event) => {
+                      updateProductField("productName", event.target.value);
+                      event.currentTarget.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="">เลือกรุ่นจากประวัติเก่า</option>
+                    {productNameOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   <span className="label-text">Part No. <RequiredMark /></span>
@@ -2857,6 +2883,22 @@ function App() {
                     type="text"
                     value={draft.partNo}
                   />
+                  <select
+                    aria-label="เลือก Part No. จากประวัติเก่า"
+                    className="production-inline-history-select"
+                    onChange={(event) => {
+                      updateProductField("partNo", event.target.value);
+                      event.currentTarget.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="">เลือก Part No. จากประวัติเก่า</option>
+                    {partNoOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   <span className="label-text">Step <RequiredMark /></span>
@@ -2869,6 +2911,22 @@ function App() {
                     type="text"
                     value={draft.step}
                   />
+                  <select
+                    aria-label="เลือก Step จากประวัติเก่า"
+                    className="production-inline-history-select"
+                    onChange={(event) => {
+                      updateProductField("step", event.target.value);
+                      event.currentTarget.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="">เลือก Step จากประวัติเก่า</option>
+                    {stepOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="production-material-field">
                   <span className="label-text">Material of production</span>
