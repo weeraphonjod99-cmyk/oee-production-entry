@@ -3327,6 +3327,7 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
+            <DailyMachinePerformanceChart logs={dashboardLogs} />
             <MachineCapacityDashboard logs={dashboardLogs} />
             <PartNoSummary logs={dashboardLogs} />
             <OeeSummaryChart summary={summary} />
@@ -4757,6 +4758,124 @@ type MachineCapacityRow = {
   utilization: number;
   workMinutes: number;
 };
+
+type DailyPerformanceRow = {
+  actualOutput: number;
+  availability: number;
+  count: number;
+  date: string;
+  machineCount: number;
+  normalMinutes: number;
+  targetQty: number;
+  utilization: number;
+  workMinutes: number;
+};
+
+function buildDailyPerformanceRows(logs: ProductionLog[]): DailyPerformanceRow[] {
+  const rows = logs.reduce((map, log) => {
+    const current =
+      map.get(log.date) ??
+      {
+        actualOutput: 0,
+        count: 0,
+        date: log.date,
+        machineIds: new Set<string>(),
+        normalMinutes: 0,
+        targetQty: 0,
+        workMinutes: 0,
+      };
+    current.actualOutput += totalOutput(log);
+    current.count += 1;
+    current.machineIds.add(log.machineId);
+    current.normalMinutes += Number(log.normalMinutes || 0);
+    current.targetQty += getLogTargetQty(log);
+    current.workMinutes += getLogWorkMinutes(log);
+    map.set(log.date, current);
+    return map;
+  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "utilization"> & { machineIds: Set<string> }>());
+
+  return [...rows.values()]
+    .map(({ machineIds, ...row }) => ({
+      ...row,
+      availability: row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0,
+      machineCount: machineIds.size,
+      utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
+  const rows = useMemo(() => buildDailyPerformanceRows(logs).slice(-14), [logs]);
+  const latest = rows.at(-1);
+
+  return (
+    <div className="analysis-panel daily-performance-panel">
+      <div className="report-table-heading compact-heading">
+        <div>
+          <h2>กราฟรายวัน อัตราการใช้เครื่อง / ประสิทธิภาพเครื่อง</h2>
+          <p>อัปเดตตามวันที่มีการกรอกผลิตในระบบ</p>
+        </div>
+        <span>{formatNumber(rows.length)} วัน</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="empty-text">ไม่มีข้อมูลรายวันตามตัวกรองนี้</p>
+      ) : (
+        <>
+          {latest && (
+            <div className="daily-performance-summary">
+              <div>
+                <span>วันล่าสุด</span>
+                <strong>{latest.date}</strong>
+              </div>
+              <div>
+                <span>Utilization</span>
+                <strong>{formatPercent(latest.utilization)}</strong>
+              </div>
+              <div>
+                <span>Availability</span>
+                <strong>{formatPercent(latest.availability)}</strong>
+              </div>
+              <div>
+                <span>เครื่อง / Logs</span>
+                <strong>{formatNumber(latest.machineCount)} / {formatNumber(latest.count)}</strong>
+              </div>
+            </div>
+          )}
+          <div className="daily-performance-chart" role="img" aria-label="Daily machine utilization and availability chart">
+            {rows.map((row) => {
+              const utilizationWidth = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
+              const availabilityWidth = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
+              return (
+                <div className="daily-performance-row" key={row.date}>
+                  <div className="daily-performance-date">
+                    <strong>{row.date.slice(5)}</strong>
+                    <span>{formatNumber(row.machineCount)} เครื่อง</span>
+                  </div>
+                  <div className="daily-performance-bars">
+                    <div className="daily-performance-bar utilization">
+                      <span>ใช้เครื่อง</span>
+                      <i><b style={{ width: utilizationWidth }} /></i>
+                      <em>{formatPercent(row.utilization)}</em>
+                    </div>
+                    <div className="daily-performance-bar availability">
+                      <span>ประสิทธิภาพ</span>
+                      <i><b style={{ width: availabilityWidth }} /></i>
+                      <em>{formatPercent(row.availability)}</em>
+                    </div>
+                  </div>
+                  <div className="daily-performance-output">
+                    <span>Actual {formatNumber(row.actualOutput)}</span>
+                    <span>Target {formatNumber(row.targetQty)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function buildMachineCapacityRows(logs: ProductionLog[]): MachineCapacityRow[] {
   const rows = logs.reduce((map, log) => {

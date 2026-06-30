@@ -2643,6 +2643,134 @@ input[readonly] {
   min-width: 980px;
 }
 
+.daily-performance-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.daily-performance-panel .compact-heading p {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 3px 0 0;
+}
+
+.daily-performance-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.daily-performance-summary div {
+  background: #f8fbf9;
+  border: 1px solid #dfe8df;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.daily-performance-summary span {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.daily-performance-summary strong {
+  color: #061635;
+  font-size: 22px;
+  font-weight: 1000;
+}
+
+.daily-performance-chart {
+  display: grid;
+  gap: 9px;
+}
+
+.daily-performance-row {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e4e9e4;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 86px minmax(0, 1fr) 180px;
+  padding: 10px;
+}
+
+.daily-performance-date {
+  display: grid;
+  gap: 3px;
+}
+
+.daily-performance-date strong {
+  color: #061635;
+  font-size: 16px;
+  font-weight: 1000;
+}
+
+.daily-performance-date span,
+.daily-performance-output span {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.daily-performance-bars {
+  display: grid;
+  gap: 7px;
+}
+
+.daily-performance-bar {
+  align-items: center;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 92px minmax(0, 1fr) 58px;
+}
+
+.daily-performance-bar span {
+  color: #344054;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.daily-performance-bar i {
+  background: #eef1ee;
+  border-radius: 999px;
+  display: block;
+  height: 12px;
+  overflow: hidden;
+}
+
+.daily-performance-bar b {
+  display: block;
+  height: 100%;
+}
+
+.daily-performance-bar.utilization b {
+  background: #16a34a;
+}
+
+.daily-performance-bar.availability b {
+  background: #2563eb;
+}
+
+.daily-performance-bar em {
+  color: #061635;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 950;
+  text-align: right;
+}
+
+.daily-performance-output {
+  display: grid;
+  gap: 5px;
+  justify-items: end;
+  text-align: right;
+}
+
 .capacity-table td strong {
   color: #061635;
   font-weight: 900;
@@ -3194,6 +3322,16 @@ td:nth-child(10) {
 
   .bar-row {
     grid-template-columns: 1fr;
+  }
+
+  .daily-performance-row,
+  .daily-performance-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-performance-output {
+    justify-items: start;
+    text-align: left;
   }
 
   .part-summary-row {
