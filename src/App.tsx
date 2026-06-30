@@ -1465,7 +1465,9 @@ function App() {
         const sharedStatus = employeeSharedStatusByMachineId.get(machine.id);
         const logSummary = machineLogSummaryByMachineId.get(machine.id);
         const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "");
+        const timerExcelCode = getEmployeeTimerExcelCode(activeTimerKey);
         return {
+          activityCode: timerExcelCode,
           hasDraft:
             (draft.machineId === machine.id && employeeDraftActive) ||
             employeeDraftMachineIds.has(machine.id) ||
@@ -2704,7 +2706,7 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ activityStatus, hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus, timerToneClass }) => (
+              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, hasSubmitted, latestLog, logCount, machine, productCount, sharedStatus, timerToneClass }) => (
                 <button
                   className={`machine-icon-card ${hasDraft ? `active-draft ${timerToneClass}` : hasSubmitted ? "submitted-log" : ""}`}
                   key={machine.id}
@@ -2715,10 +2717,8 @@ function App() {
                     <StampingPressIcon />
                   </span>
                   {hasDraft && activityStatus && (
-                    <span className="machine-activity-badge">
-                      {getEmployeeTimerExcelCode(sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "")) && (
-                        <b>{getEmployeeTimerExcelCode(sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : ""))}</b>
-                      )}
+                    <span className={`machine-activity-badge ${timerToneClass}`}>
+                      {activityCode && <b>{activityCode}</b>}
                       <span>{activityStatus.replace(/^[A-Z]\s*/, "")}</span>
                     </span>
                   )}

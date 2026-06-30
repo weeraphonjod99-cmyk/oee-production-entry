@@ -536,6 +536,40 @@ h3 {
   --timer-text: #ffffff;
 }
 
+.machine-icon-card.active-draft.timer-tone-a {
+  background: #dcfce7;
+  border-color: #16a34a;
+  box-shadow: 0 12px 26px rgba(22, 163, 74, 0.18);
+}
+
+.machine-icon-card.active-draft.timer-tone-c {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  box-shadow: 0 12px 26px rgba(245, 158, 11, 0.2);
+}
+
+.machine-icon-card.active-draft.timer-tone-d {
+  background: #fee2e2;
+  border-color: #ef4444;
+  box-shadow: 0 12px 26px rgba(239, 68, 68, 0.18);
+}
+
+.machine-icon-card.active-draft.timer-tone-e {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  box-shadow: 0 12px 26px rgba(14, 165, 233, 0.18);
+}
+
+.machine-icon-card.active-draft.timer-tone-b,
+.machine-icon-card.active-draft.timer-tone-f,
+.machine-icon-card.active-draft.timer-tone-g,
+.machine-icon-card.active-draft.timer-tone-h,
+.machine-icon-card.active-draft.timer-tone-x {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  box-shadow: 0 12px 26px rgba(100, 116, 139, 0.14);
+}
+
 .machine-icon-card.submitted-log {
   background: #fff1f2;
   border-color: #ef4444;
