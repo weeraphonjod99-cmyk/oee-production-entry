@@ -4640,9 +4640,9 @@ function OeeSummaryChart({
   const progress = Math.min(Math.max(oee, 0), 1);
   const strokeDashoffset = circumference * (1 - progress);
   const factors = [
-    { label: "Availability", value: summary.availability, tone: "amber" },
-    { label: "Quality", value: summary.quality, tone: "blue" },
-    { label: "OEE", value: oee, tone: "green" },
+    { label: "Availability", value: summary.availability, minutes: summary.run },
+    { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality },
+    { label: "OEE", value: oee, minutes: summary.run * summary.quality },
   ];
   const issueColors = ["#dc2626", "#f97316", "#d97706", "#64748b", "#94a3b8"];
   const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 4);
@@ -4719,17 +4719,25 @@ function OeeSummaryChart({
           </div>
         </div>
         <div className="oee-factor-list">
-          {factors.map((factor) => (
-            <div className={`oee-factor ${factor.tone}`} key={factor.label}>
-              <div>
-                <span>{factor.label}</span>
-                <strong>{formatPercent(factor.value)}</strong>
+          {factors.map((factor) => {
+            const percent = Math.min(Math.max(factor.value, 0), 1);
+            return (
+              <div className="oee-factor" key={factor.label}>
+                <div
+                  className="oee-factor-mini-donut"
+                  style={{
+                    background: `conic-gradient(#16a34a 0% ${percent * 100}%, #eef1ee ${percent * 100}% 100%)`,
+                  }}
+                >
+                  <div>{formatPercent(factor.value)}</div>
+                </div>
+                <div className="oee-factor-detail">
+                  <span>{factor.label}</span>
+                  <strong>{formatNumber(factor.minutes)} นาที · {formatPercent(factor.value)}</strong>
+                </div>
               </div>
-              <div className="oee-factor-track">
-                <div style={{ width: `${Math.min(Math.max(factor.value, 0), 1) * 100}%` }} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="oee-volume-summary">
           <div className="oee-time-donut" style={{ background: `conic-gradient(${timeGradient})` }}>
