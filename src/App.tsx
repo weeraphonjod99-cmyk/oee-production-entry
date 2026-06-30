@@ -1409,6 +1409,8 @@ function App() {
     () => buildProductChoices(draft.machineId, machineProducts, allLogs),
     [allLogs, draft.machineId, machineProducts],
   );
+  const pendingOrderChoices = useMemo(() => machineProductChoices.slice(0, 8), [machineProductChoices]);
+  const selectedProductChoiceKey = productChoiceKey(draft);
   const filteredProducts = useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
     if (!query) return machineProductChoices.slice(0, 300);
@@ -2830,6 +2832,43 @@ function App() {
                   </select>
                   {isEmployeeEntry && <small className="field-help">ล็อกเครื่องที่เลือกแล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>}
                 </label>
+                <div className="pending-order-panel" role="status" aria-live="polite">
+                  <div className="pending-order-header">
+                    <div>
+                      <span>ORDER QUEUE</span>
+                      <strong>Order ที่รอผลิต / งานที่ต้องผลิต</strong>
+                    </div>
+                    <b>{formatNumber(pendingOrderChoices.length)} รายการ</b>
+                  </div>
+                  {pendingOrderChoices.length > 0 ? (
+                    <div className="pending-order-list">
+                      {pendingOrderChoices.map((product, index) => {
+                        const choiceKey = productChoiceKey(product);
+                        const isSelected = choiceKey === selectedProductChoiceKey;
+                        return (
+                          <button
+                            className={`pending-order-item ${isSelected ? "selected" : ""}`}
+                            key={choiceKey}
+                            onClick={() => selectProductChoice(choiceKey)}
+                            type="button"
+                          >
+                            <span className="pending-order-rank">#{index + 1}</span>
+                            <span className="pending-order-main">
+                              <strong>{product.productName}</strong>
+                              <small>Part No. {product.partNo} • Step {product.step || "-"}</small>
+                            </span>
+                            <span className="pending-order-meta">
+                              {product.latestDate ? `ล่าสุด ${product.latestDate}` : "จาก Master"}
+                              {product.latestGoodQty ? ` • Good ${formatNumber(product.latestGoodQty)}` : ""}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p>ยังไม่มีประวัติงานของเครื่องนี้สำหรับแนะนำงานรอผลิต</p>
+                  )}
+                </div>
                 <label>
                   ค้นหารุ่น
                   <div className="input-with-icon">

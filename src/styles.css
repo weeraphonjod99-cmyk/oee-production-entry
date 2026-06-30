@@ -1015,6 +1015,137 @@ input[readonly] {
   grid-column: span 2;
 }
 
+.pending-order-panel {
+  background: #fff7ed;
+  border: 2px solid #f97316;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(249, 115, 22, 0.14);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  padding: 14px;
+}
+
+.pending-order-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.pending-order-header div {
+  display: grid;
+  gap: 3px;
+}
+
+.pending-order-header span {
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.pending-order-header strong {
+  color: #061635;
+  font-size: 20px;
+  font-weight: 1000;
+}
+
+.pending-order-header b {
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 950;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.pending-order-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.pending-order-item {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  color: #061635;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 76px;
+  padding: 10px;
+  text-align: left;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.pending-order-item:hover,
+.pending-order-item:focus-visible {
+  border-color: #f97316;
+  box-shadow: 0 10px 22px rgba(249, 115, 22, 0.18);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.pending-order-item.selected {
+  background: #ecfdf5;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+}
+
+.pending-order-rank {
+  align-items: center;
+  background: #f97316;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 1000;
+  height: 38px;
+  justify-content: center;
+  width: 42px;
+}
+
+.pending-order-item.selected .pending-order-rank {
+  background: #16a34a;
+}
+
+.pending-order-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pending-order-main strong {
+  font-size: 17px;
+  font-weight: 1000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-order-main small,
+.pending-order-meta {
+  color: #4b5c73;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pending-order-meta {
+  grid-column: 1 / -1;
+}
+
+.pending-order-panel p {
+  color: #9a3412;
+  font-weight: 900;
+  margin: 0;
+}
+
 .production-history-select {
   background: #ecfdf5;
   border: 2px solid #16a34a;
