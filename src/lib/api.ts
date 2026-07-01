@@ -63,6 +63,9 @@ export type EmployeeMachineStatus = {
   note?: string;
   activeTimerKey?: string;
   activeTimerLabel?: string;
+  activeTimerStartedAt?: string;
+  activeTimerBaseAt?: string;
+  activeTimerBaseMinutes?: number;
   workStartedAt?: string;
   entryStartedAt?: string;
   status: "active" | "cleared";

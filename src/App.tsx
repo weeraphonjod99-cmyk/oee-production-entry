@@ -449,6 +449,9 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
         status.emergencyStopMinutes || 0,
         status.meetingMinutes || 0,
         status.plannedStopMinutes || 0,
+        status.activeTimerStartedAt || "",
+        status.activeTimerBaseAt || "",
+        status.activeTimerBaseMinutes || 0,
         status.note || "",
         status.entryUpdatedAt || "",
         status.updatedAt || "",
@@ -456,6 +459,18 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
       ].join(":"),
     )
     .join("|");
+
+const getSharedStatusLiveMinutes = (status: EmployeeMachineStatus | undefined, now = new Date()) => {
+  if (!status?.activeTimerKey) return null;
+  const baseMinutes = Number(status.activeTimerBaseMinutes || 0);
+  const baseAt = status.activeTimerBaseAt || status.updatedAt || status.entryUpdatedAt || "";
+  if (!baseAt) return baseMinutes;
+  const liveMinutes =
+    status.activeTimerKey === "work"
+      ? getElapsedShiftWorkMinutes(status.date || getTodayInputValue(), status.shift, now, baseAt)
+      : getElapsedWallMinutes(baseAt, now);
+  return roundNumber(baseMinutes + liveMinutes);
+};
 
 const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date(), workStartedAt?: string) => {
   const schedule = getShiftSchedule(productionDate, shift);
@@ -1245,6 +1260,7 @@ function App() {
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
+  const draftRef = useRef(draft);
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
@@ -1252,6 +1268,10 @@ function App() {
   const remoteLogsSignatureRef = useRef("");
   const employeeStatusesSignatureRef = useRef("");
   const employeeClearedMachineAtRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -1368,11 +1388,11 @@ function App() {
   }, [tab]);
 
   useEffect(() => {
-    if (tab !== "employeeEntry" || !employeeMachineSelected) return;
+    if (tab !== "employeeEntry") return;
     setEmployeeReportNow(new Date());
     const timer = window.setInterval(() => setEmployeeReportNow(new Date()), 1000);
     return () => window.clearInterval(timer);
-  }, [employeeMachineSelected, tab]);
+  }, [tab]);
 
   useEffect(() => {
     employeeActiveTimerRef.current = employeeActiveTimer;
@@ -1498,6 +1518,7 @@ function App() {
   const currentMachineSharedStatus = employeeSharedStatusByMachineId.get(draft.machineId);
   const currentMachineSharedActivity = getEmployeeMachineActivityLabel(currentMachineSharedStatus);
   const currentMachineSharedTimerKey = currentMachineSharedStatus?.activeTimerKey || "";
+  const currentMachineSharedLiveMinutes = getSharedStatusLiveMinutes(currentMachineSharedStatus, employeeReportNow);
   const employeeMachineCards = useMemo(
     () =>
       machines.map((machine) => {
@@ -1505,6 +1526,7 @@ function App() {
         const logSummary = machineLogSummaryByMachineId.get(machine.id);
         const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "");
         const timerExcelCode = getEmployeeTimerExcelCode(activeTimerKey);
+        const sharedLiveMinutes = getSharedStatusLiveMinutes(sharedStatus, employeeReportNow);
         return {
           activityCode: timerExcelCode,
           hasDraft:
@@ -1514,6 +1536,7 @@ function App() {
           machine,
           productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
+          sharedLiveMinutes,
           timerToneClass: getEmployeeTimerToneClass(activeTimerKey),
           activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
           latestLog: logSummary?.latestLog,
@@ -1524,6 +1547,7 @@ function App() {
       draft.machineId,
       employeeDraftActive,
       employeeDraftMachineIds,
+      employeeReportNow,
       employeeSharedStatusByMachineId,
       machineLogSummaryByMachineId,
       productCountByMachineId,
@@ -2176,6 +2200,13 @@ function App() {
     const expiresAt = parseStoredDateTime(stored.shiftEndAt || stored.draft.shiftEndAt)?.toISOString() || stored.shiftEndAt || stored.draft.shiftEndAt || "";
     const machineName = machines.find((machine) => machine.id === stored.draft.machineId)?.name || stored.draft.machineId;
     const downtimeMinutes = totalDowntime(stored.draft);
+    const activeTimerStartedAt = stored.activeTimer?.originalStartedAt || stored.activeTimer?.startedAt || "";
+    const activeTimerBaseAt = stored.activeTimer ? stored.savedAt : "";
+    const activeTimerBaseMinutes = stored.activeTimer
+      ? stored.activeTimer.key === "work"
+        ? Number(stored.draft.workMinutes || 0)
+        : Number(stored.draft[stored.activeTimer.key as DowntimeKey] || 0)
+      : 0;
     const status: EmployeeMachineStatus = {
       machineId: stored.draft.machineId,
       machineName,
@@ -2207,6 +2238,9 @@ function App() {
       note: stored.draft.note || "",
       activeTimerKey: stored.activeTimer?.key || "",
       activeTimerLabel: stored.activeTimer ? getEmployeeTimerLabel(stored.activeTimer.key) : "",
+      activeTimerStartedAt,
+      activeTimerBaseAt,
+      activeTimerBaseMinutes,
       workStartedAt: stored.workStartedAt || "",
       entryStartedAt: stored.entryStartedAt || "",
       status: "active",
@@ -2283,6 +2317,21 @@ function App() {
     setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
     return stored;
   };
+
+  useEffect(() => {
+    if (!remoteEnabled || tab !== "employeeEntry" || editingLog || !employeeMachineSelected) return;
+    if (!employeeDraftActive && !employeeWorkStartedAt && !employeeActiveTimerRef.current) return;
+    const publishLiveStatus = () => {
+      if (autoSubmittingEmployeeDraft.current) return;
+      const nowIso = new Date().toISOString();
+      const stored = buildEmployeeStoredDraft(draftRef.current, false, { entryUpdatedAt: nowIso });
+      window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+      publishEmployeeMachineStatus(stored);
+    };
+    const timer = window.setInterval(publishLiveStatus, 5000);
+    publishLiveStatus();
+    return () => window.clearInterval(timer);
+  }, [editingLog, employeeDraftActive, employeeMachineSelected, employeeWorkStartedAt, employeeActiveTimer?.key, tab]);
 
   const saveEmployeeDraftLocally = () => {
     if (!isEmployeeEntry) return;
@@ -2765,7 +2814,7 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, productCount, sharedStatus, timerToneClass }) => (
+              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, productCount, sharedLiveMinutes, sharedStatus, timerToneClass }) => (
                 <button
                   className={`machine-icon-card ${hasDraft ? `active-draft ${timerToneClass}` : ""}`}
                   key={machine.id}
@@ -2801,6 +2850,7 @@ function App() {
                       <small>
                         Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT {formatRate(sharedStatus.downtimeMinutes || 0)} นาที
                       </small>
+                      {sharedStatus.activeTimerLabel && sharedLiveMinutes !== null && <small>ใช้เวลา {formatDurationMinutes(sharedLiveMinutes)}</small>}
                       <small>
                         Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
                         {sharedStatus.materialOfProduction || "-"}
@@ -3180,6 +3230,7 @@ function App() {
                     {currentMachineSharedTimerKey === "work" && currentMachineSharedStatus && (
                       <small className="shared-topic-note">
                         {currentMachineSharedActivity || "กำลังกรอกอยู่"} · ผู้กรอก {currentMachineSharedStatus.userName || "-"}
+                        {currentMachineSharedLiveMinutes !== null ? ` · ใช้เวลา ${formatDurationMinutes(currentMachineSharedLiveMinutes)}` : ""}
                       </small>
                     )}
                     <small>{employeeWorkStartedAt ? `เริ่มงานจริง ${formatClock(employeeWorkStartedDate ?? employeeReportNow)}` : "ยังไม่กดเริ่มงานจริง"}</small>
@@ -3220,6 +3271,7 @@ function App() {
                     {isEmployeeEntry && currentMachineSharedTimerKey === field.key && currentMachineSharedStatus && (
                       <small className="shared-topic-note">
                         {currentMachineSharedActivity || "กำลังกรอกอยู่"} · ผู้กรอก {currentMachineSharedStatus.userName || "-"}
+                        {currentMachineSharedLiveMinutes !== null ? ` · ใช้เวลา ${formatDurationMinutes(currentMachineSharedLiveMinutes)}` : ""}
                       </small>
                     )}
                     {isEmployeeEntry && employeeActiveTimer?.key === field.key && <small className="downtime-press-time">กำลังนับหัวข้อนี้อยู่</small>}
