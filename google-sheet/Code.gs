@@ -13,6 +13,8 @@ const KPI_MACHINE_JOB_STEP_SHEET = "kpi_machine_job_step";
 const KPI_DAILY_DETAIL_SHEET = "kpi_daily_detail";
 const KPI_NOTES_SHEET = "kpi_notes";
 const KPI_REFRESH_ACTION = "refreshKpi";
+const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
+const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
 const PD_EXTERNAL_SHEETS = [
   {
     id: "1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j",
@@ -23,11 +25,12 @@ const PD_EXTERNAL_SHEETS = [
   {
     id: "1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq",
     label: "PD 2",
-    gid: "255697382",
-    url: "https://docs.google.com/spreadsheets/d/1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq/edit?gid=255697382#gid=255697382",
+    gid: "120835667",
+    url: "https://docs.google.com/spreadsheets/d/1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq/edit?gid=120835667#gid=120835667",
   },
 ];
 const PD_MAX_ROWS_PER_SHEET = 300;
+const PD_KPI_MAX_ROWS_PER_SHEET = 2000;
 const PD_MAX_COLUMNS_PER_SHEET = 40;
 
 const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
@@ -1644,8 +1647,10 @@ function getLogs(limit) {
 function refreshKpiSheets() {
   const book = getWorkbook();
   const refreshedAt = new Date().toISOString();
+  ensureKpiAutoRefreshTrigger();
+  const capacityLookup = buildKpiCapacityLookup();
   const rawLogs = getLogs(100000);
-  const logs = dedupeKpiLogs(rawLogs);
+  const logs = dedupeKpiLogs(rawLogs, capacityLookup);
   const duplicateRowsRemoved = rawLogs.length - logs.length;
   const machineRows = buildKpiMachineRows(logs);
   const machineStepRows = buildKpiMachineStepRows(logs);
@@ -1725,7 +1730,7 @@ function writeKpiReportToBook(book, logs, machineRows, machineStepRows, machineJ
 function writeKpiReportsToPdBooks(logs, machineRows, machineStepRows, machineJobStepRows, dailyRows, rawCount, duplicateRowsRemoved, refreshedAt) {
   return PD_EXTERNAL_SHEETS.map(function(source) {
     try {
-      const book = SpreadsheetApp.openById(source.id);
+      const book = openPdSpreadsheet(source);
       const result = writeKpiReportToBook(
         book,
         logs,
@@ -1754,10 +1759,263 @@ function writeKpiReportsToPdBooks(logs, machineRows, machineStepRows, machineJob
   });
 }
 
-function dedupeKpiLogs(rawLogs) {
+function ensureKpiAutoRefreshTrigger() {
+  try {
+    const exists = ScriptApp.getProjectTriggers().some(function(trigger) {
+      return trigger.getHandlerFunction() === KPI_AUTO_REFRESH_HANDLER;
+    });
+    if (!exists) {
+      ScriptApp.newTrigger(KPI_AUTO_REFRESH_HANDLER).timeBased().everyMinutes(10).create();
+    }
+  } catch (error) {
+    // Web-app calls can still refresh KPI even if trigger permission has not been granted yet.
+  }
+}
+
+function openPdSpreadsheet(source) {
+  const nativeId = getNativePdSpreadsheetId(source);
+  return SpreadsheetApp.openById(nativeId);
+}
+
+function getNativePdSpreadsheetId(source) {
+  try {
+    const file = Drive.Files.get(source.id);
+    if (file.mimeType === MimeType.GOOGLE_SHEETS || file.mimeType === "application/vnd.google-apps.spreadsheet") {
+      return source.id;
+    }
+
+    const modifiedDate = file.modifiedDate || file.modifiedTime || "";
+    const cacheKey = KPI_PD_CACHE_PREFIX + source.id;
+    const properties = PropertiesService.getScriptProperties();
+    const cached = parseJsonSafe(properties.getProperty(cacheKey));
+    if (cached && cached.id && cached.modifiedDate === modifiedDate) {
+      try {
+        SpreadsheetApp.openById(cached.id);
+        return cached.id;
+      } catch (error) {
+        // Cache copy was removed; create a fresh converted copy below.
+      }
+    }
+
+    const copy = Drive.Files.copy(
+      {
+        title: "OEE KPI cache - " + (file.title || source.label || source.id),
+        mimeType: MimeType.GOOGLE_SHEETS,
+      },
+      source.id
+    );
+    if (cached && cached.id && cached.id !== copy.id) {
+      try {
+        Drive.Files.trash(cached.id);
+      } catch (error) {
+        // Old cache cleanup is best effort only.
+      }
+    }
+    properties.setProperty(cacheKey, JSON.stringify({ id: copy.id, modifiedDate: modifiedDate }));
+    return copy.id;
+  } catch (error) {
+    return source.id;
+  }
+}
+
+function parseJsonSafe(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildKpiCapacityLookup() {
+  const lookup = {};
+  PD_EXTERNAL_SHEETS.forEach(function(source) {
+    try {
+      const book = openPdSpreadsheet(source);
+      readPdCapacityRows(book, source).forEach(function(item) {
+        addKpiCapacityLookup(lookup, item);
+      });
+    } catch (error) {
+      // If a PD source is temporarily unavailable, KPI falls back to log speed.
+    }
+  });
+  return lookup;
+}
+
+function readPdCapacityRows(book, source) {
+  const rows = [];
+  book.getSheets().forEach(function(sheet) {
+    if (isKpiOutputSheet(sheet.getName())) return;
+    const lastRow = Math.min(sheet.getLastRow(), PD_KPI_MAX_ROWS_PER_SHEET);
+    const lastColumn = Math.min(sheet.getLastColumn(), PD_MAX_COLUMNS_PER_SHEET);
+    if (lastRow < 1 || lastColumn < 1) return;
+    const values = trimPdValues(sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues());
+    const layout = detectPdCapacityLayout(values);
+    if (!layout) return;
+    values.slice(layout.headerRow + 1).forEach(function(row) {
+      const item = extractPdCapacityRow(row, layout, source, sheet.getName());
+      if (item) rows.push(item);
+    });
+  });
+  return rows;
+}
+
+function isKpiOutputSheet(name) {
+  const normalized = String(name || "").trim().toLowerCase();
+  if (normalized.indexOf("kpi_") === 0) return true;
+  return [
+    KPI_DASHBOARD_SHEET,
+    KPI_MACHINE_SHEET,
+    KPI_MACHINE_STEP_SHEET,
+    KPI_MACHINE_JOB_STEP_SHEET,
+    KPI_DAILY_DETAIL_SHEET,
+    KPI_NOTES_SHEET,
+  ].indexOf(normalized) >= 0;
+}
+
+function detectPdCapacityLayout(values) {
+  let best = null;
+  values.forEach(function(row, rowIndex) {
+    const headers = row.map(normalizeKpiKey);
+    const partNoIndex = findPdHeaderIndex(headers, ["PARTNO", "PARTNUMBER", "PN"]);
+    const partNameIndex = findPdHeaderIndex(headers, ["PARTNAME", "PRODUCTNAME", "PRODUCT", "ITEMNAME"]);
+    const stepIndex = findPdHeaderIndex(headers, ["STEP"]);
+    const machineIndex = findPdHeaderIndex(headers, ["MCNO", "M/CNO", "MACHINE", "M/C"]);
+    const targetIndex = findPdTargetIndex(headers);
+    const score =
+      (partNoIndex >= 0 ? 4 : 0) +
+      (partNameIndex >= 0 ? 2 : 0) +
+      (stepIndex >= 0 ? 2 : 0) +
+      (machineIndex >= 0 ? 2 : 0) +
+      (targetIndex >= 0 ? 4 : 0);
+    if (!best || score > best.score) {
+      best = {
+        score: score,
+        headerRow: rowIndex,
+        partNoIndex: partNoIndex >= 0 ? partNoIndex : 2,
+        partNameIndex: partNameIndex >= 0 ? partNameIndex : 1,
+        stepIndex: stepIndex >= 0 ? stepIndex : 3,
+        machineIndex: machineIndex,
+        targetIndex: targetIndex,
+      };
+    }
+  });
+  if (!best || best.score < 4) return null;
+  return best;
+}
+
+function findPdHeaderIndex(headers, tokens) {
+  for (let index = 0; index < headers.length; index++) {
+    if (tokens.some(function(token) { return headers[index].indexOf(token) >= 0; })) return index;
+  }
+  return -1;
+}
+
+function findPdTargetIndex(headers) {
+  let fallback = -1;
+  for (let index = 0; index < headers.length; index++) {
+    const header = headers[index];
+    if (!header) continue;
+    if (header.indexOf("TARGET8") >= 0 || header.indexOf("TARGET/HOUR") >= 0 || header.indexOf("TARGET") >= 0) return index;
+    if (header.indexOf("8HOUR") >= 0 || header.indexOf("8HR") >= 0) fallback = index;
+  }
+  return fallback;
+}
+
+function extractPdCapacityRow(row, layout, source, sheetName) {
+  const partNo = normalizeKpiText(row[layout.partNoIndex]);
+  const productName = normalizeKpiText(row[layout.partNameIndex]);
+  const step = normalizeKpiText(row[layout.stepIndex], "-");
+  const machineName = layout.machineIndex >= 0 ? normalizeKpiText(row[layout.machineIndex]) : "";
+  const target8h = getPdCapacityTarget(row, layout.targetIndex);
+  if ((!partNo && !productName) || target8h <= 0) return null;
+  return {
+    sourceLabel: source.label,
+    sheetName: sheetName,
+    machineName: machineName,
+    machineAlias: sheetName,
+    productName: productName,
+    partNo: partNo,
+    step: step,
+    target8h: target8h,
+    speedPcsPerMinute: target8h / 480,
+  };
+}
+
+function getPdCapacityTarget(row, targetIndex) {
+  if (targetIndex >= 0) {
+    const target = numberValue(String(row[targetIndex] || "").replace(/,/g, ""));
+    if (target > 0) return target;
+  }
+  for (let index = row.length - 1; index >= 0; index--) {
+    const value = numberValue(String(row[index] || "").replace(/,/g, ""));
+    if (value > 0) return value;
+  }
+  return 0;
+}
+
+function addKpiCapacityLookup(lookup, item) {
+  const machineKeys = [
+    normalizeKpiKey(item.machineName),
+    normalizeKpiKey(item.machineAlias),
+  ].filter(Boolean);
+  const partKey = normalizeKpiKey(item.partNo);
+  const productKey = normalizeKpiKey(item.productName);
+  const stepKeys = getKpiStepKeys(item.step || "-");
+  const keys = [];
+  machineKeys.forEach(function(machineKey) {
+    stepKeys.forEach(function(stepKey) {
+      if (partKey) keys.push(machineKey + "|" + partKey + "|" + stepKey);
+      if (productKey) keys.push(machineKey + "|" + productKey + "|" + stepKey);
+    });
+  });
+  keys.forEach(function(key) {
+    if (!lookup[key]) {
+      lookup[key] = {
+        target8h: item.target8h,
+        speedPcsPerMinute: item.speedPcsPerMinute,
+        source: "PD capacity " + item.sourceLabel + " / " + item.sheetName,
+      };
+    }
+  });
+}
+
+function findKpiCapacity(lookup, log) {
+  if (!lookup) return null;
+  const machineKeys = [
+    normalizeKpiKey(log.machineId),
+    normalizeKpiKey(log.machineName),
+  ].filter(Boolean);
+  const stepKeys = getKpiStepKeys(log.step || "-");
+  const valueKeys = [
+    normalizeKpiKey(log.partNo),
+    normalizeKpiKey(log.productName),
+  ].filter(Boolean);
+  for (let machineIndex = 0; machineIndex < machineKeys.length; machineIndex++) {
+    for (let valueIndex = 0; valueIndex < valueKeys.length; valueIndex++) {
+      for (let stepIndex = 0; stepIndex < stepKeys.length; stepIndex++) {
+        const exact = lookup[machineKeys[machineIndex] + "|" + valueKeys[valueIndex] + "|" + stepKeys[stepIndex]];
+        if (exact) return exact;
+      }
+    }
+  }
+  return null;
+}
+
+function getKpiStepKeys(step) {
+  const text = normalizeKpiText(step, "-");
+  const keys = [normalizeKpiKey(text)];
+  const slashMatch = text.match(/^(\d+)\s*\/\s*\d+$/);
+  if (slashMatch) keys.push(normalizeKpiKey(slashMatch[1]));
+  if (text === "/" || text === "-" || text === "1/1") keys.push(normalizeKpiKey("-"));
+  return keys.filter(function(key, index, list) {
+    return key && list.indexOf(key) === index;
+  });
+}
+
+function dedupeKpiLogs(rawLogs, capacityLookup) {
   const map = {};
   rawLogs.forEach(function(raw) {
-    const log = normalizeKpiLog(raw);
+    const log = normalizeKpiLog(raw, capacityLookup);
     if (!log.date || !log.machineId || !log.partKey) return;
     const key = [
       log.date,
@@ -1782,7 +2040,7 @@ function dedupeKpiLogs(rawLogs) {
     });
 }
 
-function normalizeKpiLog(raw) {
+function normalizeKpiLog(raw, capacityLookup) {
   const workMinutes = numberValue(raw.workMinutes);
   const machineSpeed = numberValue(raw.machineSpeed);
   const cavityQty = numberValue(raw.cavityQty) || 1;
@@ -1801,10 +2059,29 @@ function normalizeKpiLog(raw) {
   ]);
   const rawNormalMinutes = numberValue(raw.normalMinutes);
   const normalMinutes = rawNormalMinutes > 0 ? rawNormalMinutes : Math.max(workMinutes - downtimeMinutes, 0);
-  const speedPcsPerMinute = machineSpeed >= 1000 ? machineSpeed / 480 : machineSpeed * cavityQty;
+  const machineId = normalizeKpiText(raw.machineId || raw.machineName, "unknown");
+  const machineName = normalizeKpiText(raw.machineName, "Unknown machine");
+  const productName = normalizeKpiText(raw.productName, "-");
+  const partNo = normalizeKpiText(raw.partNo, "(blank)");
+  const step = normalizeKpiText(raw.step, "-");
+  const productKey = normalizeKpiKey(productName);
+  const partKey = normalizeKpiKey(partNo);
+  const stepKey = normalizeKpiKey(step || "-");
+  const fallbackSpeed = machineSpeed >= 1000 ? machineSpeed / 480 : machineSpeed * cavityQty;
+  const capacity = findKpiCapacity(capacityLookup, {
+    machineId: machineId,
+    machineName: machineName,
+    productName: productName,
+    productKey: productKey,
+    partNo: partNo,
+    partKey: partKey,
+    step: step,
+    stepKey: stepKey,
+  });
+  const speedPcsPerMinute = capacity ? capacity.speedPcsPerMinute : fallbackSpeed;
   const targetQty = speedPcsPerMinute * workMinutes;
   const actualOutput = goodQty + ngQty + testQty;
-  const target8h = speedPcsPerMinute * 480;
+  const target8h = capacity ? capacity.target8h : speedPcsPerMinute * 480;
   const kpi = targetQty > 0 ? actualOutput / targetQty : 0;
   const availability = workMinutes > 0 ? normalMinutes / workMinutes : 0;
   const quality = goodQty + ngQty > 0 ? goodQty / (goodQty + ngQty) : 0;
@@ -1815,14 +2092,14 @@ function normalizeKpiLog(raw) {
     month: String(formatLegacyDate(raw.date)).slice(0, 7),
     shift: toOriginalShift(raw.shift) || "-",
     shiftStartAt: normalizeKpiText(raw.shiftStartAt),
-    machineId: normalizeKpiText(raw.machineId || raw.machineName, "unknown"),
-    machineName: normalizeKpiText(raw.machineName, "Unknown machine"),
-    productName: normalizeKpiText(raw.productName, "-"),
-    productKey: normalizeKpiKey(raw.productName),
-    partNo: normalizeKpiText(raw.partNo, "(blank)"),
-    partKey: normalizeKpiKey(raw.partNo),
-    step: normalizeKpiText(raw.step, "-"),
-    stepKey: normalizeKpiKey(raw.step || "-"),
+    machineId: machineId,
+    machineName: machineName,
+    productName: productName,
+    productKey: productKey,
+    partNo: partNo,
+    partKey: partKey,
+    step: step,
+    stepKey: stepKey,
     source: normalizeKpiText(raw.source, "unknown"),
     workMinutes: workMinutes,
     normalMinutes: normalMinutes,
@@ -1841,7 +2118,7 @@ function normalizeKpiLog(raw) {
     availability: availability,
     quality: quality,
     oee: kpi * availability * quality,
-    speedSource: machineSpeed >= 1000 ? "machineSpeed / 480" : "machineSpeed x cavityQty",
+    speedSource: capacity ? capacity.source : (machineSpeed >= 1000 ? "machineSpeed / 480" : "machineSpeed x cavityQty"),
     createdAt: normalizeKpiText(raw.createdAt),
     updatedAt: normalizeKpiText(raw.updatedAt),
   };
@@ -2268,7 +2545,9 @@ function buildKpiNotesRows(refreshedAt, rawCount, usedCount, duplicateRowsRemove
   return [
     ["Method", "KPI % = Actual Output / Target Qty. Target Qty = Work Minutes x Speed pcs/min."],
     ["Actual Output", "Good Qty + NG Qty + Test Qty."],
-    ["Speed pcs/min", "If machineSpeed >= 1000, treat machineSpeed as target per 8 hours and divide by 480. Otherwise speed = machineSpeed x cavityQty."],
+    ["Speed pcs/min", "Priority 1: PD capacity by Machine + Part/Product + Step. Priority 2: if machineSpeed >= 1000, divide by 480. Priority 3: machineSpeed x cavityQty."],
+    ["PD refresh", "PD Office files are converted to a temporary Google Sheets cache for read-only KPI calculation. The cache refreshes when the source file modified date changes."],
+    ["Auto refresh", "KPI auto refresh trigger runs every 10 minutes after refreshKpi is called once."],
     ["Availability %", "Normal Minutes / Work Minutes."],
     ["Quality %", "Good Qty / (Good Qty + NG Qty). Test Qty is excluded from quality."],
     ["OEE %", "KPI % x Availability % x Quality %."],
@@ -2960,17 +3239,12 @@ function getPdExternalSheets() {
   return PD_EXTERNAL_SHEETS.map(function(source) {
     try {
       const gid = source.gid || "0";
-      const url = "https://docs.google.com/spreadsheets/d/" + source.id + "/export?format=csv&gid=" + gid;
-      const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-      const statusCode = response.getResponseCode();
-      if (statusCode < 200 || statusCode >= 300) {
-        throw new Error("HTTP " + statusCode);
-      }
-      const rows = Utilities.parseCsv(response.getContentText());
-      const normalized = trimPdValues(rows);
-      const headers = normalized.length ? normalized[0].map(function(value, index) {
-        return value || "Column " + (index + 1);
-      }) : [];
+      const book = openPdSpreadsheet(source);
+      let sheets = book.getSheets();
+      const selectedSheets = sheets.filter(function(sheet) {
+        return String(sheet.getSheetId()) === String(gid);
+      });
+      if (selectedSheets.length) sheets = selectedSheets;
       return {
         ok: true,
         id: source.id,
@@ -2979,16 +3253,24 @@ function getPdExternalSheets() {
         name: source.label,
         url: source.url,
         fetchedAt: new Date().toISOString(),
-        sheets: [
-          {
-            name: "Sheet1",
+        sheets: sheets.map(function(sheet) {
+          const lastRow = Math.min(sheet.getLastRow(), PD_MAX_ROWS_PER_SHEET + 1);
+          const lastColumn = Math.min(sheet.getLastColumn(), PD_MAX_COLUMNS_PER_SHEET);
+          const normalized = lastRow > 0 && lastColumn > 0
+            ? trimPdValues(sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues())
+            : [];
+          const headers = normalized.length ? normalized[0].map(function(value, index) {
+            return value || "Column " + (index + 1);
+          }) : [];
+          return {
+            name: sheet.getName(),
             headers: headers,
             rows: normalized.slice(1, PD_MAX_ROWS_PER_SHEET),
-            rowCount: Math.max(normalized.length - 1, 0),
+            rowCount: Math.max(sheet.getLastRow() - 1, 0),
             columnCount: headers.length,
-            truncated: normalized.length > PD_MAX_ROWS_PER_SHEET,
-          },
-        ],
+            truncated: sheet.getLastRow() > PD_MAX_ROWS_PER_SHEET,
+          };
+        }),
       };
     } catch (error) {
       return {
