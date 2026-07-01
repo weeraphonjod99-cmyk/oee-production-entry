@@ -242,6 +242,26 @@ const getEmployeeTimerToneClass = (key?: string) => {
   const code = getEmployeeTimerExcelCode(key).toLowerCase();
   return code ? `timer-tone-${code}` : "";
 };
+
+const employeeTimerRolePermissions: Partial<Record<AppRole, EmployeeTimerKey[]>> = {
+  qc: ["work", "moldRepairMinutes"],
+  tooling_repair: ["inspectionMinutes"],
+  technician: ["work"],
+};
+
+const employeeRoleLabel = (role: AppRole) => {
+  if (role === "admin") return "Admin";
+  if (role === "production") return "Production";
+  if (role === "qc") return "QC";
+  if (role === "tooling_repair") return "Tooling repair";
+  if (role === "technician") return "Technician";
+  return role;
+};
+
+const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTimerKey) => {
+  if (!role || role === "admin" || role === "production") return true;
+  return (employeeTimerRolePermissions[role] ?? []).includes(key);
+};
 const clampWorkMinutes = (value: number) => Math.min(roundNumber(Math.max(Number(value) || 0, 0)), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
@@ -2047,6 +2067,12 @@ function App() {
   };
 
   const switchEmployeeTimerRealtime = (key: EmployeeTimerKey, label: string) => {
+    if (!canPressEmployeeTimerForRole(session?.role, key)) {
+      const message = `Role ${employeeRoleLabel(session?.role || "production")} ไม่มีสิทธิ์กดหัวข้อ ${getEmployeeTimerExcelCode(key) || ""} ${label}`;
+      setStatus(message);
+      setProblemDialog({ title: "ไม่มีสิทธิ์กดหัวข้อนี้", message });
+      return false;
+    }
     const activeTimer = employeeActiveTimerRef.current;
     if (activeTimer?.key === key) {
       const message = `${label} กำลังนับเวลาอยู่แล้ว ไม่ต้องกดซ้ำ`;
@@ -3268,7 +3294,9 @@ function App() {
                   <label className={`downtime-card ${getExcelCodeTone(productionWorkExcelCode)}`}>
                     <button
                       className={`downtime-press-button ${getExcelCodeTone(productionWorkExcelCode)} ${getEmployeeTimerToneClass("work")} ${employeeActiveTimer?.key === "work" ? "active-timer" : ""} ${currentMachineSharedTimerKey === "work" ? "shared-active-timer" : ""}`}
+                      disabled={!canPressEmployeeTimerForRole(session.role, "work")}
                       onClick={pressEmployeeWorkStartRealtime}
+                      title={!canPressEmployeeTimerForRole(session.role, "work") ? `Role ${employeeRoleLabel(session.role)} ไม่มีสิทธิ์กด A` : undefined}
                       type="button"
                     >
                       <span className="downtime-button-code">{productionWorkExcelCode}</span>
@@ -3293,7 +3321,13 @@ function App() {
                     {isEmployeeEntry ? (
                       <button
                         className={`downtime-press-button ${getExcelCodeTone(downtimeExcelCodes[field.key])} ${getEmployeeTimerToneClass(field.key)} ${employeeActiveTimer?.key === field.key ? "active-timer" : ""} ${currentMachineSharedTimerKey === field.key ? "shared-active-timer" : ""}`}
+                        disabled={!canPressEmployeeTimerForRole(session.role, field.key)}
                         onClick={() => pressEmployeeDowntimeRealtime(field.key)}
+                        title={
+                          !canPressEmployeeTimerForRole(session.role, field.key)
+                            ? `Role ${employeeRoleLabel(session.role)} ไม่มีสิทธิ์กด ${downtimeExcelCodes[field.key]}`
+                            : undefined
+                        }
                         type="button"
                       >
                         <span className="downtime-button-code">{downtimeExcelCodes[field.key]}</span>
@@ -3802,6 +3836,8 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             >
               <option value="production">Production</option>
               <option value="qc">QC</option>
+              <option value="tooling_repair">Tooling repair</option>
+              <option value="technician">Technician</option>
               <option value="admin">Admin</option>
             </select>
           </label>

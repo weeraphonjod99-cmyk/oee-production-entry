@@ -579,7 +579,7 @@ function createAppUser(payload) {
   if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
     throw new Error("Username ต้องเป็น a-z, 0-9, จุด, ขีดกลาง หรือ underscore ความยาว 3-32 ตัว");
   }
-  if (role !== "admin" && role !== "production" && role !== "qc") {
+  if (["admin", "production", "qc", "tooling_repair", "technician"].indexOf(role) < 0) {
     throw new Error("Role ไม่ถูกต้อง");
   }
   if (!passwordHash) {

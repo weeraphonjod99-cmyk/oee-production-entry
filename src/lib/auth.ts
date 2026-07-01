@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "production" | "qc";
+export type AppRole = "admin" | "production" | "qc" | "tooling_repair" | "technician";
 
 export type AppSession = {
   username: string;
@@ -230,7 +230,7 @@ export async function createUser(input: {
   if (password.length < 6) {
     throw new Error("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
   }
-  if (input.role !== "admin" && input.role !== "production" && input.role !== "qc") {
+  if (!["admin", "production", "qc", "tooling_repair", "technician"].includes(input.role)) {
     throw new Error("Role ไม่ถูกต้อง");
   }
   const passwordHash = await sha256(password);
