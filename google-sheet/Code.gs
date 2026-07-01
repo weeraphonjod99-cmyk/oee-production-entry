@@ -39,12 +39,18 @@ const OEE_MINUTES_PER_SLOT = 5;
 const OEE_SHIFT_BREAK_MINUTES = 110;
 const OEE_ENTRY_DATE_HEADER = "วันที่กรอกยอด\nEntry Date";
 const OEE_ENTRY_TIME_HEADER = "เวลากรอก\nEntry Time";
+const OEE_ENTRY_USER_HEADER = "ผู้กรอก\nEntry User";
+const OEE_SUBMIT_TIME_HEADER = "เวลาส่งยอด\nSubmit Time";
+const OEE_BUTTON_DETAILS_HEADER = "รายละเอียดการกดปุ่ม\nButton Details";
 const OEE_TEST_HEADER = "งาน\nทดสอบ\n/Test";
 
 const LOG_HEADERS = [
   "id",
   "recordDate",
   "recordTime",
+  "entryUser",
+  "submittedAt",
+  "buttonDetails",
   "date",
   "shift",
   "shiftStartAt",
@@ -301,8 +307,11 @@ function appendLog(payload) {
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
     date: productionDate,
+    buttonDetails: String(payload.buttonDetails || ""),
+    entryUser: String(payload.entryUser || payload.userName || ""),
     recordDate: formatRecordDate(payload.recordDate) || todayBangkok(now),
     recordTime: formatRecordTime(payload.recordTime) || timeBangkok(now),
+    submittedAt: formatRecordDateTime(payload.submittedAt) || dateTimeBangkok(now),
     shiftStartAt: payload.shiftStartAt || getShiftStartAt(productionDate, payload.shift),
     shiftEndAt: payload.shiftEndAt || getShiftEndAt(productionDate, payload.shift),
     createdAt: payload.createdAt || now.toISOString(),
@@ -331,8 +340,11 @@ function upsertLog(payload) {
   const productionDate = formatRecordDate(payload.date) || todayBangkok(now);
   const log = Object.assign({}, payload, {
     date: productionDate,
+    buttonDetails: String(payload.buttonDetails || ""),
+    entryUser: String(payload.entryUser || payload.userName || ""),
     recordDate: formatRecordDate(payload.recordDate) || todayBangkok(now),
     recordTime: formatRecordTime(payload.recordTime) || timeBangkok(now),
+    submittedAt: formatRecordDateTime(payload.submittedAt) || dateTimeBangkok(now),
     shiftStartAt: payload.shiftStartAt || getShiftStartAt(productionDate, payload.shift),
     shiftEndAt: payload.shiftEndAt || getShiftEndAt(productionDate, payload.shift),
     createdAt: payload.createdAt || now.toISOString(),
@@ -793,18 +805,23 @@ function normalizeSheetName(value) {
 }
 
 function getOeeLayout(sheet) {
-  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 60)).getDisplayValues()[0];
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
   const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
-  const offset = hasEntryTimestamp ? 2 : 0;
+  const hasEntryDetails = hasEntryTimestamp && isOeeEntryDetailsHeader(headers[3], headers[4], headers[5]);
+  const offset = hasEntryTimestamp ? (hasEntryDetails ? 5 : 2) : 0;
   const hasStep = String(headers[5 + offset] || "").toLowerCase().indexOf("step") >= 0;
   const detected = detectOeeOutputColumns(headers);
   const layout = hasStep
     ? {
       hasStep: true,
+      hasEntryDetails: hasEntryDetails,
       hasEntryTimestamp: hasEntryTimestamp,
       sequence: 1,
       entryDate: hasEntryTimestamp ? 2 : 0,
       entryTime: hasEntryTimestamp ? 3 : 0,
+      entryUser: hasEntryDetails ? 4 : 0,
+      submittedAt: hasEntryDetails ? 5 : 0,
+      buttonDetails: hasEntryDetails ? 6 : 0,
       date: 2 + offset,
       shift: 3 + offset,
       productName: 4 + offset,
@@ -822,10 +839,14 @@ function getOeeLayout(sheet) {
     }
     : {
       hasStep: false,
+      hasEntryDetails: hasEntryDetails,
       hasEntryTimestamp: hasEntryTimestamp,
       sequence: 1,
       entryDate: hasEntryTimestamp ? 2 : 0,
       entryTime: hasEntryTimestamp ? 3 : 0,
+      entryUser: hasEntryDetails ? 4 : 0,
+      submittedAt: hasEntryDetails ? 5 : 0,
+      buttonDetails: hasEntryDetails ? 6 : 0,
       date: 2 + offset,
       shift: 3 + offset,
       productName: 4 + offset,
@@ -897,15 +918,34 @@ function isOeeEntryTimestampHeader(entryDateHeader, entryTimeHeader) {
   );
 }
 
-function ensureOeeEntryTimestampColumns(sheet) {
-  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 60)).getDisplayValues()[0];
-  if (isOeeEntryTimestampHeader(headers[1], headers[2])) return false;
+function isOeeEntryDetailsHeader(entryUserHeader, submitTimeHeader, buttonDetailsHeader) {
+  const userText = normalizeHeaderText(entryUserHeader);
+  const submitText = normalizeHeaderText(submitTimeHeader);
+  const detailsText = normalizeHeaderText(buttonDetailsHeader);
+  return (
+    (userText.indexOf("entry user") >= 0 || userText.indexOf("ผู้กรอก") >= 0) &&
+    (submitText.indexOf("submit time") >= 0 || submitText.indexOf("ส่งยอด") >= 0) &&
+    (detailsText.indexOf("button details") >= 0 || detailsText.indexOf("รายละเอียด") >= 0)
+  );
+}
 
-  sheet.insertColumnsAfter(1, 2);
-  const headerRange = sheet.getRange(OEE_HEADER_ROW, 2, 1, 2);
-  const styleSource = sheet.getRange(OEE_HEADER_ROW, 4, 1, 1);
+function ensureOeeEntryTimestampColumns(sheet) {
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
+  const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
+  const hasEntryDetails = hasEntryTimestamp && isOeeEntryDetailsHeader(headers[3], headers[4], headers[5]);
+  if (hasEntryTimestamp && hasEntryDetails) return false;
+
+  const insertAfter = hasEntryTimestamp ? 3 : 1;
+  const insertCount = hasEntryTimestamp ? 3 : 5;
+  sheet.insertColumnsAfter(insertAfter, insertCount);
+  const headerColumn = hasEntryTimestamp ? 4 : 2;
+  const headerValues = hasEntryTimestamp
+    ? [[OEE_ENTRY_USER_HEADER, OEE_SUBMIT_TIME_HEADER, OEE_BUTTON_DETAILS_HEADER]]
+    : [[OEE_ENTRY_DATE_HEADER, OEE_ENTRY_TIME_HEADER, OEE_ENTRY_USER_HEADER, OEE_SUBMIT_TIME_HEADER, OEE_BUTTON_DETAILS_HEADER]];
+  const headerRange = sheet.getRange(OEE_HEADER_ROW, headerColumn, 1, insertCount);
+  const styleSource = sheet.getRange(OEE_HEADER_ROW, headerColumn + insertCount, 1, 1);
   styleSource.copyTo(headerRange, { contentsOnly: false });
-  headerRange.setValues([[OEE_ENTRY_DATE_HEADER, OEE_ENTRY_TIME_HEADER]]);
+  headerRange.setValues(headerValues);
   headerRange
     .setBackground("#fbbc04")
     .setFontColor("#000000")
@@ -915,10 +955,12 @@ function ensureOeeEntryTimestampColumns(sheet) {
     .setWrap(true);
   sheet.setColumnWidth(2, 105);
   sheet.setColumnWidth(3, 90);
+  sheet.setColumnWidth(4, 140);
+  sheet.setColumnWidth(5, 145);
+  sheet.setColumnWidth(6, 360);
   if (sheet.getLastRow() >= OEE_FIRST_DATA_ROW) {
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
-    sheet.getRange(OEE_FIRST_DATA_ROW, 2, rowCount, 1).setNumberFormat("yyyy-mm-dd");
-    sheet.getRange(OEE_FIRST_DATA_ROW, 3, rowCount, 1).setNumberFormat("@");
+    sheet.getRange(OEE_FIRST_DATA_ROW, 2, rowCount, 5).setNumberFormat("@").setWrap(true);
   }
   return true;
 }
@@ -1064,6 +1106,25 @@ function writeOeeInputRow(sheet, layout, row, log) {
       .getRange(row, layout.entryTime)
       .setNumberFormat("@")
       .setValue(formatRecordTime(log.recordTime) || timeBangkok(new Date()));
+  }
+  if (layout.entryUser) {
+    sheet
+      .getRange(row, layout.entryUser)
+      .setNumberFormat("@")
+      .setValue(String(log.entryUser || log.userName || ""));
+  }
+  if (layout.submittedAt) {
+    sheet
+      .getRange(row, layout.submittedAt)
+      .setNumberFormat("@")
+      .setValue(formatRecordDateTime(log.submittedAt) || dateTimeBangkok(new Date()));
+  }
+  if (layout.buttonDetails) {
+    sheet
+      .getRange(row, layout.buttonDetails)
+      .setNumberFormat("@")
+      .setWrap(true)
+      .setValue(String(log.buttonDetails || ""));
   }
   sheet.getRange(row, layout.date).setNumberFormat("@").setValue(formatRecordDate(log.date) || todayBangkok(new Date()));
   sheet.getRange(row, layout.shift).setNumberFormat("@").setValue(String(toOriginalShift(log.shift) || ""));
@@ -1258,6 +1319,9 @@ function repairSheetTypes() {
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
     if (layout.entryDate) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryDate, rowCount, 1).setNumberFormat("yyyy-mm-dd");
     if (layout.entryTime) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryTime, rowCount, 1).setNumberFormat("@");
+    if (layout.entryUser) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryUser, rowCount, 1).setNumberFormat("@");
+    if (layout.submittedAt) sheet.getRange(OEE_FIRST_DATA_ROW, layout.submittedAt, rowCount, 1).setNumberFormat("@");
+    if (layout.buttonDetails) sheet.getRange(OEE_FIRST_DATA_ROW, layout.buttonDetails, rowCount, 1).setNumberFormat("@").setWrap(true);
     sheet.getRange(OEE_FIRST_DATA_ROW, layout.date, rowCount, 1).setNumberFormat("yyyy-mm-dd");
     sheet.getRange(OEE_FIRST_DATA_ROW, layout.shift, rowCount, 1).setNumberFormat("@");
     sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, 1).setNumberFormat("@");
@@ -2152,7 +2216,14 @@ function getLegacyOeeLogs() {
     if (!machine || sheet.getLastRow() < OEE_FIRST_DATA_ROW) return;
 
     const layout = getOeeLayout(sheet);
-    const lastColumn = Math.max(layout.cavityQty, layout.theoreticalImpulse, layout.testQty);
+    const lastColumn = Math.max(
+      layout.cavityQty,
+      layout.theoreticalImpulse,
+      layout.testQty,
+      layout.entryUser || 0,
+      layout.submittedAt || 0,
+      layout.buttonDetails || 0
+    );
     const rows = sheet
       .getRange(OEE_FIRST_DATA_ROW, 1, sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, lastColumn)
       .getValues();
@@ -2182,6 +2253,9 @@ function getLegacyOeeLogs() {
         id: "legacy-" + machine.id + "-" + sourceRow,
         recordDate: layout.entryDate ? formatRecordDate(row[layout.entryDate - 1]) : "",
         recordTime: layout.entryTime ? formatRecordTime(row[layout.entryTime - 1]) : "",
+        entryUser: layout.entryUser ? String(row[layout.entryUser - 1] || "") : "",
+        submittedAt: layout.submittedAt ? formatRecordDateTime(row[layout.submittedAt - 1]) : "",
+        buttonDetails: layout.buttonDetails ? String(row[layout.buttonDetails - 1] || "") : "",
         date: date,
         shift: toOriginalShift(row[layout.shift - 1]),
         shiftStartAt: getShiftStartAt(date, row[layout.shift - 1]),
@@ -2305,6 +2379,21 @@ function formatRecordTime(value) {
   return "";
 }
 
+function formatRecordDateTime(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+  }
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const readable = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}:\d{2}(?::\d{2})?)/);
+  if (readable) return readable[1] + " " + normalizeTimeText(readable[2]);
+  const parsed = new Date(text);
+  if (!isNaN(parsed.getTime())) {
+    return Utilities.formatDate(parsed, "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+  }
+  return text;
+}
+
 function normalizeTimeText(value) {
   const parts = String(value || "").split(":");
   const hour = String(Number(parts[0]) || 0).padStart(2, "0");
@@ -2319,6 +2408,10 @@ function todayBangkok(value) {
 
 function timeBangkok(value) {
   return Utilities.formatDate(value || new Date(), "Asia/Bangkok", "HH:mm:ss");
+}
+
+function dateTimeBangkok(value) {
+  return Utilities.formatDate(value || new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
 }
 
 function addDaysToLegacyDate(date, days) {
@@ -2516,16 +2609,16 @@ function writeCncMachineSheet(sheet, machine, logs) {
   ensureSheetSize(sheet, totalRows, totalColumns);
   sheet.clear();
   sheet.setFrozenRows(OEE_HEADER_ROW);
-  sheet.setFrozenColumns(7);
+  sheet.setFrozenColumns(10);
 
   const noteRow = new Array(totalColumns).fill("");
   noteRow[1] = "只填写黄色区域表格";
-  noteRow[17] = "表中每小格代表5分钟，总个数132";
-  noteRow[31] = "X2";
+  noteRow[20] = "表中每小格代表5分钟，总个数132";
+  noteRow[34] = "X2";
   const codeRow = new Array(totalColumns).fill("");
   const timeCodes = ["A", "B", "C", "D", "E", "F", "G", "H", "X", "A", "B", "C", "D", "E", "F", "G", "H", "X"];
   for (let index = 0; index < timeCodes.length; index++) {
-    codeRow[7 + index] = timeCodes[index];
+    codeRow[10 + index] = timeCodes[index];
   }
   const values = [noteRow, codeRow, headers].concat(logs.map(function(log, index) {
     return buildCncMachineSheetRow(log, index + OEE_FIRST_DATA_ROW);
@@ -2543,17 +2636,16 @@ function writeCncMachineSheet(sheet, machine, logs) {
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle")
     .setWrap(true);
-  sheet.getRange(1, 32, 1, 1).setBackground("#ff0000").setFontWeight("bold");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 2, Math.max(logs.length, 1), 1).setNumberFormat("@");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 3, Math.max(logs.length, 1), 1).setNumberFormat("@");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 4, Math.max(logs.length, 1), 1).setNumberFormat("@");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 5, Math.max(logs.length, 1), 3).setNumberFormat("@");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 8, Math.max(logs.length, 1), totalColumns - 7).setNumberFormat("0.##");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 34, Math.max(logs.length, 1), 4).setNumberFormat("0.00%");
+  sheet.getRange(1, 35, 1, 1).setBackground("#ff0000").setFontWeight("bold");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 2, Math.max(logs.length, 1), 5).setNumberFormat("@").setWrap(true);
+  sheet.getRange(OEE_FIRST_DATA_ROW, 7, Math.max(logs.length, 1), 4).setNumberFormat("@");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 11, Math.max(logs.length, 1), totalColumns - 10).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 37, Math.max(logs.length, 1), 4).setNumberFormat("0.00%");
   sheet.autoResizeColumns(1, totalColumns);
   sheet.setColumnWidths(1, 1, 55);
-  sheet.setColumnWidths(2, 3, 105);
-  sheet.setColumnWidths(6, 2, 145);
+  sheet.setColumnWidths(2, 4, 105);
+  sheet.setColumnWidth(6, 360);
+  sheet.setColumnWidths(9, 2, 145);
 }
 
 function getCncMachineSheetHeaders() {
@@ -2561,6 +2653,9 @@ function getCncMachineSheetHeaders() {
     "序号No",
     OEE_ENTRY_DATE_HEADER,
     OEE_ENTRY_TIME_HEADER,
+    OEE_ENTRY_USER_HEADER,
+    OEE_SUBMIT_TIME_HEADER,
+    OEE_BUTTON_DETAILS_HEADER,
     "日期 Date",
     "D/N",
     "产品名称 Product Name",
@@ -2615,13 +2710,16 @@ function buildCncMachineSheetRow(log, rowNumber) {
     minutesToSheetSlots(log.plannedStopMinutes, minutesPerSlot),
   ];
   const normalSlotFormula = "=" + workSlots + "-" + downtimeSlots.map(function(_value, index) {
-    return columnToLetter(9 + index) + rowNumber;
+    return columnToLetter(12 + index) + rowNumber;
   }).join("-");
-  const totalFormula = "=Z" + rowNumber + "+AA" + rowNumber + "+AB" + rowNumber;
+  const totalFormula = "=AC" + rowNumber + "+AD" + rowNumber + "+AE" + rowNumber;
   return [
     "=ROW()-ROW($A$3)",
     formatRecordDate(log.recordDate),
     formatRecordTime(log.recordTime),
+    String(log.entryUser || log.userName || ""),
+    formatRecordDateTime(log.submittedAt),
+    String(log.buttonDetails || ""),
     formatRecordDate(log.date),
     toOriginalShift(log.shift),
     String(log.productName || ""),
@@ -2645,15 +2743,15 @@ function buildCncMachineSheetRow(log, rowNumber) {
       totalFormula,
       numberValue(log.machineSpeed),
       numberValue(log.cavityQty),
-      "=IFERROR(AC" + rowNumber + "/AD" + rowNumber + ",\"\")",
-      numberValue(log.workMinutes),
       "=IFERROR(AF" + rowNumber + "/AG" + rowNumber + ",\"\")",
-      "=IFERROR(Z" + rowNumber + "/AC" + rowNumber + ",\"\")",
-      "=IFERROR(Q" + rowNumber + "/AG" + rowNumber + ",\"\")",
-      "=IFERROR(AH" + rowNumber + "*AI" + rowNumber + "*AJ" + rowNumber + ",\"\")",
-      "=IF(L" + rowNumber + ">0,1,0)",
-      "=IF(AL" + rowNumber + ">0,U" + rowNumber + "/AL" + rowNumber + ",\"\")",
-      "=IF(AL" + rowNumber + ">0,Q" + rowNumber + "/AL" + rowNumber + ",\"\")",
+      numberValue(log.workMinutes),
+      "=IFERROR(AI" + rowNumber + "/AJ" + rowNumber + ",\"\")",
+      "=IFERROR(AC" + rowNumber + "/AF" + rowNumber + ",\"\")",
+      "=IFERROR(T" + rowNumber + "/AJ" + rowNumber + ",\"\")",
+      "=IFERROR(AK" + rowNumber + "*AL" + rowNumber + "*AM" + rowNumber + ",\"\")",
+      "=IF(O" + rowNumber + ">0,1,0)",
+      "=IF(AO" + rowNumber + ">0,X" + rowNumber + "/AO" + rowNumber + ",\"\")",
+      "=IF(AO" + rowNumber + ">0,T" + rowNumber + "/AO" + rowNumber + ",\"\")",
     ]);
 }
 

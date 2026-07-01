@@ -166,6 +166,8 @@ const formatDurationMinutes = (minutesValue: number) => {
   return `${seconds} วิ`;
 };
 
+const formatThailandDateTime = (date: Date) => `${formatInputDate(date)} ${formatInputTime(date)}`;
+
 const getRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => log?.recordDate || "";
 const getDraftRecordDate = (log?: Pick<ProductionLog, "recordDate"> | null) => getRecordDate(log) || getTodayInputValue();
 const getRecordTime = (log?: Pick<ProductionLog, "recordTime"> | null) => log?.recordTime || "";
@@ -1199,6 +1201,9 @@ const getLogTargetQty = (log: ProductionLog) => roundNumber(getLogWorkMinutes(lo
 const draftFromLog = (log: ProductionLog): EntryDraft => ({
   recordDate: getDraftRecordDate(log),
   recordTime: getDraftRecordTime(log),
+  entryUser: log.entryUser || "",
+  submittedAt: log.submittedAt || "",
+  buttonDetails: log.buttonDetails || "",
   date: log.date || getTodayInputValue(),
   shift: log.shift,
   shiftStartAt: log.shiftStartAt || shiftStartAt(log.date || getTodayInputValue(), log.shift),
@@ -2116,6 +2121,83 @@ function App() {
       ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, endedAt, timer.originalStartedAt ?? timer.startedAt)
       : getElapsedWallMinutes(timer.originalStartedAt ?? timer.startedAt, endedAt);
 
+  const getEmployeeTimerDurationForDraft = (
+    targetDraft: EntryDraft,
+    key: EmployeeTimerKey,
+    startedAt: string,
+    endedAt: Date,
+  ) =>
+    key === "work"
+      ? getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, endedAt, startedAt)
+      : getElapsedWallMinutes(startedAt, endedAt);
+
+  const buildEmployeeButtonDetails = (
+    targetDraft: EntryDraft,
+    events: EmployeeDraftEvent[],
+    submittedAt: Date,
+    activeTimer: EmployeeActiveTimer | null,
+  ) => {
+    const grouped = new Map<string, EmployeeDraftEvent>();
+    events
+      .filter((event) => event.key && event.startedAt)
+      .forEach((event) => {
+        const key = `${event.key}::${event.startedAt}`;
+        const current = grouped.get(key);
+        if (!current) {
+          grouped.set(key, { ...event });
+          return;
+        }
+        grouped.set(key, {
+          ...current,
+          endedAt: event.endedAt || current.endedAt,
+          durationMinutes: typeof event.durationMinutes === "number" ? event.durationMinutes : current.durationMinutes,
+          reason: event.reason || current.reason,
+          user: event.user || current.user,
+        });
+      });
+
+    if (activeTimer) {
+      const startedAt = activeTimer.originalStartedAt ?? activeTimer.startedAt;
+      const key = `${activeTimer.key}::${startedAt}`;
+      const current = grouped.get(key);
+      grouped.set(key, {
+        ...(current ?? {
+          at: startedAt,
+          id: `submit-${key}`,
+          key: activeTimer.key,
+          label: getEmployeeTimerLabel(activeTimer.key),
+          reason: getEmployeeTimerLabel(activeTimer.key),
+          startedAt,
+          user: employeeOperatorName,
+        }),
+        endedAt: submittedAt.toISOString(),
+        durationMinutes: getEmployeeTimerDurationForDraft(targetDraft, activeTimer.key, startedAt, submittedAt),
+      });
+    }
+
+    const rows = Array.from(grouped.values()).sort((left, right) => String(left.startedAt || left.at).localeCompare(String(right.startedAt || right.at)));
+    return rows
+      .map((event) => {
+        const code = getEmployeeTimerExcelCode(event.key);
+        const started = parseStoredDateTime(event.startedAt);
+        const ended = parseStoredDateTime(event.endedAt);
+        const duration =
+          typeof event.durationMinutes === "number"
+            ? event.durationMinutes
+            : started && ended && event.key
+              ? getEmployeeTimerDurationForDraft(targetDraft, event.key, event.startedAt || started.toISOString(), ended)
+              : null;
+        return [
+          code ? `${code} ${event.reason || event.label}` : event.reason || event.label,
+          `ผู้กด: ${event.user || employeeOperatorName}`,
+          `เริ่ม: ${started ? formatThailandDateTime(started) : "-"}`,
+          `จบ: ${ended ? formatThailandDateTime(ended) : "-"}`,
+          `ใช้เวลา: ${duration === null ? "-" : formatDurationMinutes(duration)}`,
+        ].join(" | ");
+      })
+      .join("\n");
+  };
+
   const confirmEmployeeTimer = () => {
     if (!pendingEmployeeTimer) return;
     const { key, label, pressedDate, pressedTime, startedAt } = pendingEmployeeTimer;
@@ -2454,7 +2536,18 @@ function App() {
     setSuccessDialog({ title: "บันทึกร่างไว้แล้ว", message: "ร่างนี้ยังไม่ส่งเข้าระบบ จนกว่าจะกดส่งยอดบันทึก หรือระบบส่งให้อัตโนมัติหลังจบกะ" });
   };
 
-  const submitProductionDraft = async (targetDraft: EntryDraft, options: { autoSubmit?: boolean; editingLog?: ProductionLog | null; resetAfterSave?: boolean } = {}) => {
+  const submitProductionDraft = async (
+    targetDraft: EntryDraft,
+    options: {
+      activeTimer?: EmployeeActiveTimer | null;
+      autoSubmit?: boolean;
+      editingLog?: ProductionLog | null;
+      entryEvents?: EmployeeDraftEvent[];
+      entryUser?: string;
+      resetAfterSave?: boolean;
+      submittedAt?: Date;
+    } = {},
+  ) => {
     const shouldValidateBeforeSave = !options.autoSubmit;
     const missingFields = shouldValidateBeforeSave ? getMissingSaveFields(targetDraft) : [];
     if (missingFields.length > 0) {
@@ -2477,12 +2570,19 @@ function App() {
     const savedWorkMinutes = clampWorkMinutes(targetDraft.workMinutes);
     const savedTimeSlots = slotsFromMinutes(savedWorkMinutes, savedMinutesPerSlot);
     const savedMeetingMinutes = Math.max(Number(targetDraft.meetingMinutes || 0), getShiftBreakMinutes(targetDraft.shift));
+    const submittedAt = options.submittedAt ?? new Date();
+    const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
+    const entryEventsForDetails = options.entryEvents ?? employeeDraftEvents;
+    const entryUser = options.entryUser || session?.displayName || session?.username || "";
     const log: ProductionLog = {
       ...targetDraft,
+      buttonDetails: isEmployeeEntry && !shouldUpdate ? buildEmployeeButtonDetails(targetDraft, entryEventsForDetails, submittedAt, activeTimerForDetails) : targetDraft.buttonDetails || options.editingLog?.buttonDetails || "",
+      entryUser: entryUser || targetDraft.entryUser || options.editingLog?.entryUser || "",
       meetingMinutes: savedMeetingMinutes,
       minutesPerSlot: savedMinutesPerSlot,
       recordDate: savedRecordDate,
       recordTime: savedRecordTime,
+      submittedAt: shouldUpdate ? targetDraft.submittedAt || options.editingLog?.submittedAt || formatThailandDateTime(submittedAt) : formatThailandDateTime(submittedAt),
       date: savedDate,
       shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
       shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
@@ -2558,22 +2658,26 @@ function App() {
       const raw = window.localStorage.getItem(draftKey);
       if (!raw) continue;
       try {
-      const stored = JSON.parse(raw) as StoredEmployeeDraft;
+        const stored = JSON.parse(raw) as StoredEmployeeDraft;
         if (!stored?.draft || !stored.shiftEndAt) continue;
-      const finalAt = new Date(stored.shiftEndAt);
+        const finalAt = new Date(stored.shiftEndAt);
         if (Date.now() < finalAt.getTime()) continue;
-      autoSubmittingEmployeeDraft.current = true;
-      const finalized = finalizeEmployeeDraftForSubmit(
-        stored.draft,
-        stored.activeTimer ?? null,
-        finalAt,
-        "ตัดกะอัตโนมัติ / ส่งยอดบันทึก",
-        stored.workStartedAt || "",
-      );
-      await submitProductionDraft(finalized.draft, {
-        autoSubmit: true,
-        resetAfterSave: stored.draft.machineId === draft.machineId,
-      });
+        autoSubmittingEmployeeDraft.current = true;
+        const finalized = finalizeEmployeeDraftForSubmit(
+          stored.draft,
+          stored.activeTimer ?? null,
+          finalAt,
+          "ตัดกะอัตโนมัติ / ส่งยอดบันทึก",
+          stored.workStartedAt || "",
+        );
+        await submitProductionDraft(finalized.draft, {
+          activeTimer: stored.activeTimer ?? null,
+          autoSubmit: true,
+          entryEvents: Array.isArray(stored.entryEvents) ? stored.entryEvents : [],
+          entryUser: (Array.isArray(stored.entryEvents) ? stored.entryEvents.find((event) => event.user)?.user : "") || session?.displayName || session?.username || "",
+          resetAfterSave: stored.draft.machineId === draft.machineId,
+          submittedAt: finalAt,
+        });
       } catch {
         window.localStorage.removeItem(draftKey);
         refreshEmployeeDraftMachineIds();
@@ -2600,7 +2704,7 @@ function App() {
       setDraft(finalized.draft);
       setEmployeeDraftUpdatedAt(finalAt.toISOString());
       recordEmployeeDraftEvent("ตัดกะอัตโนมัติ / ส่งยอดบันทึก", `${finalized.endDate} ${finalized.endTime}`);
-      const saved = await submitProductionDraft(finalized.draft, { autoSubmit: true, resetAfterSave: true });
+      const saved = await submitProductionDraft(finalized.draft, { activeTimer, autoSubmit: true, resetAfterSave: true, submittedAt: finalAt });
       if (saved) {
         clearEmployeeActiveTimer();
       } else {
@@ -2667,7 +2771,7 @@ function App() {
     }
     if (isEmployeeEntry && !editingLog) autoSubmittingEmployeeDraft.current = true;
     try {
-      const saved = await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
+      const saved = await submitProductionDraft(targetDraft, { activeTimer, editingLog, resetAfterSave: true, submittedAt: now });
       if (saved && isEmployeeEntry && !editingLog) {
         clearEmployeeActiveTimer();
         setEmployeeWorkStartedAt("");

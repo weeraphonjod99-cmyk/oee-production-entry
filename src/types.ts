@@ -25,6 +25,9 @@ export type ProductionLog = {
   id: string;
   recordDate?: string;
   recordTime?: string;
+  entryUser?: string;
+  submittedAt?: string;
+  buttonDetails?: string;
   date: string;
   shift: ShiftCode;
   shiftStartAt?: string;
