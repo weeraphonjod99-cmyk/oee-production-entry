@@ -506,6 +506,8 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
         status.activeTimerStartedAt || "",
         status.activeTimerBaseAt || "",
         status.activeTimerBaseMinutes || 0,
+        status.buttonDetails || "",
+        status.buttonDetailsUpdatedAt || "",
         status.note || "",
         status.entryUpdatedAt || "",
         status.updatedAt || "",
@@ -1319,6 +1321,7 @@ function App() {
   const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const draftRef = useRef(draft);
+  const employeeDraftEventsRef = useRef<EmployeeDraftEvent[]>([]);
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
   const autoSubmittingEmployeeDraft = useRef(false);
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
@@ -1824,7 +1827,8 @@ function App() {
       user: eventDetails.user || employeeOperatorName,
     };
     setEmployeeDraftUpdatedAt(event.at);
-    setEmployeeDraftEvents((prev) => [event, ...prev].slice(0, 30));
+    employeeDraftEventsRef.current = [event, ...employeeDraftEventsRef.current].slice(0, 30);
+    setEmployeeDraftEvents(employeeDraftEventsRef.current);
   };
 
   const clearEmployeeActiveTimer = () => {
@@ -1894,7 +1898,8 @@ function App() {
       setEmployeeDraftActive(true);
       setEmployeeDraftStartedAt(stored.entryStartedAt || parseLocalDateTime(stored.draft.recordDate || getTodayInputValue(), stored.draft.recordTime || getCurrentTimeInputValue())?.toISOString() || "");
       setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
-      setEmployeeDraftEvents(Array.isArray(stored.entryEvents) ? stored.entryEvents : []);
+      employeeDraftEventsRef.current = Array.isArray(stored.entryEvents) ? stored.entryEvents : [];
+      setEmployeeDraftEvents(employeeDraftEventsRef.current);
       setEmployeeWorkStartedAt(stored.workStartedAt || "");
       setEmployeeActiveTimer(stored.activeTimer ?? null);
       employeeActiveTimerRef.current = stored.activeTimer ?? null;
@@ -1944,6 +1949,7 @@ function App() {
       setEmployeeDraftActive(false);
       setEmployeeDraftStartedAt("");
       setEmployeeDraftUpdatedAt("");
+      employeeDraftEventsRef.current = [];
       setEmployeeDraftEvents([]);
       setEmployeeWorkStartedAt("");
       clearEmployeeActiveTimer();
@@ -2304,6 +2310,7 @@ function App() {
     setEmployeeDraftActive(false);
     setEmployeeDraftStartedAt("");
     setEmployeeDraftUpdatedAt("");
+    employeeDraftEventsRef.current = [];
     setEmployeeDraftEvents([]);
     setEmployeeWorkStartedAt("");
     clearEmployeeActiveTimer();
@@ -2364,6 +2371,7 @@ function App() {
     setEmployeeDraftActive(false);
     setEmployeeDraftStartedAt("");
     setEmployeeDraftUpdatedAt("");
+    employeeDraftEventsRef.current = [];
     setEmployeeDraftEvents([]);
     setEmployeeWorkStartedAt("");
     clearEmployeeActiveTimer();
@@ -2384,6 +2392,7 @@ function App() {
         ? Number(stored.draft.workMinutes || 0)
         : Number(stored.draft[stored.activeTimer.key as DowntimeKey] || 0)
       : 0;
+    const buttonDetails = buildEmployeeButtonDetails(stored.draft, Array.isArray(stored.entryEvents) ? stored.entryEvents : [], new Date(), stored.activeTimer ?? null);
     const status: EmployeeMachineStatus = {
       machineId: stored.draft.machineId,
       machineName,
@@ -2418,6 +2427,8 @@ function App() {
       activeTimerStartedAt,
       activeTimerBaseAt,
       activeTimerBaseMinutes,
+      buttonDetails,
+      buttonDetailsUpdatedAt: stored.entryUpdatedAt || stored.savedAt,
       workStartedAt: stored.workStartedAt || "",
       entryStartedAt: stored.entryStartedAt || "",
       status: "active",
@@ -2473,7 +2484,7 @@ function App() {
     const entryUpdatedAt = options.entryUpdatedAt || employeeDraftUpdatedAt || now.toISOString();
     return {
       draft: nextDraft,
-      entryEvents: options.entryEvents || employeeDraftEvents,
+      entryEvents: options.entryEvents || employeeDraftEventsRef.current,
       entryStartedAt,
       entryUpdatedAt,
       savedAt: now.toISOString(),
@@ -2571,7 +2582,7 @@ function App() {
     const savedMeetingMinutes = Math.max(Number(targetDraft.meetingMinutes || 0), getShiftBreakMinutes(targetDraft.shift));
     const submittedAt = options.submittedAt ?? new Date();
     const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
-    const entryEventsForDetails = options.entryEvents ?? employeeDraftEvents;
+    const entryEventsForDetails = options.entryEvents ?? employeeDraftEventsRef.current;
     const entryUser = options.entryUser || session?.displayName || session?.username || "";
     const log: ProductionLog = {
       ...targetDraft,
@@ -2729,6 +2740,7 @@ function App() {
         setEmployeeDraftActive(false);
         setEmployeeDraftStartedAt("");
         setEmployeeDraftUpdatedAt("");
+        employeeDraftEventsRef.current = [];
         setEmployeeDraftEvents([]);
       }
     }
@@ -3065,6 +3077,21 @@ function App() {
                         Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
                         {sharedStatus.materialOfProduction || "-"}
                       </small>
+                      {sharedStatus.buttonDetails && (
+                        <span className="machine-status-details">
+                          <span className="machine-status-details-title">รายละเอียดการกด</span>
+                          <span className="machine-status-detail-list">
+                            {sharedStatus.buttonDetails
+                              .split(/\n+/)
+                              .filter(Boolean)
+                              .map((detail, detailIndex) => (
+                                <span className="machine-status-detail-item" key={`${machine.id}-detail-${detailIndex}`}>
+                                  {detail}
+                                </span>
+                              ))}
+                          </span>
+                        </span>
+                      )}
                     </span>
                   )}
                   <span className="machine-card-detail">

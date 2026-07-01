@@ -686,6 +686,44 @@ h3 {
   line-height: 1.25;
 }
 
+.machine-status-details {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 7px;
+}
+
+.machine-status-details-title {
+  color: #064e3b;
+  font-size: 12px;
+  font-weight: 1000;
+  line-height: 1.1;
+}
+
+.machine-status-detail-list {
+  display: grid;
+  gap: 6px;
+  max-height: 112px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.machine-status-detail-item {
+  background: #f8fafc;
+  border: 1px solid #dbe7e1;
+  border-radius: 7px;
+  color: #102033;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+  padding: 6px 7px;
+  white-space: normal;
+}
+
 .employee-shared-entry-status {
   background: #fff7ed;
   border: 2px solid #f97316;

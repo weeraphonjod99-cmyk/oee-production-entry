@@ -138,6 +138,8 @@ const EMPLOYEE_STATUS_HEADERS = [
   "activeTimerStartedAt",
   "activeTimerBaseAt",
   "activeTimerBaseMinutes",
+  "buttonDetails",
+  "buttonDetailsUpdatedAt",
   "workStartedAt",
   "entryStartedAt",
   "status",
@@ -150,6 +152,27 @@ const LOG_DATE_HEADERS = ["recordDate", "date"];
 
 const MACHINE_NUMBER_HEADERS = ["capacityUnits", "capacityMinutes", "rowCount"];
 const PRODUCT_NUMBER_HEADERS = ["sampleGoodQty", "sampleNgQty", "sampleTestQty"];
+const EMPLOYEE_STATUS_NUMBER_HEADERS = [
+  "goodQty",
+  "ngQty",
+  "testQty",
+  "workMinutes",
+  "timeSlots",
+  "minutesPerSlot",
+  "machineSpeed",
+  "cavityQty",
+  "downtimeMinutes",
+  "normalMinutes",
+  "changeoverMinutes",
+  "inspectionMinutes",
+  "equipmentRepairMinutes",
+  "moldRepairMinutes",
+  "materialChangeMinutes",
+  "emergencyStopMinutes",
+  "meetingMinutes",
+  "plannedStopMinutes",
+  "activeTimerBaseMinutes",
+];
 
 const MACHINE_HEADERS = [
   "id",
@@ -417,6 +440,8 @@ function upsertEmployeeMachineStatus(payload) {
     activeTimerStartedAt: String(payload.activeTimerStartedAt || ""),
     activeTimerBaseAt: String(payload.activeTimerBaseAt || ""),
     activeTimerBaseMinutes: Number(payload.activeTimerBaseMinutes || 0),
+    buttonDetails: String(payload.buttonDetails || ""),
+    buttonDetailsUpdatedAt: String(payload.buttonDetailsUpdatedAt || payload.entryUpdatedAt || now.toISOString()),
     workStartedAt: String(payload.workStartedAt || ""),
     entryStartedAt: String(payload.entryStartedAt || ""),
     status: "active",
@@ -1334,6 +1359,8 @@ function repairSheetTypes() {
   typedRows += rewriteTypedDataRows(ensureSheet(MACHINE_SHEET, MACHINE_HEADERS), MACHINE_HEADERS, MACHINE_NUMBER_HEADERS);
   typedSheets++;
   typedRows += rewriteTypedDataRows(ensureSheet(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS), PRODUCT_MASTER_HEADERS, PRODUCT_NUMBER_HEADERS);
+  typedSheets++;
+  typedRows += rewriteTypedDataRows(ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS), EMPLOYEE_STATUS_HEADERS, EMPLOYEE_STATUS_NUMBER_HEADERS);
   typedSheets++;
 
   const machineByName = getMachineMap();
