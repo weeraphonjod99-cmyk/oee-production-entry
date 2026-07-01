@@ -2996,6 +2996,16 @@ function App() {
                     <strong>{currentMachine.name}</strong>
                     <small>ล็อกเครื่องนี้แล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>
                   </div>
+                  <div className="selected-machine-production">
+                    <span>วันที่ผลิต</span>
+                    <strong>{draft.date || getTodayInputValue()}</strong>
+                  </div>
+                  <div className="selected-machine-production shift">
+                    <span>กะผลิต</span>
+                    <strong>{shiftLabel(draft.shift)}</strong>
+                    <small>{shiftWindowLabel(draft.date, draft.shift)}</small>
+                    <small>พัก H: {getShiftBreakLabel(draft.shift)}</small>
+                  </div>
                   <div className="runtime-current-clock selected-machine-clock">
                     <span>เวลาปัจจุบัน</span>
                     <strong>{formatClock(employeeReportNow)}</strong>
@@ -3020,44 +3030,48 @@ function App() {
                   <span className="label-text">เวลากรอก</span>
                   <input readOnly step="1" value={draft.recordTime || getCurrentTimeInputValue()} type="time" />
                 </label>
-                <label>
-                  <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
-                  <input
-                    aria-readonly="true"
-                    readOnly
-                    tabIndex={-1}
-                    value={draft.date}
-                    type="text"
-                  />
-                </label>
-                <label>
-                  <span className="label-text">กะ <RequiredMark /></span>
-                  <select
-                    disabled
-                    required
-                    value={draft.shift}
-                  onChange={(event) => {
-                    const shift = event.target.value;
-                    recordEmployeeDraftEvent("เปลี่ยนกะ", shiftLabel(shift));
-                    setEmployeeWorkStartedAt("");
-                    clearEmployeeActiveTimer();
-                    setDraft({
-                      ...draft,
-                        meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
-                        shift,
-                        shiftEndAt: shiftEndAt(draft.date, shift),
-                        shiftStartAt: shiftStartAt(draft.date, shift),
-                      });
-                    }}
-                  >
-                    {orderedShiftOptions.map((shift) => (
-                      <option key={shift} value={shift}>
-                        {shiftLabel(shift)}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="field-help">เวลาทำงาน: {shiftWindowLabel(draft.date, draft.shift)} | พัก H: {getShiftBreakLabel(draft.shift)}</small>
-                </label>
+                {!isEmployeeEntry && (
+                  <>
+                    <label>
+                      <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
+                      <input
+                        aria-readonly="true"
+                        readOnly
+                        tabIndex={-1}
+                        value={draft.date}
+                        type="text"
+                      />
+                    </label>
+                    <label>
+                      <span className="label-text">กะ <RequiredMark /></span>
+                      <select
+                        disabled
+                        required
+                        value={draft.shift}
+                        onChange={(event) => {
+                          const shift = event.target.value;
+                          recordEmployeeDraftEvent("เปลี่ยนกะ", shiftLabel(shift));
+                          setEmployeeWorkStartedAt("");
+                          clearEmployeeActiveTimer();
+                          setDraft({
+                            ...draft,
+                            meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
+                            shift,
+                            shiftEndAt: shiftEndAt(draft.date, shift),
+                            shiftStartAt: shiftStartAt(draft.date, shift),
+                          });
+                        }}
+                      >
+                        {orderedShiftOptions.map((shift) => (
+                          <option key={shift} value={shift}>
+                            {shiftLabel(shift)}
+                          </option>
+                        ))}
+                      </select>
+                      <small className="field-help">เวลาทำงาน: {shiftWindowLabel(draft.date, draft.shift)} | พัก H: {getShiftBreakLabel(draft.shift)}</small>
+                    </label>
+                  </>
+                )}
                 {!isEmployeeEntry && (
                   <label>
                     <span className="label-text">เครื่อง / ไลน์ <RequiredMark /></span>

@@ -904,9 +904,9 @@ h3 {
   border: 2px solid #16a34a;
   border-radius: 14px;
   box-shadow: 0 12px 28px rgba(22, 163, 74, 0.12);
-  display: flex;
+  display: grid;
   gap: 16px;
-  justify-content: space-between;
+  grid-template-columns: minmax(280px, 1.3fr) minmax(170px, 0.7fr) minmax(240px, 1fr) minmax(240px, 0.9fr);
   margin-bottom: 14px;
   max-width: none;
   padding: 16px 18px;
@@ -938,10 +938,45 @@ h3 {
   font-weight: 900;
 }
 
+.selected-machine-production {
+  background: #f7fffb;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+}
+
+.selected-machine-production span {
+  color: #047857;
+  font-size: 14px;
+  font-weight: 1000;
+  letter-spacing: 0;
+}
+
+.selected-machine-production strong {
+  color: #061635;
+  font-size: 30px;
+  font-weight: 1000;
+  line-height: 1;
+}
+
+.selected-machine-production.shift strong {
+  color: #0f766e;
+  font-size: 26px;
+}
+
+.selected-machine-production small {
+  color: #31506a;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
 .selected-machine-clock {
-  flex: 0 0 360px;
   grid-column: auto;
   margin-left: auto;
+  width: 100%;
 }
 
 label {
@@ -3661,11 +3696,16 @@ td:nth-child(10) {
   .selected-machine-lock {
     display: grid;
     gap: 12px;
+    grid-template-columns: 1fr;
     max-width: none;
   }
 
   .selected-machine-main strong {
     font-size: 28px;
+  }
+
+  .selected-machine-production strong {
+    font-size: 26px;
   }
 
   .selected-machine-clock {
