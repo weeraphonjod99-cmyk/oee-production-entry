@@ -541,6 +541,26 @@ h3 {
   width: 48px;
 }
 
+.machine-card-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.machine-card-name {
+  color: #001b3d;
+  display: block;
+  flex: 1;
+  font-size: 24px;
+  font-weight: 1000;
+  line-height: 1.08;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .stamping-press-icon {
   fill: none;
   height: 31px;
@@ -554,11 +574,6 @@ h3 {
 .machine-card-main {
   display: grid;
   gap: 3px;
-}
-
-.machine-card-main strong {
-  font-size: 20px;
-  line-height: 1.15;
 }
 
 .machine-card-main small,

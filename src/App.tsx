@@ -3029,8 +3029,11 @@ function App() {
                   onClick={() => openEmployeeMachineEntry(machine.id)}
                   type="button"
                 >
-                  <span className="machine-icon-symbol">
-                    <StampingPressIcon />
+                  <span className="machine-card-header">
+                    <span className="machine-icon-symbol">
+                      <StampingPressIcon />
+                    </span>
+                    <strong className="machine-card-name">{machine.name}</strong>
                   </span>
                   {hasDraft && activityStatus && (
                     <span className={`machine-activity-badge ${timerToneClass}`}>
@@ -3039,7 +3042,6 @@ function App() {
                     </span>
                   )}
                   <span className="machine-card-main">
-                    <strong>{machine.name}</strong>
                     <small>
                       {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
                     </small>
