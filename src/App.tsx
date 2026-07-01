@@ -2762,7 +2762,7 @@ function App() {
                 </div>
               )}
 
-              <div className="form-grid">
+              <div className="form-grid entry-main-grid">
                 <label>
                   <span className="label-text">วันที่กรอกยอด</span>
                   <input readOnly value={draft.recordDate || getTodayInputValue()} type="date" />
