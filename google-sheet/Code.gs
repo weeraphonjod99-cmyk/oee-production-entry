@@ -616,8 +616,12 @@ function changeAppUserPassword(payload) {
 function updateAppUser(payload) {
   const username = normalizeUsername(payload.username);
   const displayName = String(payload.displayName || "").trim();
+  const role = String(payload.role || "production").trim();
   if (!displayName) {
     throw new Error("กรุณากรอกชื่อแสดงผล");
+  }
+  if (["admin", "production", "qc", "tooling_repair", "technician"].indexOf(role) < 0) {
+    throw new Error("Role ไม่ถูกต้อง");
   }
   const sheet = ensureUsersSheet();
   const rows = getUserRows();
@@ -626,6 +630,8 @@ function updateAppUser(payload) {
     throw new Error("ไม่พบบัญชีผู้ใช้");
   }
   sheet.getRange(found.row, 2).setValue(displayName);
+  sheet.getRange(found.row, 3).setValue(role);
+  sheet.getRange(found.row, 7).setValue(new Date().toISOString());
   return listAppUsers();
 }
 

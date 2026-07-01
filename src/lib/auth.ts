@@ -113,18 +113,18 @@ function savePasswordOverrides(overrides: Record<string, { passwordHash: string;
   window.localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(overrides));
 }
 
-function loadProfileOverrides(): Record<string, { displayName?: string; changedAt: string }> {
+function loadProfileOverrides(): Record<string, { displayName?: string; role?: AppRole; changedAt: string }> {
   try {
     const raw = window.localStorage.getItem(USER_PROFILE_OVERRIDES_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, { displayName?: string; changedAt: string }>;
+    const parsed = JSON.parse(raw) as Record<string, { displayName?: string; role?: AppRole; changedAt: string }>;
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
 }
 
-function saveProfileOverrides(overrides: Record<string, { displayName?: string; changedAt: string }>) {
+function saveProfileOverrides(overrides: Record<string, { displayName?: string; role?: AppRole; changedAt: string }>) {
   window.localStorage.setItem(USER_PROFILE_OVERRIDES_KEY, JSON.stringify(overrides));
 }
 
@@ -137,6 +137,7 @@ function getUsers() {
     return {
       ...user,
       displayName: profileOverride?.displayName || user.displayName,
+      role: profileOverride?.role || user.role,
       passwordHash: passwordOverride?.passwordHash || user.passwordHash,
       passwordChangedAt: passwordOverride?.changedAt,
     };
@@ -273,17 +274,21 @@ export async function deleteUser(username: string) {
   return listLocalUsers();
 }
 
-export async function updateUser(input: { username: string; displayName: string }) {
+export async function updateUser(input: { username: string; displayName: string; role: AppRole }) {
   const normalized = normalizeUsername(input.username);
   const displayName = input.displayName.trim();
   if (!displayName) {
     throw new Error("กรุณากรอกชื่อแสดงผล");
+  }
+  if (!["admin", "production", "qc", "tooling_repair", "technician"].includes(input.role)) {
+    throw new Error("Role ไม่ถูกต้อง");
   }
 
   if (remoteUsersEnabled) {
     const data = await postUserAction<{ ok: boolean; users: AppUserSummary[] }>("updateUser", {
       username: normalized,
       displayName,
+      role: input.role,
     });
     return Array.isArray(data.users) ? data.users : [];
   }
@@ -302,13 +307,14 @@ export async function updateUser(input: { username: string; displayName: string 
     customUsers[customUserIndex] = {
       ...customUsers[customUserIndex],
       displayName,
+      role: input.role,
     };
     saveCustomUsers(customUsers);
     return listLocalUsers();
   }
 
   const profileOverrides = loadProfileOverrides();
-  profileOverrides[normalized] = { displayName, changedAt };
+  profileOverrides[normalized] = { displayName, role: input.role, changedAt };
   saveProfileOverrides(profileOverrides);
   return listLocalUsers();
 }

@@ -3683,15 +3683,24 @@ const emptyUserForm = {
   role: "production" as AppRole,
 };
 
+const userRoleOptions: Array<{ value: AppRole; label: string }> = [
+  { value: "production", label: "Production" },
+  { value: "qc", label: "QC" },
+  { value: "tooling_repair", label: "Tooling repair" },
+  { value: "technician", label: "Technician" },
+  { value: "admin", label: "Admin" },
+];
+
 const createEmptyPasswordForm = (username: string) => ({
   username,
   password: "",
   confirmPassword: "",
 });
 
-const createEmptyEditUserForm = (username = "", displayName = "") => ({
+const createEmptyEditUserForm = (username = "", displayName = "", role: AppRole = "production") => ({
   username,
   displayName,
+  role,
 });
 
 function UsersAdmin({ currentUsername }: { currentUsername: string }) {
@@ -3750,7 +3759,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
   const selectUserForEdit = (user: AppUserSummary) => {
     setMessage("");
     setError("");
-    setEditUserForm(createEmptyEditUserForm(user.username, user.displayName));
+    setEditUserForm(createEmptyEditUserForm(user.username, user.displayName, user.role));
     setPasswordForm(createEmptyPasswordForm(user.username));
   };
 
@@ -3766,9 +3775,13 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
     try {
       const nextUsers = await updateUser(editUserForm);
       setUsers(nextUsers);
-      setMessage(`แก้ไขชื่อผู้ใช้งาน ${editUserForm.username} แล้ว`);
+      setMessage(`แก้ไขชื่อและ Role ผู้ใช้งาน ${editUserForm.username} แล้ว`);
       const updatedUser = nextUsers.find((user) => user.username === editUserForm.username);
-      setEditUserForm(createEmptyEditUserForm(updatedUser?.username || editUserForm.username, updatedUser?.displayName || editUserForm.displayName));
+      setEditUserForm(createEmptyEditUserForm(
+        updatedUser?.username || editUserForm.username,
+        updatedUser?.displayName || editUserForm.displayName,
+        updatedUser?.role || editUserForm.role,
+      ));
     } catch (editError) {
       setError(editError instanceof Error ? editError.message : "แก้ไขผู้ใช้งานไม่สำเร็จ");
     } finally {
@@ -3834,11 +3847,11 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
               required
               value={form.role}
             >
-              <option value="production">Production</option>
-              <option value="qc">QC</option>
-              <option value="tooling_repair">Tooling repair</option>
-              <option value="technician">Technician</option>
-              <option value="admin">Admin</option>
+              {userRoleOptions.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
             </select>
           </label>
           <label>
@@ -3865,15 +3878,15 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       <form className="user-form" onSubmit={submitEditUser}>
         <div className="section-title">
           <Pencil size={20} />
-          <h2>แก้ไขชื่อผู้ใช้งาน</h2>
+          <h2>แก้ไขชื่อและ Role ผู้ใช้งาน</h2>
         </div>
-        <div className="form-grid three">
+        <div className="form-grid">
           <label>
             <span className="label-text">บัญชี <RequiredMark /></span>
             <select
               onChange={(event) => {
                 const selectedUser = users.find((user) => user.username === event.target.value);
-                setEditUserForm(createEmptyEditUserForm(selectedUser?.username || "", selectedUser?.displayName || ""));
+                setEditUserForm(createEmptyEditUserForm(selectedUser?.username || "", selectedUser?.displayName || "", selectedUser?.role || "production"));
               }}
               required
               value={editUserForm.username}
@@ -3898,13 +3911,28 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             />
           </label>
           <label>
+            <span className="label-text">Role <RequiredMark /></span>
+            <select
+              disabled={!editUserForm.username}
+              onChange={(event) => setEditUserForm({ ...editUserForm, role: event.target.value as AppRole })}
+              required
+              value={editUserForm.role}
+            >
+              {userRoleOptions.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             <span className="label-text">Username</span>
             <input readOnly value={editUserForm.username || "-"} type="text" />
           </label>
         </div>
         <div className="form-actions">
           <button className="primary-button" disabled={savingEditUser || !editUserForm.username} type="submit">
-            <Save size={18} /> {savingEditUser ? "กำลังบันทึก" : "บันทึกชื่อผู้ใช้งาน"}
+            <Save size={18} /> {savingEditUser ? "กำลังบันทึก" : "บันทึกชื่อและ Role"}
           </button>
         </div>
       </form>
