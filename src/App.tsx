@@ -3059,7 +3059,6 @@ function App() {
                       {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
                     </small>
                   </span>
-                  {hasDraft && <span className="machine-draft-badge">มีร่างค้าง</span>}
                   {sharedStatus && (
                     <span className="machine-shared-status">
                       <strong>{activityStatus || "กำลังกรอก"}</strong>
