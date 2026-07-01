@@ -3024,7 +3024,7 @@ function App() {
             <div className="machine-icon-grid">
               {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, productCount, sharedLiveMinutes, sharedStatus, timerToneClass }) => (
                 <button
-                  className={`machine-icon-card ${hasDraft ? `active-draft ${timerToneClass}` : ""}`}
+                  className={`machine-icon-card ${hasDraft ? timerToneClass : ""}`}
                   key={machine.id}
                   onClick={() => openEmployeeMachineEntry(machine.id)}
                   type="button"
