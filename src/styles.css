@@ -884,37 +884,49 @@ h3 {
 }
 
 .selected-machine-lock {
-  align-items: start;
+  align-items: stretch;
   background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);
   border: 2px solid #16a34a;
   border-radius: 14px;
   box-shadow: 0 12px 28px rgba(22, 163, 74, 0.12);
-  display: grid;
-  gap: 5px;
-  justify-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
   margin-bottom: 14px;
-  max-width: 520px;
+  max-width: none;
   padding: 16px 18px;
 }
 
-.selected-machine-lock span {
+.selected-machine-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.selected-machine-main span {
   color: #047857;
   font-size: 14px;
   font-weight: 1000;
   letter-spacing: 0;
 }
 
-.selected-machine-lock strong {
+.selected-machine-main strong {
   color: #061635;
   font-size: 36px;
   font-weight: 1000;
   line-height: 1.05;
 }
 
-.selected-machine-lock small {
+.selected-machine-main small {
   color: #047857;
   font-size: 13px;
   font-weight: 900;
+}
+
+.selected-machine-clock {
+  flex: 0 0 360px;
+  grid-column: auto;
+  margin-left: auto;
 }
 
 label {
@@ -3653,11 +3665,18 @@ td:nth-child(10) {
   }
 
   .selected-machine-lock {
+    display: grid;
+    gap: 12px;
     max-width: none;
   }
 
-  .selected-machine-lock strong {
+  .selected-machine-main strong {
     font-size: 28px;
+  }
+
+  .selected-machine-clock {
+    flex-basis: auto;
+    margin-left: 0;
   }
 
   .form-grid,

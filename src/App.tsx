@@ -2956,9 +2956,15 @@ function App() {
 
               {isEmployeeEntry && (
                 <div className="selected-machine-lock" aria-live="polite">
-                  <span>เครื่อง / ไลน์ที่เลือก</span>
-                  <strong>{currentMachine.name}</strong>
-                  <small>ล็อกเครื่องนี้แล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>
+                  <div className="selected-machine-main">
+                    <span>เครื่อง / ไลน์ที่เลือก</span>
+                    <strong>{currentMachine.name}</strong>
+                    <small>ล็อกเครื่องนี้แล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>
+                  </div>
+                  <div className="runtime-current-clock selected-machine-clock">
+                    <span>เวลาปัจจุบัน</span>
+                    <strong>{formatClock(employeeReportNow)}</strong>
+                  </div>
                 </div>
               )}
 
@@ -3175,10 +3181,12 @@ function App() {
               )}
 
               <div className="runtime-panel">
-                <div className="runtime-current-clock">
-                  <span>เวลาปัจจุบัน</span>
-                  <strong>{formatClock(employeeReportNow)}</strong>
-                </div>
+                {!isEmployeeEntry && (
+                  <div className="runtime-current-clock">
+                    <span>เวลาปัจจุบัน</span>
+                    <strong>{formatClock(employeeReportNow)}</strong>
+                  </div>
+                )}
                 <label className="runtime-input-block">
                   <span>เวลาตามกะ <RequiredMark /></span>
                   <div className="runtime-input-row">
