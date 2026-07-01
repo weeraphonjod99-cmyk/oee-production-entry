@@ -201,6 +201,9 @@ function doGet(e) {
       const limit = Number(e.parameter.limit || 500);
       return jsonResponse({ ok: true, logs: getLogs(limit) });
     }
+    if (action === "machines") {
+      return jsonResponse({ ok: true, machines: getMachines() });
+    }
     if (action === "employeeMachineStatuses") {
       return jsonResponse({ ok: true, statuses: getEmployeeMachineStatuses() });
     }
@@ -2221,6 +2224,26 @@ function getMachineMap() {
     };
   });
   return map;
+}
+
+function getMachines() {
+  const sheet = ensureSheet(MACHINE_SHEET, MACHINE_HEADERS);
+  const rows = sheet.getDataRange().getValues();
+  return rows.slice(1).map(function(row) {
+    const id = String(row[0] || "").trim();
+    const name = String(row[1] || "").trim();
+    if (!id || !name) return null;
+    return {
+      id: id,
+      name: name,
+      capacityUnits: Number(row[2] || 0),
+      capacityMinutes: Number(row[3] || 0),
+      hasStep: String(row[4]).toLowerCase() === "true" || row[4] === true,
+      rowCount: Number(row[5] || 0),
+    };
+  }).filter(function(machine) {
+    return Boolean(machine);
+  });
 }
 
 function mergeLogs(primaryLogs, fallbackLogs) {

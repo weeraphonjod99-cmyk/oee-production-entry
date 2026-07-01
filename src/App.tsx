@@ -26,11 +26,12 @@ import {
   WifiOff,
 } from "lucide-react";
 import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { machines, products, seedLogs } from "./data/oeeMasterData.generated";
+import { machines as seedMachines, products, seedLogs } from "./data/oeeMasterData.generated";
 import {
   appendRemoteLog,
   clearEmployeeMachineStatus,
   fetchEmployeeMachineStatuses,
+  fetchMachines,
   fetchPdSheets,
   fetchProductDefaults,
   fetchRemoteLogs,
@@ -186,7 +187,7 @@ const getEmployeeMachineActivityLabel = (status?: Pick<EmployeeMachineStatus, "a
   return "ร่างรอบันทึก";
 };
 
-const defaultMachine = machines[0];
+const defaultMachine = seedMachines[0];
 const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
 const SHIFT_DAY = "day";
 const SHIFT_NIGHT = "night";
@@ -197,6 +198,7 @@ const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
 const realtimeRemoteRefreshMs = 2500;
 const remoteLogsRefreshMs = 120000;
+const remoteMachinesRefreshMs = 60000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
@@ -410,6 +412,20 @@ const formatSharedStatusTime = (value?: string) => {
 
 const getRemoteLogsSignature = (logs: ProductionLog[]) =>
   logs.map((log) => `${log.id}:${log.updatedAt || log.createdAt || ""}`).join("|");
+
+const getMachinesSignature = (items: Machine[]) =>
+  items
+    .map((machine) =>
+      [
+        machine.id,
+        machine.name,
+        machine.capacityUnits || 0,
+        machine.capacityMinutes || 0,
+        machine.hasStep ? 1 : 0,
+        machine.rowCount || 0,
+      ].join(":"),
+    )
+    .join("|");
 
 const isFreshEmployeeMachineStatus = (status: EmployeeMachineStatus) => {
   if (status.status !== "active") return false;
@@ -781,8 +797,8 @@ const reportRangeLabel = (filters: Filters) => {
   return "ทั้งหมด";
 };
 
-const reportMachineLabel = (filters: Filters) =>
-  filters.machineId ? machines.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
+const reportMachineLabel = (filters: Filters, machineItems: Machine[]) =>
+  filters.machineId ? machineItems.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
 
 const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filters.shift) : "ทุกกะ");
 
@@ -877,7 +893,7 @@ const detailRowsHtml = (logs: ProductionLog[]) =>
         .join("")
     : `<tr><td colspan="11" class="empty">ไม่มีข้อมูลตามตัวกรองนี้</td></tr>`;
 
-function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
+function openProductionPdfReport(logs: ProductionLog[], filters: Filters, machineItems: Machine[]) {
   const reportWindow = window.open("", "_blank", "width=1100,height=820");
   if (!reportWindow) return false;
 
@@ -936,7 +952,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters) {
           <div>
             <p class="muted">OEE PRODUCTION ENTRY</p>
             <h1>รายงานสรุปการกรอกยอดผลิต</h1>
-            <p>ช่วงวันที่ผลิต: ${escapeHtml(reportRangeLabel(filters))} | เครื่อง: ${escapeHtml(reportMachineLabel(filters))} | กะ: ${escapeHtml(reportShiftLabel(filters))}</p>
+            <p>ช่วงวันที่ผลิต: ${escapeHtml(reportRangeLabel(filters))} | เครื่อง: ${escapeHtml(reportMachineLabel(filters, machineItems))} | กะ: ${escapeHtml(reportShiftLabel(filters))}</p>
             <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
           </div>
           <div class="meta">
@@ -1239,6 +1255,7 @@ function App() {
   const [dashboardFilters, setDashboardFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [machines, setMachines] = useState<Machine[]>(seedMachines);
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
   const [employeeClearedMachineAt, setEmployeeClearedMachineAt] = useState<Record<string, string>>({});
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
@@ -1265,6 +1282,7 @@ function App() {
   const autoSubmittingEmployeeDraft = useRef(false);
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
   const employeeAutoSubmitKeyRef = useRef("");
+  const machinesSignatureRef = useRef(getMachinesSignature(seedMachines));
   const remoteLogsSignatureRef = useRef("");
   const employeeStatusesSignatureRef = useRef("");
   const employeeClearedMachineAtRef = useRef<Record<string, string>>({});
@@ -1284,6 +1302,37 @@ function App() {
       })
       .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"))
       .finally(() => setRemoteLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (!remoteEnabled) return;
+    let cancelled = false;
+    let refreshing = false;
+    const refreshMachines = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const nextMachines = await fetchMachines();
+        if (cancelled || nextMachines.length === 0) return;
+        const signature = getMachinesSignature(nextMachines);
+        if (signature !== machinesSignatureRef.current) {
+          machinesSignatureRef.current = signature;
+          setMachines(nextMachines);
+        }
+      } catch {
+        // Keep bundled machine data if the remote machine sheet is unavailable.
+      } finally {
+        refreshing = false;
+      }
+    };
+    void refreshMachines();
+    const timer = window.setInterval(() => {
+      void refreshMachines();
+    }, remoteMachinesRefreshMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -2632,7 +2681,7 @@ function App() {
   };
 
   const downloadPdfReport = () => {
-    const opened = openProductionPdfReport(activeLogs, activeFilters);
+    const opened = openProductionPdfReport(activeLogs, activeFilters, machines);
     if (!opened) {
       setProblemDialog({
         title: "เปิดรายงานไม่ได้",
@@ -3433,7 +3482,7 @@ function App() {
               <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
               <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
             </div>
-            <FiltersBar filters={dashboardFilters} setFilters={setDashboardFilters} />
+            <FiltersBar filters={dashboardFilters} machines={machines} setFilters={setDashboardFilters} />
             {dashboardEmptyMessage && (
               <FilterEmptyNotice
                 latestDate={dashboardAvailableDateRange?.lastDate}
@@ -3443,10 +3492,10 @@ function App() {
               />
             )}
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
-            <DailyMachinePerformanceChart logs={dashboardLogs} />
-            <MachineCapacityDashboard logs={dashboardLogs} />
+            <DailyMachinePerformanceChart logs={dashboardLogs} machines={machines} />
+            <MachineCapacityDashboard logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
-            <MachineRanking logs={dashboardLogs} />
+            <MachineRanking logs={dashboardLogs} machines={machines} />
             <Trend logs={dashboardLogs} />
           </section>
         )}
@@ -3457,6 +3506,7 @@ function App() {
             latestDate={reportAvailableDateRange?.lastDate}
             filters={reportFilters}
             logs={reportLogs}
+            machines={machines}
             onClearDates={clearReportDates}
             onDownloadPdf={downloadPdfReport}
             onUseLatest={useLatestReportDate}
@@ -3476,7 +3526,7 @@ function App() {
 
         {tab === "history" && (
           <section className="table-view">
-            <FiltersBar filters={historyFilters} setFilters={setHistoryFilters} />
+            <FiltersBar filters={historyFilters} machines={machines} setFilters={setHistoryFilters} />
             {historyEmptyMessage && (
               <FilterEmptyNotice
                 latestDate={historyAvailableDateRange?.lastDate}
@@ -4400,6 +4450,7 @@ function ReportsView({
   filters,
   latestDate,
   logs,
+  machines,
   onClearDates,
   onDownloadPdf,
   onUseLatest,
@@ -4409,6 +4460,7 @@ function ReportsView({
   filters: Filters;
   latestDate?: string;
   logs: ProductionLog[];
+  machines: Machine[];
   onClearDates: () => void;
   onDownloadPdf: () => void;
   onUseLatest: () => void;
@@ -4436,7 +4488,7 @@ function ReportsView({
         <div>
           <p className="eyebrow">Production document</p>
           <h2>สรุปการกรอกยอดสำหรับดาวน์โหลด PDF</h2>
-          <p>ช่วงวันที่ผลิต: {reportRangeLabel(filters)} | เครื่อง: {reportMachineLabel(filters)} | กะ: {reportShiftLabel(filters)}</p>
+          <p>ช่วงวันที่ผลิต: {reportRangeLabel(filters)} | เครื่อง: {reportMachineLabel(filters, machines)} | กะ: {reportShiftLabel(filters)}</p>
           <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
         </div>
         <button className="primary-button" onClick={onDownloadPdf} type="button">
@@ -4444,7 +4496,7 @@ function ReportsView({
         </button>
       </div>
 
-      <FiltersBar filters={filters} setFilters={setFilters} />
+      <FiltersBar filters={filters} machines={machines} setFilters={setFilters} />
       {emptyMessage && (
         <FilterEmptyNotice
           latestDate={latestDate}
@@ -4651,7 +4703,15 @@ function ReportRowsTable({ rows, title }: { rows: ReportRow[]; title: string }) 
   );
 }
 
-function FiltersBar({ filters, setFilters }: { filters: Filters; setFilters: (filters: Filters) => void }) {
+function FiltersBar({
+  filters,
+  machines,
+  setFilters,
+}: {
+  filters: Filters;
+  machines: Machine[];
+  setFilters: (filters: Filters) => void;
+}) {
   return (
     <div className="filters-bar">
       <label>
@@ -4978,7 +5038,7 @@ type DailyPerformanceRow = {
   workMinutes: number;
 };
 
-function buildDailyPerformanceRows(logs: ProductionLog[]): DailyPerformanceRow[] {
+function buildDailyPerformanceRows(logs: ProductionLog[], machines: Machine[]): DailyPerformanceRow[] {
   const machineNameLookup = new Map(machines.map((machine) => [machine.id, machine.name]));
   const rows = logs.reduce((map, log) => {
     const current =
@@ -5029,8 +5089,8 @@ function formatDailyMachineNames(row: DailyPerformanceRow): string {
   return `${row.machineNames.slice(0, 2).join(", ")} +${formatNumber(row.machineNames.length - 2)}`;
 }
 
-function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
-  const rows = useMemo(() => buildDailyPerformanceRows(logs).slice(-14), [logs]);
+function DailyMachinePerformanceChart({ logs, machines }: { logs: ProductionLog[]; machines: Machine[] }) {
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines).slice(-14), [logs, machines]);
   const latest = rows.at(-1);
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
 
@@ -5112,7 +5172,7 @@ function DailyMachinePerformanceChart({ logs }: { logs: ProductionLog[] }) {
   );
 }
 
-function buildMachineCapacityRows(logs: ProductionLog[]): MachineCapacityRow[] {
+function buildMachineCapacityRows(logs: ProductionLog[], machines: Machine[]): MachineCapacityRow[] {
   const rows = logs.reduce((map, log) => {
     const machine = machines.find((item) => item.id === log.machineId) ?? { id: log.machineId, name: log.machineName || log.machineId };
     const current =
@@ -5159,8 +5219,8 @@ function buildMachineCapacityRows(logs: ProductionLog[]): MachineCapacityRow[] {
     );
 }
 
-function MachineCapacityDashboard({ logs }: { logs: ProductionLog[] }) {
-  const rows = useMemo(() => buildMachineCapacityRows(logs), [logs]);
+function MachineCapacityDashboard({ logs, machines }: { logs: ProductionLog[]; machines: Machine[] }) {
+  const rows = useMemo(() => buildMachineCapacityRows(logs, machines), [logs, machines]);
   return (
     <div className="analysis-panel capacity-panel">
       <div className="report-table-heading compact-heading">
@@ -5228,7 +5288,7 @@ function MachineCapacityDashboard({ logs }: { logs: ProductionLog[] }) {
   );
 }
 
-function MachineRanking({ logs }: { logs: ProductionLog[] }) {
+function MachineRanking({ logs, machines }: { logs: ProductionLog[]; machines: Machine[] }) {
   const summaries = logs.reduce(
     (map, log) => {
       const current =

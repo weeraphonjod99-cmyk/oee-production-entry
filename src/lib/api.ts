@@ -1,4 +1,4 @@
-import type { ProductionLog } from "../types";
+import type { Machine, ProductionLog } from "../types";
 
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL?.trim() ?? "";
 
@@ -108,6 +108,19 @@ export async function fetchEmployeeMachineStatuses(): Promise<EmployeeMachineSta
     throw new Error(data.error || "โหลดสถานะเครื่องจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.statuses) ? data.statuses : [];
+}
+
+export async function fetchMachines(): Promise<Machine[]> {
+  if (!remoteEnabled) return [];
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "machines");
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดรายชื่อเครื่องจักรจาก Google Sheet ไม่สำเร็จ");
+  }
+  return Array.isArray(data.machines) ? data.machines : [];
 }
 
 export async function upsertEmployeeMachineStatus(status: EmployeeMachineStatus): Promise<EmployeeMachineStatus> {
