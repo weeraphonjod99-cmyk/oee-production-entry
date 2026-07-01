@@ -2120,6 +2120,7 @@ function App() {
     if (!pendingEmployeeTimer) return;
     const { key, label, pressedDate, pressedTime, startedAt } = pendingEmployeeTimer;
     const activeTimer = employeeActiveTimerRef.current;
+    const isFirstEmployeeEntry = !employeeWorkStartedAt;
     const now = parseStoredDateTime(startedAt) ?? new Date();
     const noteLine = `[${pressedDate} ${pressedTime}] เริ่ม ${label}`;
     if (activeTimer) {
@@ -2142,13 +2143,15 @@ function App() {
     const runtimeDraft = applyShiftClockRuntime(finalizedDraft, now, workStart);
     const nextDraft = {
       ...runtimeDraft,
+      recordDate: isFirstEmployeeEntry ? pressedDate : runtimeDraft.recordDate || pressedDate,
+      recordTime: isFirstEmployeeEntry ? pressedTime : runtimeDraft.recordTime || pressedTime,
       note: runtimeDraft.note.trim() ? `${runtimeDraft.note.trim()}\n${noteLine}` : noteLine,
     };
     setDraft(nextDraft);
     setEmployeeActiveTimer(nextTimer);
     employeeActiveTimerRef.current = nextTimer;
-    const entryStartedAt = employeeDraftActive ? employeeDraftStartedAt || startedAt : startedAt;
-    if (!employeeDraftActive) setEmployeeDraftStartedAt(startedAt);
+    const entryStartedAt = isFirstEmployeeEntry ? startedAt : employeeDraftStartedAt || startedAt;
+    if (isFirstEmployeeEntry || !employeeDraftStartedAt) setEmployeeDraftStartedAt(startedAt);
     setEmployeeDraftActive(true);
     setEmployeeDraftUpdatedAt(startedAt);
     recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`, {
@@ -3505,20 +3508,11 @@ function App() {
                       <p>ยังไม่มีประวัติการแก้ไขร่าง</p>
                     )}
                   </div>
-                  {employeeDraftSavedAt && <p className="employee-live-draft">ร่างล่าสุด: {employeeDraftSavedAt}</p>}
                 </section>
               )}
               </fieldset>
 
               <div className="form-actions">
-                {isEmployeeEntry && (
-                  <>
-                    <button className="draft-button" disabled={readOnlyEntry || saving} onClick={saveEmployeeDraftLocally} type="button">
-                      <Save size={18} /> บันทึกร่างไว้ก่อน
-                    </button>
-                    {employeeDraftSavedAt && <span className="draft-status">ร่างล่าสุด {employeeDraftSavedAt}</span>}
-                  </>
-                )}
                 <button className="primary-button" disabled={readOnlyEntry || saving || Boolean(duplicateEntry)} type="submit">
                   <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : isEmployeeEntry ? "ส่งยอดบันทึก" : "บันทึกยอด"}
                 </button>

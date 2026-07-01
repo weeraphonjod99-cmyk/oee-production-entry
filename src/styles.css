@@ -1590,31 +1590,6 @@ select:disabled {
   opacity: 0.7;
 }
 
-.draft-button {
-  background: #eef7f1;
-  border: 1px solid #9ed8b2;
-  color: #137a54;
-  font-weight: 900;
-}
-
-.draft-button:hover {
-  background: #dff3e8;
-}
-
-.draft-button:disabled {
-  cursor: wait;
-  opacity: 0.7;
-}
-
-.draft-status {
-  align-items: center;
-  color: #177245;
-  display: inline-flex;
-  font-size: 13px;
-  font-weight: 900;
-  min-height: 42px;
-}
-
 .employee-live-report {
   background: #f8fbf8;
   border: 1px solid #cbe7d5;
@@ -1762,8 +1737,7 @@ select:disabled {
 }
 
 .employee-live-downtime p,
-.employee-live-timeline p,
-.employee-live-draft {
+.employee-live-timeline p {
   color: #53627b;
   font-size: 13px;
   font-weight: 800;
