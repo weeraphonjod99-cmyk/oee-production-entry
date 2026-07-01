@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
-  ClipboardList,
   Database,
   Download,
   FileText,
@@ -2953,11 +2952,6 @@ function App() {
             </span>
             กรอกยอดสำหรับพนักงาน
           </button>
-          {canAccessTab(session, "entry") && (
-            <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
-              <ClipboardList size={18} /> กรอกยอด
-            </button>
-          )}
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
               <BarChart3 size={18} /> Dashboard
