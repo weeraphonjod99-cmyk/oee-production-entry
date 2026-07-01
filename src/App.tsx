@@ -1225,6 +1225,7 @@ function App() {
   const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
+  const [employeeClearedMachineAt, setEmployeeClearedMachineAt] = useState<Record<string, string>>({});
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
   const [dateManuallyEdited, setDateManuallyEdited] = useState(false);
   const [successDialog, setSuccessDialog] = useState<{ title: string; message: string } | null>(null);
@@ -1302,7 +1303,14 @@ function App() {
       refreshing = true;
       try {
         const statuses = await fetchEmployeeMachineStatuses();
-        const freshStatuses = statuses.filter(isFreshEmployeeMachineStatus);
+        const freshStatuses = statuses
+          .filter(isFreshEmployeeMachineStatus)
+          .filter((status) => {
+            const clearedAt = parseStoredDateTime(employeeClearedMachineAt[status.machineId]);
+            if (!clearedAt) return true;
+            const statusUpdatedAt = parseStoredDateTime(status.updatedAt || status.entryUpdatedAt);
+            return Boolean(statusUpdatedAt && statusUpdatedAt.getTime() > clearedAt.getTime());
+          });
         const signature = getEmployeeStatusesSignature(freshStatuses);
         if (!cancelled && signature !== employeeStatusesSignatureRef.current) {
           employeeStatusesSignatureRef.current = signature;
@@ -1322,7 +1330,7 @@ function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [tab]);
+  }, [tab, employeeClearedMachineAt]);
 
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("employeeEntry");
@@ -2064,13 +2072,25 @@ function App() {
     switchEmployeeTimerRealtime(key, field?.label ?? key);
   };
 
-  const resetDraft = () => {
+  const resetDraft = (options: { clearProduct?: boolean } = {}) => {
     const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
     const nextDraft = createEmptyDraft(currentMachine, product);
-    setDraft({
-      ...nextDraft,
-      ...applyProductToDraft(product),
-    });
+    setDraft(
+      options.clearProduct
+        ? {
+            ...nextDraft,
+            cavityQty: 0,
+            machineSpeed: 0,
+            materialOfProduction: "",
+            partNo: "",
+            productName: "",
+            step: "-",
+          }
+        : {
+            ...nextDraft,
+            ...applyProductToDraft(product),
+          },
+    );
     setEditingLog(null);
     setDateManuallyEdited(false);
     setProductSearch("");
@@ -2085,7 +2105,7 @@ function App() {
     setEmployeeDraftEvents([]);
     setEmployeeWorkStartedAt("");
     clearEmployeeActiveTimer();
-    void loadProductDefaults(product, currentMachine);
+    if (!options.clearProduct) void loadProductDefaults(product, currentMachine);
   };
 
   const editLog = (log: ProductionLog) => {
@@ -2123,8 +2143,10 @@ function App() {
   };
 
   const clearEmployeeStoredDraft = (machineId = draft.machineId) => {
+    const clearedAt = new Date().toISOString();
     window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
+    setEmployeeClearedMachineAt((items) => ({ ...items, [machineId]: clearedAt }));
     if (remoteEnabled) {
       setEmployeeSharedMachineStatuses((items) => {
         const next = items.filter((item) => item.machineId !== machineId);
@@ -2336,13 +2358,14 @@ function App() {
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
       if (!shouldUpdate) clearEmployeeStoredDraft(saved.machineId);
-      if (options.resetAfterSave !== false) resetDraft();
+      if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
       return true;
     } catch (error) {
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
       if (!shouldUpdate) clearEmployeeStoredDraft(localLog.machineId);
+      if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
       setStatus(error instanceof Error ? `${error.message} - เก็บสำรองในเครื่องแล้ว` : "เก็บสำรองในเครื่องแล้ว");
       return true;
     } finally {
@@ -3304,7 +3327,7 @@ function App() {
                 <button className="primary-button" disabled={saving || Boolean(duplicateEntry)} type="submit">
                   <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : isEmployeeEntry ? "ส่งยอดบันทึก" : "บันทึกยอด"}
                 </button>
-                <button className="ghost-button" onClick={resetDraft} type="button">
+                <button className="ghost-button" onClick={() => resetDraft()} type="button">
                   {editingLog ? "ยกเลิกแก้ไข" : "ล้างฟอร์ม"}
                 </button>
               </div>
