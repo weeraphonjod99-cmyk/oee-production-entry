@@ -929,6 +929,22 @@ function isOeeEntryDetailsHeader(entryUserHeader, submitTimeHeader, buttonDetail
   );
 }
 
+function isOeeDataSheet(sheet, machineByName) {
+  if (sheet && typeof sheet.getType === "function" && sheet.getType() !== SpreadsheetApp.SheetType.GRID) return false;
+  if (!sheet || sheet.getLastRow() < OEE_HEADER_ROW) return false;
+  if (machineByName && machineByName[normalizeSheetName(sheet.getName())]) return true;
+
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
+  if (isOeeEntryTimestampHeader(headers[1], headers[2])) return true;
+
+  const headerText = headers.map(normalizeHeaderText).join(" ");
+  const hasDate = headerText.indexOf("date") >= 0 || headerText.indexOf("日期") >= 0;
+  const hasProduct = headerText.indexOf("product") >= 0 || headerText.indexOf("产品") >= 0;
+  const hasPart = headerText.indexOf("part") >= 0;
+  const hasOutput = headerText.indexOf("good") >= 0 || headerText.indexOf("total quantity") >= 0 || headerText.indexOf("normal production") >= 0;
+  return hasDate && hasProduct && hasPart && hasOutput;
+}
+
 function ensureOeeEntryTimestampColumns(sheet) {
   const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
   const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
@@ -970,13 +986,24 @@ function migrateOeeEntryTimestampColumns() {
   const machineByName = getMachineMap();
   let sheets = 0;
   let inserted = 0;
+  const insertedSheets = [];
+  const skippedSheets = [];
   book.getSheets().forEach(function(sheet) {
-    const machine = machineByName[normalizeSheetName(sheet.getName())];
-    if (!machine || sheet.getLastRow() < OEE_HEADER_ROW) return;
-    sheets++;
-    if (ensureOeeEntryTimestampColumns(sheet)) inserted++;
+    try {
+      if (!isOeeDataSheet(sheet, machineByName)) return;
+      sheets++;
+      if (ensureOeeEntryTimestampColumns(sheet)) {
+        inserted++;
+        insertedSheets.push(sheet.getName());
+      }
+    } catch (error) {
+      skippedSheets.push({
+        sheet: sheet && typeof sheet.getName === "function" ? sheet.getName() : "",
+        error: String(error && error.message ? error.message : error),
+      });
+    }
   });
-  return { sheets: sheets, inserted: inserted };
+  return { sheets: sheets, inserted: inserted, insertedSheets: insertedSheets, skippedSheets: skippedSheets };
 }
 
 function ensureOeeTestColumn(sheet) {
