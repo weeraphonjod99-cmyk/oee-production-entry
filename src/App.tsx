@@ -1698,11 +1698,16 @@ function App() {
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const totalDraftDowntime = totalDowntime(draft);
+  const sharedWorkStartedAt = currentMachineSharedStatus?.workStartedAt || "";
+  const visibleWorkStartedAt = isEmployeeEntry ? employeeWorkStartedAt || sharedWorkStartedAt : "";
+  const visibleWorkDate = employeeWorkStartedAt ? draft.date : currentMachineSharedStatus?.date || draft.date;
+  const visibleWorkShift = employeeWorkStartedAt ? draft.shift : currentMachineSharedStatus?.shift || draft.shift;
+  const visibleDowntimeMinutes = employeeWorkStartedAt ? totalDraftDowntime : Number(currentMachineSharedStatus?.downtimeMinutes ?? totalDraftDowntime);
   const liveClockWorkMinutes =
-    isEmployeeEntry && employeeWorkStartedAt
-      ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, employeeReportNow, employeeWorkStartedAt)
+    isEmployeeEntry && visibleWorkStartedAt
+      ? getElapsedShiftWorkMinutes(visibleWorkDate || getTodayInputValue(), visibleWorkShift, employeeReportNow, visibleWorkStartedAt)
       : draft.workMinutes;
-  const computedNormalMinutes = Math.max(liveClockWorkMinutes - totalDraftDowntime, 0);
+  const computedNormalMinutes = Math.max(liveClockWorkMinutes - visibleDowntimeMinutes, 0);
   const employeeEntryStartedAt = useMemo(
     () =>
       employeeDraftStartedAt
@@ -1714,6 +1719,18 @@ function App() {
     ? formatElapsedTime(employeeReportNow.getTime() - employeeEntryStartedAt.getTime())
     : "-";
   const employeeWorkStartedDate = useMemo(() => parseStoredDateTime(employeeWorkStartedAt), [employeeWorkStartedAt]);
+  const sharedWorkStartedDate = useMemo(() => parseStoredDateTime(sharedWorkStartedAt), [sharedWorkStartedAt]);
+  const visibleWorkStartedDate = useMemo(() => parseStoredDateTime(visibleWorkStartedAt), [visibleWorkStartedAt]);
+  const visibleWorkStartedUser = employeeWorkStartedAt ? session?.displayName || session?.username || "-" : currentMachineSharedStatus?.userName || "-";
+  const currentMachineSharedWorkMinutes =
+    currentMachineSharedStatus?.workStartedAt
+      ? getElapsedShiftWorkMinutes(
+          currentMachineSharedStatus.date || getTodayInputValue(),
+          currentMachineSharedStatus.shift,
+          employeeReportNow,
+          currentMachineSharedStatus.workStartedAt,
+        )
+      : null;
   const employeeWorkElapsed = employeeWorkStartedDate
     ? formatElapsedTime(employeeReportNow.getTime() - employeeWorkStartedDate.getTime())
     : "-";
@@ -3433,6 +3450,12 @@ function App() {
                 <div>
                   <span>เวลาตามจริง (เวลาโลก)</span>
                   <strong>{formatNumber(computedNormalMinutes)} นาที</strong>
+                  {isEmployeeEntry && visibleWorkStartedDate && (
+                    <small className="runtime-live-start">
+                      เริ่มผลิต {formatThailandDateTime(visibleWorkStartedDate)} · ผู้กด {visibleWorkStartedUser} · นับสด{" "}
+                      {formatDurationMinutes(liveClockWorkMinutes)}
+                    </small>
+                  )}
                 </div>
               </div>
 
@@ -3474,6 +3497,12 @@ function App() {
                     ผู้กรอก: {currentMachineSharedStatus.userName || "-"} · อัปเดตล่าสุด{" "}
                     {formatSharedStatusTime(currentMachineSharedStatus.entryUpdatedAt || currentMachineSharedStatus.updatedAt)}
                   </p>
+                  {sharedWorkStartedDate && (
+                    <p className="shared-work-start">
+                      เริ่มผลิต: {formatThailandDateTime(sharedWorkStartedDate)} · ผู้กด {currentMachineSharedStatus.userName || "-"} · เวลาผลิตสด{" "}
+                      {formatDurationMinutes(currentMachineSharedWorkMinutes || 0)}
+                    </p>
+                  )}
                   <p>
                     {currentMachineSharedStatus.productName || "-"} / {currentMachineSharedStatus.partNo || "-"} · Good{" "}
                     {formatNumber(currentMachineSharedStatus.goodQty || 0)} · NG {formatNumber(currentMachineSharedStatus.ngQty || 0)} · Downtime{" "}

@@ -1255,6 +1255,30 @@ select:disabled {
   font-size: 22px;
 }
 
+.runtime-live-start {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #14532d !important;
+  display: block;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+  line-height: 1.35;
+  margin-top: 4px;
+  padding: 6px 8px;
+  text-transform: none !important;
+}
+
+.employee-shared-entry-status .shared-work-start {
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #14532d;
+  font-size: 14px;
+  font-weight: 1000;
+  padding: 8px 10px;
+}
+
 .runtime-current-clock {
   background: #061635;
   border: 1px solid #102a56;
