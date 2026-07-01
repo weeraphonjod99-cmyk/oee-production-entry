@@ -383,6 +383,21 @@ h3 {
   padding: 20px;
 }
 
+.entry-readonly-fieldset {
+  border: 0;
+  display: contents;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.entry-form.read-only-entry input,
+.entry-form.read-only-entry select,
+.entry-form.read-only-entry textarea {
+  background: #eef2ef;
+  color: #405066;
+}
+
 .employee-machine-menu {
   background: #ffffff;
   border: 1px solid #dfe5dd;
@@ -3559,6 +3574,11 @@ select:disabled {
 .role-pill.technician {
   background: #ede9fe;
   color: #5b21b6;
+}
+
+.role-pill.planning {
+  background: #f1f5f9;
+  color: #334155;
 }
 
 table {

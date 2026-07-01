@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "production" | "qc" | "tooling_repair" | "technician";
+export type AppRole = "admin" | "production" | "qc" | "tooling_repair" | "technician" | "planning";
 
 export type AppSession = {
   username: string;
@@ -231,7 +231,7 @@ export async function createUser(input: {
   if (password.length < 6) {
     throw new Error("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
   }
-  if (!["admin", "production", "qc", "tooling_repair", "technician"].includes(input.role)) {
+  if (!["admin", "production", "qc", "tooling_repair", "technician", "planning"].includes(input.role)) {
     throw new Error("Role ไม่ถูกต้อง");
   }
   const passwordHash = await sha256(password);
@@ -280,7 +280,7 @@ export async function updateUser(input: { username: string; displayName: string;
   if (!displayName) {
     throw new Error("กรุณากรอกชื่อแสดงผล");
   }
-  if (!["admin", "production", "qc", "tooling_repair", "technician"].includes(input.role)) {
+  if (!["admin", "production", "qc", "tooling_repair", "technician", "planning"].includes(input.role)) {
     throw new Error("Role ไม่ถูกต้อง");
   }
 
@@ -363,5 +363,6 @@ export async function changePassword(username: string, password: string) {
 
 export function canAccessTab(session: AppSession, tab: string) {
   if (session.role === "admin") return true;
+  if (session.role === "planning") return tab === "employeeEntry" || tab === "dashboard" || tab === "reports" || tab === "pd" || tab === "history" || tab === "master";
   return tab === "employeeEntry" || tab === "entry" || tab === "history" || tab === "pd";
 }

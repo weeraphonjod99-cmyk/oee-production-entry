@@ -247,6 +247,7 @@ const employeeTimerRolePermissions: Partial<Record<AppRole, EmployeeTimerKey[]>>
   qc: ["work", "moldRepairMinutes"],
   tooling_repair: ["inspectionMinutes"],
   technician: ["work"],
+  planning: [],
 };
 
 const employeeRoleLabel = (role: AppRole) => {
@@ -255,8 +256,11 @@ const employeeRoleLabel = (role: AppRole) => {
   if (role === "qc") return "QC";
   if (role === "tooling_repair") return "Tooling repair";
   if (role === "technician") return "Technician";
+  if (role === "planning") return "Planing";
   return role;
 };
+
+const isReadOnlyRole = (role?: AppRole) => role === "planning";
 
 const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTimerKey) => {
   if (!role || role === "admin" || role === "production") return true;
@@ -1662,6 +1666,7 @@ function App() {
   const summary = useMemo(() => (tab === "dashboard" ? summarize(dashboardLogs) : summarize([])), [dashboardLogs, tab]);
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
   const isEmployeeEntry = tab === "employeeEntry";
+  const readOnlyEntry = isReadOnlyRole(session?.role);
   const totalDraftDowntime = totalDowntime(draft);
   const liveClockWorkMinutes =
     isEmployeeEntry && employeeWorkStartedAt
@@ -2410,6 +2415,12 @@ function App() {
 
   const saveEmployeeDraftLocally = () => {
     if (!isEmployeeEntry) return;
+    if (readOnlyEntry) {
+      const message = "Role Planing ดูได้อย่างเดียว ไม่สามารถกรอกหรือบันทึกได้";
+      setStatus(message);
+      setProblemDialog({ title: "ไม่มีสิทธิ์บันทึก", message });
+      return;
+    }
     if (editingLog) {
       setProblemDialog({ title: "ยังบันทึกร่างไม่ได้", message: "รายการที่กำลังแก้ไขให้กดยืนยันบันทึกโดยตรง" });
       return;
@@ -2656,6 +2667,12 @@ function App() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (readOnlyEntry) {
+      const message = "Role Planing ดูได้อย่างเดียว ไม่สามารถกรอกหรือบันทึกได้";
+      setStatus(message);
+      setProblemDialog({ title: "ไม่มีสิทธิ์บันทึก", message });
+      return;
+    }
     const missingFields = getMissingSaveFields();
     if (missingFields.length > 0) {
       showMissingSaveFields(missingFields);
@@ -2816,9 +2833,11 @@ function App() {
             </span>
             กรอกยอดสำหรับพนักงาน
           </button>
-          <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
-            <ClipboardList size={18} /> กรอกยอด
-          </button>
+          {canAccessTab(session, "entry") && (
+            <button className={tab === "entry" ? "active" : ""} onClick={() => setTab("entry")} type="button">
+              <ClipboardList size={18} /> กรอกยอด
+            </button>
+          )}
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
               <BarChart3 size={18} /> Dashboard
@@ -2943,7 +2962,7 @@ function App() {
 
         {((tab === "employeeEntry" && employeeMachineSelected) || tab === "entry") && (
           <section className="entry-layout">
-            <form className="entry-form" onSubmit={submit}>
+            <form className={`entry-form ${readOnlyEntry ? "read-only-entry" : ""}`} onSubmit={submit}>
               <div className="section-title">
                 <Gauge size={20} />
                 <h2>{editingLog ? "แก้ไขยอดผลิต" : "กรอกยอดผลิต"}</h2>
@@ -2968,6 +2987,14 @@ function App() {
                 </div>
               )}
 
+              {readOnlyEntry && (
+                <div className="duplicate-warning" role="status">
+                  <AlertTriangle size={18} />
+                  <span>Role Planing ดูได้อย่างเดียว ช่องกรอกและปุ่มบันทึกถูกปิด</span>
+                </div>
+              )}
+
+              <fieldset className="entry-readonly-fieldset" disabled={readOnlyEntry}>
               <div className="form-grid entry-main-grid">
                 <label>
                   <span className="label-text">วันที่กรอกยอด</span>
@@ -3468,20 +3495,21 @@ function App() {
                   {employeeDraftSavedAt && <p className="employee-live-draft">ร่างล่าสุด: {employeeDraftSavedAt}</p>}
                 </section>
               )}
+              </fieldset>
 
               <div className="form-actions">
                 {isEmployeeEntry && (
                   <>
-                    <button className="draft-button" disabled={saving} onClick={saveEmployeeDraftLocally} type="button">
+                    <button className="draft-button" disabled={readOnlyEntry || saving} onClick={saveEmployeeDraftLocally} type="button">
                       <Save size={18} /> บันทึกร่างไว้ก่อน
                     </button>
                     {employeeDraftSavedAt && <span className="draft-status">ร่างล่าสุด {employeeDraftSavedAt}</span>}
                   </>
                 )}
-                <button className="primary-button" disabled={saving || Boolean(duplicateEntry)} type="submit">
+                <button className="primary-button" disabled={readOnlyEntry || saving || Boolean(duplicateEntry)} type="submit">
                   <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : isEmployeeEntry ? "ส่งยอดบันทึก" : "บันทึกยอด"}
                 </button>
-                <button className="ghost-button" onClick={() => resetDraft()} type="button">
+                <button className="ghost-button" disabled={readOnlyEntry} onClick={() => resetDraft()} type="button">
                   {editingLog ? "ยกเลิกแก้ไข" : "ล้างฟอร์ม"}
                 </button>
               </div>
@@ -3696,6 +3724,7 @@ const userRoleOptions: Array<{ value: AppRole; label: string }> = [
   { value: "qc", label: "QC" },
   { value: "tooling_repair", label: "Tooling repair" },
   { value: "technician", label: "Technician" },
+  { value: "planning", label: "Planing" },
   { value: "admin", label: "Admin" },
 ];
 
