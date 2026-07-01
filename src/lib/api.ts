@@ -121,12 +121,12 @@ export async function upsertEmployeeMachineStatus(status: EmployeeMachineStatus)
   return data.status ?? status;
 }
 
-export async function clearEmployeeMachineStatus(machineId: string): Promise<void> {
+export async function clearEmployeeMachineStatus(machineId: string, clearedAt?: string): Promise<void> {
   if (!remoteEnabled || !machineId) return;
   const response = await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "clearEmployeeMachineStatus", payload: { machineId } }),
+    body: JSON.stringify({ action: "clearEmployeeMachineStatus", payload: { clearedAt, machineId } }),
   });
   const data = await parseJsonResponse(response);
   if (!response.ok || data.ok === false) {

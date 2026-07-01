@@ -405,10 +405,19 @@ function upsertEmployeeMachineStatus(payload) {
   const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
   const values = sheet.getDataRange().getValues();
   let rowIndex = -1;
+  let existingStatus = null;
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0]) === status.machineId) {
       rowIndex = i + 1;
+      existingStatus = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
       break;
+    }
+  }
+  if (existingStatus && existingStatus.status === "cleared") {
+    const existingUpdatedAt = new Date(existingStatus.updatedAt || existingStatus.expiresAt || "");
+    const incomingUpdatedAt = new Date(payload.updatedAt || payload.entryUpdatedAt || payload.savedAt || "");
+    if (!isNaN(existingUpdatedAt.getTime()) && !isNaN(incomingUpdatedAt.getTime()) && incomingUpdatedAt.getTime() <= existingUpdatedAt.getTime()) {
+      return existingStatus;
     }
   }
   const row = EMPLOYEE_STATUS_HEADERS.map(function(header) {
@@ -430,7 +439,7 @@ function clearEmployeeMachineStatus(payload) {
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0]) === machineId) {
       const statusColumn = EMPLOYEE_STATUS_HEADERS.indexOf("status") + 1;
-      const nowIso = new Date().toISOString();
+      const nowIso = payload.clearedAt ? String(payload.clearedAt) : new Date().toISOString();
       sheet.getRange(i + 1, statusColumn, 1, 4).setValues([["cleared", "", nowIso, nowIso]]);
       return;
     }

@@ -1251,6 +1251,7 @@ function App() {
   const employeeAutoSubmitKeyRef = useRef("");
   const remoteLogsSignatureRef = useRef("");
   const employeeStatusesSignatureRef = useRef("");
+  const employeeClearedMachineAtRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -2144,6 +2145,7 @@ function App() {
 
   const clearEmployeeStoredDraft = (machineId = draft.machineId) => {
     const clearedAt = new Date().toISOString();
+    employeeClearedMachineAtRef.current = { ...employeeClearedMachineAtRef.current, [machineId]: clearedAt };
     window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
     window.localStorage.removeItem(EMPLOYEE_DRAFT_KEY);
     setEmployeeClearedMachineAt((items) => ({ ...items, [machineId]: clearedAt }));
@@ -2153,7 +2155,7 @@ function App() {
         employeeStatusesSignatureRef.current = getEmployeeStatusesSignature(next);
         return next;
       });
-      void clearEmployeeMachineStatus(machineId).catch(() => undefined);
+      void clearEmployeeMachineStatus(machineId, clearedAt).catch(() => undefined);
     }
     refreshEmployeeDraftMachineIds();
     if (machineId !== draft.machineId) return;
@@ -2168,6 +2170,9 @@ function App() {
 
   const publishEmployeeMachineStatus = (stored: StoredEmployeeDraft) => {
     if (!remoteEnabled) return;
+    const clearedAt = parseStoredDateTime(employeeClearedMachineAtRef.current[stored.draft.machineId]);
+    const storedUpdatedAt = parseStoredDateTime(stored.savedAt || stored.entryUpdatedAt);
+    if (clearedAt && storedUpdatedAt && storedUpdatedAt.getTime() <= clearedAt.getTime()) return;
     const expiresAt = parseStoredDateTime(stored.shiftEndAt || stored.draft.shiftEndAt)?.toISOString() || stored.shiftEndAt || stored.draft.shiftEndAt || "";
     const machineName = machines.find((machine) => machine.id === stored.draft.machineId)?.name || stored.draft.machineId;
     const downtimeMinutes = totalDowntime(stored.draft);
