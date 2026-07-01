@@ -112,8 +112,21 @@ const EMPLOYEE_STATUS_HEADERS = [
   "ngQty",
   "testQty",
   "workMinutes",
+  "timeSlots",
+  "minutesPerSlot",
+  "machineSpeed",
+  "cavityQty",
   "downtimeMinutes",
   "normalMinutes",
+  "changeoverMinutes",
+  "inspectionMinutes",
+  "equipmentRepairMinutes",
+  "moldRepairMinutes",
+  "materialChangeMinutes",
+  "emergencyStopMinutes",
+  "meetingMinutes",
+  "plannedStopMinutes",
+  "note",
   "activeTimerKey",
   "activeTimerLabel",
   "workStartedAt",
@@ -361,8 +374,21 @@ function upsertEmployeeMachineStatus(payload) {
     ngQty: Number(payload.ngQty || 0),
     testQty: Number(payload.testQty || 0),
     workMinutes: Number(payload.workMinutes || 0),
+    timeSlots: Number(payload.timeSlots || 0),
+    minutesPerSlot: Number(payload.minutesPerSlot || 0),
+    machineSpeed: Number(payload.machineSpeed || 0),
+    cavityQty: Number(payload.cavityQty || 0),
     downtimeMinutes: Number(payload.downtimeMinutes || 0),
     normalMinutes: Number(payload.normalMinutes || 0),
+    changeoverMinutes: Number(payload.changeoverMinutes || 0),
+    inspectionMinutes: Number(payload.inspectionMinutes || 0),
+    equipmentRepairMinutes: Number(payload.equipmentRepairMinutes || 0),
+    moldRepairMinutes: Number(payload.moldRepairMinutes || 0),
+    materialChangeMinutes: Number(payload.materialChangeMinutes || 0),
+    emergencyStopMinutes: Number(payload.emergencyStopMinutes || 0),
+    meetingMinutes: Number(payload.meetingMinutes || 0),
+    plannedStopMinutes: Number(payload.plannedStopMinutes || 0),
+    note: String(payload.note || ""),
     activeTimerKey: String(payload.activeTimerKey || ""),
     activeTimerLabel: String(payload.activeTimerLabel || ""),
     workStartedAt: String(payload.workStartedAt || ""),
@@ -403,7 +429,9 @@ function clearEmployeeMachineStatus(payload) {
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0]) === machineId) {
-      sheet.getRange(i + 1, 8, 1, 4).setValues([["cleared", "", new Date().toISOString(), new Date().toISOString()]]);
+      const statusColumn = EMPLOYEE_STATUS_HEADERS.indexOf("status") + 1;
+      const nowIso = new Date().toISOString();
+      sheet.getRange(i + 1, statusColumn, 1, 4).setValues([["cleared", "", nowIso, nowIso]]);
       return;
     }
   }

@@ -195,7 +195,7 @@ const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 610;
-const realtimeRemoteRefreshMs = 7000;
+const realtimeRemoteRefreshMs = 2500;
 const remoteLogsRefreshMs = 120000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
@@ -427,6 +427,29 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
         status.activeTimerKey || "",
         status.activeTimerLabel || "",
         status.userName || "",
+        status.productName || "",
+        status.partNo || "",
+        status.step || "",
+        status.materialOfProduction || "",
+        status.goodQty || 0,
+        status.ngQty || 0,
+        status.testQty || 0,
+        status.workMinutes || 0,
+        status.timeSlots || 0,
+        status.minutesPerSlot || 0,
+        status.machineSpeed || 0,
+        status.cavityQty || 0,
+        status.downtimeMinutes || 0,
+        status.normalMinutes || 0,
+        status.changeoverMinutes || 0,
+        status.inspectionMinutes || 0,
+        status.equipmentRepairMinutes || 0,
+        status.moldRepairMinutes || 0,
+        status.materialChangeMinutes || 0,
+        status.emergencyStopMinutes || 0,
+        status.meetingMinutes || 0,
+        status.plannedStopMinutes || 0,
+        status.note || "",
         status.entryUpdatedAt || "",
         status.updatedAt || "",
         status.expiresAt || "",
@@ -2140,8 +2163,21 @@ function App() {
       ngQty: Number(stored.draft.ngQty || 0),
       testQty: Number(stored.draft.testQty || 0),
       workMinutes: Number(stored.draft.workMinutes || 0),
+      timeSlots: Number(stored.draft.timeSlots || 0),
+      minutesPerSlot: Number(stored.draft.minutesPerSlot || 0),
+      machineSpeed: Number(stored.draft.machineSpeed || 0),
+      cavityQty: Number(stored.draft.cavityQty || 0),
       downtimeMinutes,
       normalMinutes: Math.max(Number(stored.draft.workMinutes || 0) - downtimeMinutes, 0),
+      changeoverMinutes: Number(stored.draft.changeoverMinutes || 0),
+      inspectionMinutes: Number(stored.draft.inspectionMinutes || 0),
+      equipmentRepairMinutes: Number(stored.draft.equipmentRepairMinutes || 0),
+      moldRepairMinutes: Number(stored.draft.moldRepairMinutes || 0),
+      materialChangeMinutes: Number(stored.draft.materialChangeMinutes || 0),
+      emergencyStopMinutes: Number(stored.draft.emergencyStopMinutes || 0),
+      meetingMinutes: Number(stored.draft.meetingMinutes || 0),
+      plannedStopMinutes: Number(stored.draft.plannedStopMinutes || 0),
+      note: stored.draft.note || "",
       activeTimerKey: stored.activeTimer?.key || "",
       activeTimerLabel: stored.activeTimer ? getEmployeeTimerLabel(stored.activeTimer.key) : "",
       workStartedAt: stored.workStartedAt || "",
@@ -2417,12 +2453,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isEmployeeEntry || !employeeDraftActive || editingLog || autoSubmittingEmployeeDraft.current) return;
+    const hasDraftChangeActivity = employeeDraftActive || employeeDraftEvents.length > 0 || Boolean(employeeWorkStartedAt) || Boolean(employeeActiveTimer);
+    if (!isEmployeeEntry || !hasDraftChangeActivity || editingLog || autoSubmittingEmployeeDraft.current) return;
     const timer = window.setTimeout(() => {
       writeEmployeeStoredDraft(draft);
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [draft, editingLog, employeeDraftActive, employeeDraftEvents, employeeDraftUpdatedAt, isEmployeeEntry]);
+  }, [draft, editingLog, employeeActiveTimer, employeeDraftActive, employeeDraftEvents, employeeDraftUpdatedAt, employeeWorkStartedAt, isEmployeeEntry]);
 
   useEffect(() => {
     if (!remoteLoaded) return;
@@ -2729,6 +2766,10 @@ function App() {
                       </small>
                       <small>
                         Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT {formatRate(sharedStatus.downtimeMinutes || 0)} นาที
+                      </small>
+                      <small>
+                        Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
+                        {sharedStatus.materialOfProduction || "-"}
                       </small>
                     </span>
                   )}
@@ -3077,6 +3118,15 @@ function App() {
                     {currentMachineSharedStatus.productName || "-"} / {currentMachineSharedStatus.partNo || "-"} · Good{" "}
                     {formatNumber(currentMachineSharedStatus.goodQty || 0)} · NG {formatNumber(currentMachineSharedStatus.ngQty || 0)} · Downtime{" "}
                     {formatRate(currentMachineSharedStatus.downtimeMinutes || 0)} นาที
+                  </p>
+                  <p>
+                    Material {currentMachineSharedStatus.materialOfProduction || "-"} · Speed{" "}
+                    {formatRate(currentMachineSharedStatus.machineSpeed || 0)} · Cavity {formatNumber(currentMachineSharedStatus.cavityQty || 0)} ·
+                    Test {formatNumber(currentMachineSharedStatus.testQty || 0)}
+                  </p>
+                  <p>
+                    Work {formatRate(currentMachineSharedStatus.workMinutes || 0)} นาที · Normal{" "}
+                    {formatRate(currentMachineSharedStatus.normalMinutes || 0)} นาที · Note {currentMachineSharedStatus.note || "-"}
                   </p>
                 </div>
               )}
