@@ -2509,13 +2509,19 @@ function App() {
       setEmployeeDraftUpdatedAt(now.toISOString());
       recordEmployeeDraftEvent("สิ้นสุดการผลิต / ส่งยอดบันทึก", `${finalized?.endDate ?? formatInputDate(now)} ${finalized?.endTime ?? formatInputTime(now)}`);
     }
-    const saved = await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
-    if (saved && isEmployeeEntry && !editingLog) {
-      clearEmployeeActiveTimer();
-    } else if (!saved && isEmployeeEntry && !editingLog && activeTimer) {
-      const nextTimer = { ...activeTimer, startedAt: now.toISOString() };
-      setEmployeeActiveTimer(nextTimer);
-      employeeActiveTimerRef.current = nextTimer;
+    if (isEmployeeEntry && !editingLog) autoSubmittingEmployeeDraft.current = true;
+    try {
+      const saved = await submitProductionDraft(targetDraft, { editingLog, resetAfterSave: true });
+      if (saved && isEmployeeEntry && !editingLog) {
+        clearEmployeeActiveTimer();
+        setEmployeeWorkStartedAt("");
+      } else if (!saved && isEmployeeEntry && !editingLog && activeTimer) {
+        const nextTimer = { ...activeTimer, startedAt: now.toISOString() };
+        setEmployeeActiveTimer(nextTimer);
+        employeeActiveTimerRef.current = nextTimer;
+      }
+    } finally {
+      if (isEmployeeEntry && !editingLog) autoSubmittingEmployeeDraft.current = false;
     }
   };
 
