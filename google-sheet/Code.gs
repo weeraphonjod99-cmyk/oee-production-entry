@@ -297,12 +297,14 @@ function doPost(e) {
 
 function appendLog(payload) {
   const now = new Date();
+  const productionDate = formatRecordDate(payload.date) || todayBangkok(now);
   const log = Object.assign({}, payload, {
     id: payload.id || Utilities.getUuid(),
+    date: productionDate,
     recordDate: formatRecordDate(payload.recordDate) || todayBangkok(now),
     recordTime: formatRecordTime(payload.recordTime) || timeBangkok(now),
-    shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
-    shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
+    shiftStartAt: payload.shiftStartAt || getShiftStartAt(productionDate, payload.shift),
+    shiftEndAt: payload.shiftEndAt || getShiftEndAt(productionDate, payload.shift),
     createdAt: payload.createdAt || now.toISOString(),
     updatedAt: payload.updatedAt || now.toISOString(),
     source: "google-sheet",
@@ -325,13 +327,16 @@ function upsertLog(payload) {
   const rowIndex = values.findIndex(function(row, index) {
     return index > 0 && String(row[idColumn - 1]) === String(payload.id);
   });
+  const now = new Date();
+  const productionDate = formatRecordDate(payload.date) || todayBangkok(now);
   const log = Object.assign({}, payload, {
-    recordDate: formatRecordDate(payload.recordDate) || todayBangkok(new Date()),
-    recordTime: formatRecordTime(payload.recordTime) || timeBangkok(new Date()),
-    shiftStartAt: payload.shiftStartAt || getShiftStartAt(payload.date, payload.shift),
-    shiftEndAt: payload.shiftEndAt || getShiftEndAt(payload.date, payload.shift),
-    createdAt: payload.createdAt || new Date().toISOString(),
-    updatedAt: payload.updatedAt || new Date().toISOString(),
+    date: productionDate,
+    recordDate: formatRecordDate(payload.recordDate) || todayBangkok(now),
+    recordTime: formatRecordTime(payload.recordTime) || timeBangkok(now),
+    shiftStartAt: payload.shiftStartAt || getShiftStartAt(productionDate, payload.shift),
+    shiftEndAt: payload.shiftEndAt || getShiftEndAt(productionDate, payload.shift),
+    createdAt: payload.createdAt || now.toISOString(),
+    updatedAt: payload.updatedAt || now.toISOString(),
     source: "google-sheet",
   });
   assertNoDuplicateOeeLog(log, payload.id, false);
@@ -1051,8 +1056,8 @@ function writeOeeInputRow(sheet, layout, row, log) {
   if (layout.entryDate) {
     sheet
       .getRange(row, layout.entryDate)
-      .setNumberFormat("yyyy-mm-dd")
-      .setValue(parseSheetDate(formatRecordDate(log.recordDate) || todayBangkok(new Date())));
+      .setNumberFormat("@")
+      .setValue(formatRecordDate(log.recordDate) || todayBangkok(new Date()));
   }
   if (layout.entryTime) {
     sheet
@@ -1060,7 +1065,7 @@ function writeOeeInputRow(sheet, layout, row, log) {
       .setNumberFormat("@")
       .setValue(formatRecordTime(log.recordTime) || timeBangkok(new Date()));
   }
-  sheet.getRange(row, layout.date).setNumberFormat("yyyy-mm-dd").setValue(parseSheetDate(log.date));
+  sheet.getRange(row, layout.date).setNumberFormat("@").setValue(formatRecordDate(log.date) || todayBangkok(new Date()));
   sheet.getRange(row, layout.shift).setNumberFormat("@").setValue(String(toOriginalShift(log.shift) || ""));
   sheet.getRange(row, layout.productName).setNumberFormat("@").setValue(String(log.productName || ""));
   sheet.getRange(row, layout.partNo).setNumberFormat("@").setValue(String(log.partNo || ""));

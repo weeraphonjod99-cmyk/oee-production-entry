@@ -100,21 +100,39 @@ type PendingEmployeeTimer = {
   startedAt: string;
 };
 
+const getThailandDateTimeParts = (date: Date) => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "2-digit",
+    second: "2-digit",
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+  }).formatToParts(date);
+  const valueFor = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || "00";
+  return {
+    day: valueFor("day"),
+    hour: valueFor("hour"),
+    minute: valueFor("minute"),
+    month: valueFor("month"),
+    second: valueFor("second"),
+    year: valueFor("year"),
+  };
+};
+
 const formatInputDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const { year, month, day } = getThailandDateTimeParts(date);
   return `${year}-${month}-${day}`;
 };
 
 const getTodayInputValue = () => formatInputDate(new Date());
 
-const formatInputTime = (date: Date) =>
-  [
-    String(date.getHours()).padStart(2, "0"),
-    String(date.getMinutes()).padStart(2, "0"),
-    String(date.getSeconds()).padStart(2, "0"),
-  ].join(":");
+const formatInputTime = (date: Date) => {
+  const { hour, minute, second } = getThailandDateTimeParts(date);
+  return [hour, minute, second].join(":");
+};
 
 const getCurrentTimeInputValue = () => formatInputTime(new Date());
 
@@ -126,12 +144,7 @@ const parseLocalDateTime = (date: string, time: string) => {
   return new Date(year, month - 1, day, hour, minute, second);
 };
 
-const formatClock = (date: Date) =>
-  [
-    String(date.getHours()).padStart(2, "0"),
-    String(date.getMinutes()).padStart(2, "0"),
-    String(date.getSeconds()).padStart(2, "0"),
-  ].join(":");
+const formatClock = (date: Date) => formatInputTime(date);
 
 const formatElapsedTime = (milliseconds: number) => {
   const totalSeconds = Math.max(Math.floor(milliseconds / 1000), 0);
@@ -350,7 +363,7 @@ const addDaysToInputDate = (date: string, days: number) => {
 
 const getCurrentProductionShift = (now = new Date()) => {
   const today = formatInputDate(now);
-  const hour = now.getHours();
+  const hour = Number(getThailandDateTimeParts(now).hour);
   if (hour < 8) {
     return { date: addDaysToInputDate(today, -1), shift: SHIFT_NIGHT };
   }
