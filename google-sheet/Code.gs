@@ -236,6 +236,9 @@ function doGet(e) {
     if (action === "employeeMachineStatuses") {
       return jsonResponse({ ok: true, statuses: getEmployeeMachineStatuses() });
     }
+    if (action === "auditEmployeeMachineStatuses") {
+      return jsonResponse({ ok: true, result: auditEmployeeMachineStatuses() });
+    }
     if (action === "pdSheets") {
       return jsonResponse({ ok: true, sources: getPdExternalSheets() });
     }
@@ -393,6 +396,7 @@ function getEmployeeMachineStatuses() {
   for (let i = 1; i < values.length; i++) {
     const item = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
     if (!item.machineId || item.status !== "active") continue;
+    if (!item.activeTimerKey && !item.workStartedAt) continue;
     if (item.expiresAt) {
       const expiresAt = new Date(item.expiresAt);
       if (!isNaN(expiresAt.getTime()) && expiresAt.getTime() < now.getTime()) continue;
@@ -402,6 +406,34 @@ function getEmployeeMachineStatuses() {
   return rows.sort(function(a, b) {
     return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   });
+}
+
+function auditEmployeeMachineStatuses() {
+  const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const statusColumn = EMPLOYEE_STATUS_HEADERS.indexOf("status") + 1;
+  const updatedAtColumn = EMPLOYEE_STATUS_HEADERS.indexOf("updatedAt") + 1;
+  const expiresAtColumn = EMPLOYEE_STATUS_HEADERS.indexOf("expiresAt") + 1;
+  const checked = Math.max(values.length - 1, 0);
+  let cleared = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    const item = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
+    if (!item.machineId || item.status !== "active") continue;
+    const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
+    const expired = expiresAt && !isNaN(expiresAt.getTime()) && expiresAt.getTime() < now.getTime();
+    const hasLiveActivity = Boolean(item.activeTimerKey || item.workStartedAt);
+    if (!expired && hasLiveActivity) continue;
+    const row = i + 1;
+    sheet.getRange(row, statusColumn).setValue("cleared");
+    sheet.getRange(row, updatedAtColumn).setValue(nowIso);
+    sheet.getRange(row, expiresAtColumn).setValue(nowIso);
+    cleared++;
+  }
+
+  return { checked: checked, cleared: cleared, at: nowIso };
 }
 
 function upsertEmployeeMachineStatus(payload) {

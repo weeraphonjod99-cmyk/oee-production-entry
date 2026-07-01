@@ -467,6 +467,7 @@ const getMachinesSignature = (items: Machine[]) =>
 
 const isFreshEmployeeMachineStatus = (status: EmployeeMachineStatus) => {
   if (status.status !== "active") return false;
+  if (!status.activeTimerKey && !status.workStartedAt) return false;
   const expiresAt = parseStoredDateTime(status.expiresAt);
   return !expiresAt || expiresAt.getTime() >= Date.now();
 };
