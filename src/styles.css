@@ -589,6 +589,41 @@ h3 {
   padding-top: 9px;
 }
 
+.machine-order-status {
+  border: 1px solid #d7e5db;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 8px 9px;
+}
+
+.machine-order-status strong {
+  font-size: 13px;
+  font-weight: 1000;
+  line-height: 1.2;
+}
+
+.machine-order-status small {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.machine-order-status.has-orders {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+.machine-order-status.no-orders {
+  background: #f8fbf8;
+  color: #177245;
+}
+
 .machine-activity-badge {
   align-items: center;
   animation: machineActivityBadgePulse 0.85s ease-in-out infinite;

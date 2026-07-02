@@ -76,6 +76,13 @@ export type EmployeeMachineStatus = {
   expiresAt: string;
 };
 
+export type ProductionOrderMachineSummary = {
+  machineId: string;
+  machineName: string;
+  pendingCount: number;
+  pendingOrders: ProductionOrder[];
+};
+
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
   try {
@@ -125,6 +132,19 @@ export async function fetchProductionOrders(input: { machineId: string; machineN
     throw new Error(data.error || "โหลดออเดอร์การผลิตจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.orders) ? data.orders : [];
+}
+
+export async function fetchProductionOrderSummaries(): Promise<ProductionOrderMachineSummary[]> {
+  if (!remoteEnabled) return [];
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "productionOrderSummaries");
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดสรุปออเดอร์การผลิตจาก Google Sheet ไม่สำเร็จ");
+  }
+  return Array.isArray(data.summaries) ? data.summaries : [];
 }
 
 export async function upsertProductionOrder(order: ProductionOrder): Promise<ProductionOrder> {

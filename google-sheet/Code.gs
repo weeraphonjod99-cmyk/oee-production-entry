@@ -20,6 +20,8 @@ const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
 const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
 const PRODUCTION_ORDER_SPREADSHEET_ID = "1gR-a77vkgVxDu0jdSZ9RPhnGLC5OabIRHSRGBN0hZ18";
 const PRODUCTION_ORDER_MAX_ROWS = 200;
+const PRODUCTION_ORDER_SUMMARY_CACHE_KEY = "production_order_summaries_v1";
+const PRODUCTION_ORDER_SUMMARY_CACHE_SECONDS = 60;
 const PRODUCTION_ORDER_COLUMNS = {
   no: 1,
   openedDate: 2,
@@ -345,6 +347,9 @@ function doGet(e) {
     }
     if (action === "productionOrders") {
       return jsonResponse({ ok: true, orders: getProductionOrders(e.parameter || {}) });
+    }
+    if (action === "productionOrderSummaries") {
+      return jsonResponse({ ok: true, summaries: getProductionOrderSummaries() });
     }
     if (action === "auditEmployeeMachineStatuses") {
       return jsonResponse({ ok: true, result: auditEmployeeMachineStatuses() });
@@ -692,6 +697,15 @@ function normalizeOrderMachineName(value) {
 
 function getProductionOrderSheet(machineName, machineId) {
   const book = openProductionOrderWorkbook();
+  const foundSheet = findProductionOrderSheet(book, machineName, machineId);
+  if (foundSheet) return foundSheet;
+  const sheetName = String(machineName || machineId || "Production Orders").slice(0, 90);
+  const sheet = book.insertSheet(sheetName);
+  ensureProductionOrderLayout(sheet);
+  return sheet;
+}
+
+function findProductionOrderSheet(book, machineName, machineId) {
   const target = normalizeOrderMachineName(machineName || machineId);
   const cncTarget = target && target.length <= 3 ? "cnc" + target : "";
   const sheets = book.getSheets();
@@ -703,10 +717,7 @@ function getProductionOrderSheet(machineName, machineId) {
     const normalized = normalizeOrderMachineName(sheets[i].getName());
     if ((target && normalized.indexOf(target) >= 0) || (cncTarget && normalized.indexOf(cncTarget) >= 0)) return sheets[i];
   }
-  const sheetName = String(machineName || machineId || "Production Orders").slice(0, 90);
-  const sheet = book.insertSheet(sheetName);
-  ensureProductionOrderLayout(sheet);
-  return sheet;
+  return null;
 }
 
 function ensureProductionOrderLayout(sheet) {
@@ -728,6 +739,10 @@ function getProductionOrders(params) {
   const machineId = String(params.machineId || "");
   const sheet = getProductionOrderSheet(machineName, machineId);
   ensureProductionOrderLayout(sheet);
+  return readProductionOrdersFromSheet(sheet, machineId);
+}
+
+function readProductionOrdersFromSheet(sheet, machineId) {
   const lastRow = Math.max(sheet.getLastRow(), 2);
   if (lastRow < 3) return [];
   const rowCount = Math.min(lastRow - 2, PRODUCTION_ORDER_MAX_ROWS);
@@ -769,6 +784,77 @@ function getProductionOrders(params) {
     });
   }
   return orders;
+}
+
+function isCompletedProductionOrder(order) {
+  const status = String(order && order.status || "").trim().toLowerCase();
+  const progress = String(order && order.progress || "").trim().toLowerCase();
+  return status.indexOf("complete") >= 0 ||
+    status.indexOf("done") >= 0 ||
+    status.indexOf("finished") >= 0 ||
+    status.indexOf("closed") >= 0 ||
+    status.indexOf("จบ") >= 0 ||
+    status.indexOf("เสร็จ") >= 0 ||
+    progress === "100%" ||
+    progress === "100";
+}
+
+function getProductionOrderSummaries() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(PRODUCTION_ORDER_SUMMARY_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (error) {
+      cache.remove(PRODUCTION_ORDER_SUMMARY_CACHE_KEY);
+    }
+  }
+  const book = openProductionOrderWorkbook();
+  const machines = getMachines();
+  const summaries = machines.map(function(machine) {
+    const sheet = findProductionOrderSheet(book, machine.name, machine.id);
+    if (!sheet) {
+      return {
+        machineId: machine.id,
+        machineName: machine.name,
+        pendingCount: 0,
+        pendingOrders: [],
+      };
+    }
+    ensureProductionOrderLayout(sheet);
+    const orders = readProductionOrdersFromSheet(sheet, machine.id)
+      .filter(function(order) {
+        return !isCompletedProductionOrder(order) && [order.orderNo, order.productName, order.partNo].some(function(value) {
+          return String(value || "").trim();
+        });
+      })
+      .sort(function(left, right) {
+        const leftNo = parseProductionOrderNumber(left.no);
+        const rightNo = parseProductionOrderNumber(right.no);
+        if (leftNo > 0 && rightNo > 0 && leftNo !== rightNo) return leftNo - rightNo;
+        if (leftNo > 0 && rightNo <= 0) return -1;
+        if (rightNo > 0 && leftNo <= 0) return 1;
+        return Number(left.rowNumber || 0) - Number(right.rowNumber || 0);
+      });
+    return {
+      machineId: machine.id,
+      machineName: machine.name,
+      pendingCount: orders.length,
+      pendingOrders: orders.slice(0, 3).map(function(order) {
+        return {
+          rowNumber: order.rowNumber,
+          no: order.no,
+          orderNo: order.orderNo,
+          productName: order.productName,
+          partNo: order.partNo,
+          orderQty: order.orderQty,
+          unit: order.unit,
+        };
+      }),
+    };
+  });
+  cache.put(PRODUCTION_ORDER_SUMMARY_CACHE_KEY, JSON.stringify(summaries), PRODUCTION_ORDER_SUMMARY_CACHE_SECONDS);
+  return summaries;
 }
 
 function findNextProductionOrderRow(sheet) {
@@ -822,6 +908,7 @@ function upsertProductionOrder(payload) {
     String(payload.stock || ""),
   ];
   sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+  CacheService.getScriptCache().remove(PRODUCTION_ORDER_SUMMARY_CACHE_KEY);
   return getProductionOrders({ machineId: machineId, machineName: sheet.getName() }).filter(function(order) {
     return Number(order.rowNumber || 0) === targetRow;
   })[0] || {

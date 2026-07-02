@@ -34,6 +34,7 @@ import {
   fetchPdSheets,
   fetchProductDefaults,
   fetchProductionOrders,
+  fetchProductionOrderSummaries,
   fetchRemoteLogs,
   remoteEnabled,
   updateRemoteLog,
@@ -42,6 +43,7 @@ import {
   type EmployeeMachineStatus,
   type PdWorkbook,
   type ProductDefaults,
+  type ProductionOrderMachineSummary,
 } from "./lib/api";
 import {
   canAccessTab,
@@ -1395,6 +1397,9 @@ function App() {
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
+  const [machineOrderSummaries, setMachineOrderSummaries] = useState<ProductionOrderMachineSummary[]>([]);
+  const [machineOrderSummariesLoading, setMachineOrderSummariesLoading] = useState(false);
+  const [machineOrderSummariesError, setMachineOrderSummariesError] = useState("");
   const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
   const [productionOrdersLoading, setProductionOrdersLoading] = useState(false);
   const [productionOrdersError, setProductionOrdersError] = useState("");
@@ -1682,7 +1687,7 @@ function App() {
       map.set(product.machineId, (map.get(product.machineId) ?? 0) + 1);
     }
     return map;
-  }, []);
+  }, [products]);
   const machineLogSummaryByMachineId = useMemo(() => {
     const map = new Map<string, { latestLog?: ProductionLog; logCount: number }>();
     for (const log of allLogs) {
@@ -1699,6 +1704,10 @@ function App() {
   const employeeSharedStatusByMachineId = useMemo(
     () => new Map(employeeSharedMachineStatuses.map((status) => [status.machineId, status])),
     [employeeSharedMachineStatuses],
+  );
+  const machineOrderSummaryByMachineId = useMemo(
+    () => new Map(machineOrderSummaries.map((summary) => [summary.machineId, summary])),
+    [machineOrderSummaries],
   );
   const currentMachineSharedStatus = employeeSharedStatusByMachineId.get(draft.machineId);
   const currentMachineSharedActivity = getEmployeeMachineActivityLabel(currentMachineSharedStatus);
@@ -1726,6 +1735,7 @@ function App() {
           activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
           latestLog: logSummary?.latestLog,
           logCount: logSummary?.logCount ?? 0,
+          orderSummary: machineOrderSummaryByMachineId.get(machine.id),
         };
       }),
     [
@@ -1735,6 +1745,8 @@ function App() {
       employeeReportNow,
       employeeSharedStatusByMachineId,
       machineLogSummaryByMachineId,
+      machineOrderSummaryByMachineId,
+      machines,
       productCountByMachineId,
     ],
   );
@@ -1790,6 +1802,35 @@ function App() {
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const canSubmitProduction = canSubmitProductionForRole(session?.role);
+
+  useEffect(() => {
+    if (!remoteEnabled || !isEmployeeEntry || employeeMachineSelected) {
+      if (!isEmployeeEntry) {
+        setMachineOrderSummaries([]);
+        setMachineOrderSummariesError("");
+      }
+      return;
+    }
+    let cancelled = false;
+    setMachineOrderSummariesLoading(true);
+    setMachineOrderSummariesError("");
+    fetchProductionOrderSummaries()
+      .then((summaries) => {
+        if (cancelled) return;
+        setMachineOrderSummaries(summaries);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setMachineOrderSummaries([]);
+        setMachineOrderSummariesError(error instanceof Error ? error.message : "โหลดสรุปออเดอร์การผลิตไม่สำเร็จ");
+      })
+      .finally(() => {
+        if (!cancelled) setMachineOrderSummariesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeMachineSelected, isEmployeeEntry]);
 
   useEffect(() => {
     if (!remoteEnabled || !isEmployeeEntry || !employeeMachineSelected) {
@@ -3302,7 +3343,7 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, productCount, sharedLiveMinutes, sharedStatus, timerToneClass }) => (
+              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, orderSummary, productCount, sharedLiveMinutes, sharedStatus, timerToneClass }) => (
                 <button
                   className={`machine-icon-card ${hasDraft ? timerToneClass : ""}`}
                   key={machine.id}
@@ -3325,6 +3366,24 @@ function App() {
                     <small>
                       {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
                     </small>
+                  </span>
+                  <span className={`machine-order-status ${(orderSummary?.pendingCount || 0) > 0 ? "has-orders" : "no-orders"}`}>
+                    {machineOrderSummariesLoading ? (
+                      <strong>กำลังโหลดออเดอร์...</strong>
+                    ) : machineOrderSummariesError ? (
+                      <strong>โหลดออเดอร์ไม่ได้</strong>
+                    ) : (orderSummary?.pendingCount || 0) > 0 ? (
+                      <>
+                        <strong>มีออเดอร์รอผลิต {formatNumber(orderSummary?.pendingCount || 0)} รายการ</strong>
+                        {(orderSummary?.pendingOrders || []).slice(0, 2).map((order, orderIndex) => (
+                          <small key={`${machine.id}-order-${order.rowNumber || orderIndex}`}>
+                            #{getProductionOrderSequence(order) || orderIndex + 1} {order.productName || "-"} / {order.partNo || "-"}
+                          </small>
+                        ))}
+                      </>
+                    ) : (
+                      <strong>ไม่มีออเดอร์การผลิต</strong>
+                    )}
                   </span>
                   {sharedStatus && (
                     <span className="machine-shared-status">
