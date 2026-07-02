@@ -37,6 +37,7 @@ import {
   fetchProductionOrderSummaries,
   fetchRemoteLogs,
   remoteEnabled,
+  reorderProductionOrder,
   updateRemoteLog,
   upsertEmployeeMachineStatus,
   upsertProductionOrder,
@@ -2258,56 +2259,26 @@ function App() {
       return;
     }
     const requestedSequence = Number(productionOrderForm.no.replace(/[^\d.-]/g, "")) || 0;
-    const editingRowNumber = Number(productionOrderForm.rowNumber || 0);
-    const currentOrder = productionOrders.find((order) => Number(order.rowNumber || 0) === editingRowNumber);
-    const previousSequence = currentOrder ? getProductionOrderSequence(currentOrder) : 0;
     const orderUpdater = session?.displayName || session?.username || "";
-    const shiftedOrders =
-      requestedSequence > 0
-        ? productionOrders
-            .filter((order) => !isCompletedProductionOrder(order))
-            .filter((order) => Number(order.rowNumber || 0) !== editingRowNumber)
-            .map((order) => {
-              const sequence = getProductionOrderSequence(order);
-              if (sequence <= 0) return null;
-              if (previousSequence > 0 && requestedSequence > previousSequence) {
-                return sequence > previousSequence && sequence <= requestedSequence
-                  ? { order, nextSequence: sequence - 1 }
-                  : null;
-              }
-              return sequence >= requestedSequence && (previousSequence <= 0 || sequence < previousSequence)
-                ? { order, nextSequence: sequence + 1 }
-                : null;
-            })
-            .filter((item): item is { order: ProductionOrder; nextSequence: number } => Boolean(item))
-        : [];
+    const orderPayload: ProductionOrder = {
+      rowNumber: productionOrderForm.rowNumber,
+      machineId: currentMachine.id,
+      machineName: currentMachine.name,
+      no: productionOrderForm.no.trim(),
+      orderNo: productionOrderForm.orderNo.trim(),
+      productName: productionOrderForm.productName.trim(),
+      partNo: productionOrderForm.partNo.trim(),
+      rmNo: productionOrderForm.rmNo.trim(),
+      orderQty: Number(productionOrderForm.orderQty.replace(/,/g, "")) || 0,
+      dueDate: productionOrderForm.dueDate.trim(),
+      shift: productionOrderForm.shift.trim(),
+      status: productionOrderForm.status.trim(),
+      unit: "pcs",
+      updatedBy: orderUpdater,
+    };
     setSavingProductionOrder(true);
     try {
-      for (const item of shiftedOrders) {
-        await upsertProductionOrder({
-          ...item.order,
-          machineId: currentMachine.id,
-          machineName: currentMachine.name,
-          no: String(item.nextSequence),
-          updatedBy: orderUpdater,
-        });
-      }
-      const savedOrder = await upsertProductionOrder({
-        rowNumber: productionOrderForm.rowNumber,
-        machineId: currentMachine.id,
-        machineName: currentMachine.name,
-        no: productionOrderForm.no.trim(),
-        orderNo: productionOrderForm.orderNo.trim(),
-        productName: productionOrderForm.productName.trim(),
-        partNo: productionOrderForm.partNo.trim(),
-        rmNo: productionOrderForm.rmNo.trim(),
-        orderQty: Number(productionOrderForm.orderQty.replace(/,/g, "")) || 0,
-        dueDate: productionOrderForm.dueDate.trim(),
-        shift: productionOrderForm.shift.trim(),
-        status: productionOrderForm.status.trim(),
-        unit: "pcs",
-        updatedBy: orderUpdater,
-      });
+      const savedOrder = requestedSequence > 0 ? await reorderProductionOrder(orderPayload) : await upsertProductionOrder(orderPayload);
       const orders = await fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name });
       setProductionOrders(orders);
       setProductionOrderForm(emptyProductionOrderForm);
@@ -3705,11 +3676,18 @@ function App() {
                           normalizeText(order.productName) === normalizeText(draft.productName) &&
                           normalizeText(order.partNo) === normalizeText(draft.partNo);
                         return (
-                          <button
+                          <div
                             className={`pending-order-item ${isSelected ? "selected" : ""} ${sequence ? "" : "unsequenced"}`}
                             key={choiceKey}
                             onClick={() => selectProductionOrder(order)}
-                            type="button"
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                selectProductionOrder(order);
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
                           >
                             <span className="pending-order-rank">{sequence ? `#${sequence}` : "ยังไม่จัดลำดับ"}</span>
                             <span className="pending-order-main">
@@ -3722,19 +3700,18 @@ function App() {
                               {order.status ? ` • ${order.status}` : ""}
                             </span>
                             {canManageProductionOrders && (
-                              <span
+                              <button
                                 className="pending-order-edit"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   setProductionOrderForm(orderToForm(order));
                                 }}
-                                role="button"
-                                tabIndex={0}
+                                type="button"
                               >
                                 <Pencil size={14} /> แก้ไข
-                              </span>
+                              </button>
                             )}
-                          </button>
+                          </div>
                         );
                       })}
                     </div>

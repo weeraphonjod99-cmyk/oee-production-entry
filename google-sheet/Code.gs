@@ -431,6 +431,10 @@ function doPost(e) {
       const order = upsertProductionOrder(body.payload || {});
       return jsonResponse({ ok: true, order: order });
     }
+    if (body.action === "reorderProductionOrder") {
+      const order = reorderProductionOrder(body.payload || {});
+      return jsonResponse({ ok: true, order: order });
+    }
     if (body.action === "getProductDefaults") {
       return jsonResponse({ ok: true, defaults: getProductDefaults(body.payload || {}) });
     }
@@ -919,6 +923,55 @@ function upsertProductionOrder(payload) {
     productName: String(payload.productName || ""),
     partNo: String(payload.partNo || ""),
   };
+}
+
+function reorderProductionOrder(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const machineName = String(payload.machineName || "");
+    const machineId = String(payload.machineId || "");
+    const sheet = getProductionOrderSheet(machineName, machineId);
+    ensureProductionOrderLayout(sheet);
+    const requestedSequence = parseProductionOrderNumber(payload.no);
+    if (requestedSequence <= 0) {
+      return upsertProductionOrder(payload);
+    }
+
+    const rowNumber = Number(payload.rowNumber || 0);
+    const lastRow = Math.max(sheet.getLastRow(), 2);
+    const targetRow = rowNumber >= 3 && rowNumber <= Math.max(lastRow + 1, 3) ? rowNumber : findNextProductionOrderRow(sheet);
+    const orders = readProductionOrdersFromSheet(sheet, machineId).filter(function(order) {
+      return !isCompletedProductionOrder(order);
+    });
+    const currentOrder = orders.filter(function(order) {
+      return Number(order.rowNumber || 0) === targetRow;
+    })[0];
+    const previousSequence = currentOrder ? parseProductionOrderNumber(currentOrder.no) : 0;
+
+    orders.forEach(function(order) {
+      const orderRow = Number(order.rowNumber || 0);
+      if (orderRow === targetRow) return;
+      const sequence = parseProductionOrderNumber(order.no);
+      if (sequence <= 0) return;
+      let nextSequence = sequence;
+      if (previousSequence > 0 && requestedSequence > previousSequence) {
+        if (sequence > previousSequence && sequence <= requestedSequence) nextSequence = sequence - 1;
+      } else if (sequence >= requestedSequence && (previousSequence <= 0 || sequence < previousSequence)) {
+        nextSequence = sequence + 1;
+      }
+      if (nextSequence !== sequence) {
+        sheet.getRange(orderRow, PRODUCTION_ORDER_COLUMNS.no).setValue(String(nextSequence));
+      }
+    });
+
+    return upsertProductionOrder(Object.assign({}, payload, {
+      rowNumber: targetRow,
+      no: String(requestedSequence),
+    }));
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function parseProductionOrderNumber(value) {

@@ -161,6 +161,20 @@ export async function upsertProductionOrder(order: ProductionOrder): Promise<Pro
   return data.order ?? order;
 }
 
+export async function reorderProductionOrder(order: ProductionOrder): Promise<ProductionOrder> {
+  if (!remoteEnabled) return order;
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "reorderProductionOrder", payload: order }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "จัดลำดับออเดอร์ใน Google Sheet ไม่สำเร็จ");
+  }
+  return data.order ?? order;
+}
+
 export async function fetchMachines(): Promise<Machine[]> {
   if (!remoteEnabled) return [];
   const url = new URL(APPS_SCRIPT_URL);
