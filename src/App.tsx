@@ -1285,6 +1285,8 @@ type StoredEmployeeDraft = {
   entryEvents?: EmployeeDraftEvent[];
   entryStartedAt?: string;
   entryUpdatedAt?: string;
+  emergencySubmitRequestedAt?: string;
+  emergencySubmitReason?: string;
   savedAt: string;
   shiftEndAt: string;
   workStartedAt?: string;
@@ -2817,8 +2819,24 @@ function App() {
     };
   };
 
+  const preserveEmergencySubmitFields = (stored: StoredEmployeeDraft): StoredEmployeeDraft => {
+    const raw = window.localStorage.getItem(getEmployeeDraftStorageKey(stored.draft.machineId));
+    if (!raw) return stored;
+    try {
+      const existing = JSON.parse(raw) as StoredEmployeeDraft;
+      if (!existing?.emergencySubmitRequestedAt) return stored;
+      return {
+        ...stored,
+        emergencySubmitRequestedAt: existing.emergencySubmitRequestedAt,
+        emergencySubmitReason: existing.emergencySubmitReason,
+      };
+    } catch {
+      return stored;
+    }
+  };
+
   const writeEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false) => {
-    const stored = buildEmployeeStoredDraft(targetDraft, freshRecordTime);
+    const stored = preserveEmergencySubmitFields(buildEmployeeStoredDraft(targetDraft, freshRecordTime));
     window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
     publishEmployeeMachineStatus(stored);
     refreshEmployeeDraftMachineIds();
@@ -2835,7 +2853,7 @@ function App() {
     const publishLiveStatus = () => {
       if (autoSubmittingEmployeeDraft.current) return;
       const nowIso = new Date().toISOString();
-      const stored = buildEmployeeStoredDraft(draftRef.current, false, { entryUpdatedAt: nowIso });
+      const stored = preserveEmergencySubmitFields(buildEmployeeStoredDraft(draftRef.current, false, { entryUpdatedAt: nowIso }));
       window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
       publishEmployeeMachineStatus(stored);
     };
@@ -2877,6 +2895,7 @@ function App() {
       editingLog?: ProductionLog | null;
       entryEvents?: EmployeeDraftEvent[];
       entryUser?: string;
+      keepDraftOnRemoteError?: boolean;
       resetAfterSave?: boolean;
       submittedAt?: Date;
     } = {},
@@ -2961,6 +2980,14 @@ function App() {
       if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
       return true;
     } catch (error) {
+      if (options.keepDraftOnRemoteError) {
+        const message =
+          error instanceof Error
+            ? `${error.message} - เก็บคิวส่งยอดฉุกเฉินไว้ จะส่งซ้ำเมื่อระบบออนไลน์`
+            : "เก็บคิวส่งยอดฉุกเฉินไว้ จะส่งซ้ำเมื่อระบบออนไลน์";
+        setStatus(message);
+        return false;
+      }
       const localLog = { ...log, source: "local" as const };
       const next = shouldUpdate ? upsertLocalLog(localLog) : appendLocalLog(localLog);
       setLocalLogs(next);
@@ -2993,6 +3020,65 @@ function App() {
       endDate,
       endTime,
     };
+  };
+
+  const queueEmergencyEmployeeSubmit = (reason: string) => {
+    if (!isEmployeeEntry || editingLog || autoSubmittingEmployeeDraft.current) return;
+    const activeTimer = employeeActiveTimerRef.current;
+    const hasActivity = employeeDraftActive || Boolean(employeeWorkStartedAt) || Boolean(activeTimer) || employeeDraftEventsRef.current.length > 0;
+    if (!hasActivity) return;
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const stored = {
+      ...buildEmployeeStoredDraft(draftRef.current, false, { entryUpdatedAt: nowIso }),
+      emergencySubmitRequestedAt: nowIso,
+      emergencySubmitReason: reason,
+    };
+    window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+    publishEmployeeMachineStatus(stored);
+    refreshEmployeeDraftMachineIds();
+    setEmployeeDraftActive(true);
+    setEmployeeDraftUpdatedAt(nowIso);
+    setEmployeeDraftSavedAt(now.toLocaleString("th-TH"));
+    setStatus(`${reason} - ระบบเก็บคิวส่งยอดฉุกเฉินไว้แล้ว`);
+    if (remoteEnabled && navigator.onLine) {
+      window.setTimeout(() => {
+        void submitEmergencyStoredEmployeeDrafts();
+      }, 0);
+    }
+  };
+
+  const submitEmergencyStoredEmployeeDrafts = async () => {
+    if (!remoteEnabled || !navigator.onLine || autoSubmittingEmployeeDraft.current) return;
+    const draftKeys = machines.map((machine) => getEmployeeDraftStorageKey(machine.id));
+    for (const draftKey of draftKeys) {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) continue;
+      try {
+        const stored = JSON.parse(raw) as StoredEmployeeDraft;
+        if (!stored?.draft || !stored.emergencySubmitRequestedAt || !hasEmployeeStoredDraftActivity(stored)) continue;
+        const submittedAt = parseStoredDateTime(stored.emergencySubmitRequestedAt) || parseStoredDateTime(stored.savedAt) || new Date();
+        autoSubmittingEmployeeDraft.current = true;
+        const saved = await submitProductionDraft(stored.draft, {
+          activeTimer: stored.activeTimer ?? null,
+          autoSubmit: true,
+          entryEvents: Array.isArray(stored.entryEvents) ? stored.entryEvents : [],
+          entryUser: (Array.isArray(stored.entryEvents) ? stored.entryEvents.find((event) => event.user)?.user : "") || session?.displayName || session?.username || "",
+          keepDraftOnRemoteError: true,
+          resetAfterSave: stored.draft.machineId === draftRef.current.machineId,
+          submittedAt,
+        });
+        if (saved && stored.draft.machineId === draftRef.current.machineId) {
+          clearEmployeeActiveTimer();
+          setEmployeeWorkStartedAt("");
+        }
+      } catch {
+        refreshEmployeeDraftMachineIds();
+      } finally {
+        autoSubmittingEmployeeDraft.current = false;
+      }
+    }
   };
 
   const autoSubmitStoredEmployeeDraft = async () => {
@@ -3091,14 +3177,42 @@ function App() {
 
   useEffect(() => {
     if (!remoteLoaded) return;
+    void submitEmergencyStoredEmployeeDrafts();
     void autoSubmitCurrentEmployeeDraft();
     void autoSubmitStoredEmployeeDraft();
     const timer = window.setInterval(() => {
+      void submitEmergencyStoredEmployeeDrafts();
       void autoSubmitCurrentEmployeeDraft();
       void autoSubmitStoredEmployeeDraft();
     }, 30000);
     return () => window.clearInterval(timer);
   }, [allLogs, draft, editingLog, employeeDraftActive, employeeWorkStartedAt, isEmployeeEntry, remoteLoaded]);
+
+  useEffect(() => {
+    if (!isEmployeeEntry || editingLog) return;
+    const queueSystemProblemSubmit = (reason: string) => {
+      queueEmergencyEmployeeSubmit(reason);
+    };
+    const handleOffline = () => queueSystemProblemSubmit("ระบบตัดขาดหรือออฟไลน์");
+    const handleOnline = () => {
+      void submitEmergencyStoredEmployeeDrafts();
+    };
+    const handlePageHide = () => queueSystemProblemSubmit("หน้าเว็บถูกปิดหรือหลุด");
+    const handleError = () => queueSystemProblemSubmit("ระบบเกิด error");
+    const handleUnhandledRejection = () => queueSystemProblemSubmit("ระบบเกิด error");
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+    };
+  }, [editingLog, isEmployeeEntry]);
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
