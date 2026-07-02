@@ -1492,9 +1492,9 @@ function App() {
   }, [tab]);
 
   useEffect(() => {
-    if (tab !== "employeeEntry") return;
+    if (tab !== "employeeEntry" && tab !== "dashboard") return;
     setEmployeeReportNow(new Date());
-    const timer = window.setInterval(() => setEmployeeReportNow(new Date()), 1000);
+    const timer = window.setInterval(() => setEmployeeReportNow(new Date()), tab === "dashboard" ? 60000 : 1000);
     return () => window.clearInterval(timer);
   }, [tab]);
 
@@ -1696,7 +1696,16 @@ function App() {
 
   const summary = useMemo(() => (tab === "dashboard" ? summarize(dashboardLogs) : summarize([])), [dashboardLogs, tab]);
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
-  const dashboardMachineRows = useMemo(() => aggregateReportRows(dashboardLogs, (log) => log.machineName, () => ""), [dashboardLogs]);
+  const currentDashboardShift = useMemo(() => getCurrentProductionShift(employeeReportNow), [employeeReportNow]);
+  const currentDashboardShiftLogs = useMemo(
+    () =>
+      allLogs.filter(
+        (log) =>
+          log.date === currentDashboardShift.date &&
+          normalizeShiftCode(log.shift) === currentDashboardShift.shift,
+      ),
+    [allLogs, currentDashboardShift.date, currentDashboardShift.shift],
+  );
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const canSubmitProduction = canSubmitProductionForRole(session?.role);
@@ -3767,9 +3776,14 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
+            <CurrentShiftMachineOeeTable
+              logs={currentDashboardShiftLogs}
+              machines={machines}
+              productionDate={currentDashboardShift.date}
+              shift={currentDashboardShift.shift}
+            />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <DailyMachinePerformanceChart logs={dashboardLogs} machines={machines} />
-            <ReportRowsTable rows={dashboardMachineRows} title="สรุปตามเครื่องจักร" />
             <MachineCapacityDashboard logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
@@ -5332,6 +5346,14 @@ type MachineCapacityRow = {
   workMinutes: number;
 };
 
+type CurrentShiftMachineOeeRow = {
+  count: number;
+  machineId: string;
+  machineName: string;
+  oee: number;
+  output: number;
+};
+
 type DailyPerformanceRow = {
   actualOutput: number;
   availability: number;
@@ -5344,6 +5366,99 @@ type DailyPerformanceRow = {
   utilization: number;
   workMinutes: number;
 };
+
+function buildCurrentShiftMachineOeeRows(logs: ProductionLog[], machines: Machine[]): CurrentShiftMachineOeeRow[] {
+  const machineLookup = new Map(machines.map((machine, index) => [machine.id, { index, name: machine.name }]));
+  const grouped = logs.reduce((map, log) => {
+    const items = map.get(log.machineId) ?? [];
+    items.push(log);
+    map.set(log.machineId, items);
+    return map;
+  }, new Map<string, ProductionLog[]>());
+
+  return [...grouped.entries()]
+    .map(([machineId, machineLogs]) => {
+      const machineInfo = machineLookup.get(machineId);
+      const machineSummary = summarize(machineLogs);
+      return {
+        count: machineLogs.length,
+        machineId,
+        machineName: machineInfo?.name || machineLogs[0]?.machineName || machineId,
+        oee: machineSummary.availability * machineSummary.quality,
+        output: machineSummary.total,
+      };
+    })
+    .sort((a, b) => {
+      const leftIndex = machineLookup.get(a.machineId)?.index ?? Number.MAX_SAFE_INTEGER;
+      const rightIndex = machineLookup.get(b.machineId)?.index ?? Number.MAX_SAFE_INTEGER;
+      return leftIndex - rightIndex || a.machineName.localeCompare(b.machineName, "en");
+    });
+}
+
+function CurrentShiftMachineOeeTable({
+  logs,
+  machines,
+  productionDate,
+  shift,
+}: {
+  logs: ProductionLog[];
+  machines: Machine[];
+  productionDate: string;
+  shift: string;
+}) {
+  const rows = useMemo(() => buildCurrentShiftMachineOeeRows(logs, machines), [logs, machines]);
+  const totalOutput = rows.reduce((sum, row) => sum + row.output, 0);
+  const shiftSummary = summarize(logs);
+  const shiftOee = shiftSummary.availability * shiftSummary.quality;
+
+  return (
+    <div className="data-table-wrap report-table current-shift-oee-table">
+      <div className="report-table-heading current-shift-heading">
+        <div>
+          <h2>สรุปการผลิตตามกะปัจจุบัน</h2>
+          <p>
+            วันที่ผลิต {productionDate} · {shiftLabel(shift)} · {shiftWindowLabel(productionDate, shift)}
+          </p>
+        </div>
+        <div className="current-shift-totals" aria-label="Current shift production totals">
+          <span>Output {formatNumber(totalOutput)}</span>
+          <strong>OEE {formatPercent(shiftOee)}</strong>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>เครื่องจักร / Machine</th>
+            <th>ยอดงาน / Output</th>
+            <th>OEE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td className="empty-cell" colSpan={3}>
+                ยังไม่มีข้อมูลผลิตของกะนี้
+              </td>
+            </tr>
+          ) : (
+            rows.map((row) => (
+              <tr key={row.machineId}>
+                <td>
+                  <strong>{row.machineName}</strong>
+                  <small>{formatNumber(row.count)} รายการ</small>
+                </td>
+                <td className="current-shift-output">{formatNumber(row.output)}</td>
+                <td>
+                  <span className="oee-value-pill">{formatPercent(row.oee)}</span>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 function buildDailyPerformanceRows(logs: ProductionLog[], machines: Machine[]): DailyPerformanceRow[] {
   const machineNameLookup = new Map(machines.map((machine) => [machine.id, machine.name]));

@@ -2101,6 +2101,57 @@ select:disabled {
   margin-top: 3px;
 }
 
+.current-shift-oee-table {
+  border-top: 4px solid #16a34a;
+}
+
+.current-shift-heading p {
+  color: #53627b;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 5px 0 0;
+}
+
+.current-shift-totals {
+  align-items: flex-end;
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  min-width: 190px;
+}
+
+.current-shift-totals span {
+  color: #177245;
+  font-size: 14px;
+  font-weight: 1000;
+  text-transform: none;
+}
+
+.current-shift-totals strong {
+  color: #061635;
+  font-size: 22px;
+  font-weight: 1000;
+}
+
+.current-shift-output {
+  color: #061635;
+  font-size: 18px;
+  font-weight: 1000;
+}
+
+.oee-value-pill {
+  background: #ecfdf3;
+  border: 1px solid #b7e4c7;
+  border-radius: 999px;
+  color: #0f7a3b;
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 1000;
+  justify-content: center;
+  min-width: 74px;
+  padding: 5px 10px;
+}
+
 .empty-cell {
   color: #667085;
   font-weight: 800;
