@@ -1696,6 +1696,7 @@ function App() {
 
   const summary = useMemo(() => (tab === "dashboard" ? summarize(dashboardLogs) : summarize([])), [dashboardLogs, tab]);
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
+  const dashboardMachineRows = useMemo(() => aggregateReportRows(dashboardLogs, (log) => log.machineName, () => ""), [dashboardLogs]);
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const canSubmitProduction = canSubmitProductionForRole(session?.role);
@@ -3768,6 +3769,7 @@ function App() {
             )}
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <DailyMachinePerformanceChart logs={dashboardLogs} machines={machines} />
+            <ReportRowsTable rows={dashboardMachineRows} title="สรุปตามเครื่องจักร" />
             <MachineCapacityDashboard logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
@@ -4831,7 +4833,6 @@ function ReportsView({
       <DowntimeInsightPanel rows={downtimeStats} summary={summary} />
 
       <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
-      <ReportRowsTable rows={machineRows} title="สรุปตามเครื่องจักร" />
       <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No." />
 
       <div className="analysis-panel">
