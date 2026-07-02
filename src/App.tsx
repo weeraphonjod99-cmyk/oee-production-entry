@@ -89,6 +89,7 @@ type ProductChoice = ProductMaster & {
 };
 type ProductionOrderForm = {
   rowNumber?: number;
+  no: string;
   orderNo: string;
   productName: string;
   partNo: string;
@@ -1302,6 +1303,7 @@ type EmployeeDraftEvent = {
 };
 
 const emptyProductionOrderForm: ProductionOrderForm = {
+  no: "",
   orderNo: "",
   productName: "",
   partNo: "",
@@ -1320,6 +1322,19 @@ const isCompletedProductionOrder = (order: ProductionOrder) => {
   return status.includes("จบ") || status.includes("complete") || status.includes("closed") || status.includes("finished");
 };
 
+const getProductionOrderSequence = (order: ProductionOrder) => Number(String(order.no || "").replace(/[^\d.-]/g, "")) || 0;
+
+const hasProductionOrderSequence = (order: ProductionOrder) => getProductionOrderSequence(order) > 0;
+
+const compareProductionOrders = (left: ProductionOrder, right: ProductionOrder) => {
+  const leftSequence = getProductionOrderSequence(left);
+  const rightSequence = getProductionOrderSequence(right);
+  if (leftSequence && rightSequence && leftSequence !== rightSequence) return leftSequence - rightSequence;
+  if (leftSequence && !rightSequence) return -1;
+  if (!leftSequence && rightSequence) return 1;
+  return Number(left.rowNumber || 0) - Number(right.rowNumber || 0);
+};
+
 const clearProductionOrderSelection = {
   productionOrderRowNumber: undefined,
   productionOrderNo: "",
@@ -1328,6 +1343,7 @@ const clearProductionOrderSelection = {
 
 const orderToForm = (order: ProductionOrder): ProductionOrderForm => ({
   rowNumber: order.rowNumber,
+  no: order.no || "",
   orderNo: order.orderNo || "",
   productName: order.productName || "",
   partNo: order.partNo || "",
@@ -1635,8 +1651,10 @@ function App() {
     () =>
       productionOrders
         .filter((order) => !isCompletedProductionOrder(order) && (order.productName || order.partNo || order.orderNo))
+        .filter((order) => canManageProductionOrders || hasProductionOrderSequence(order))
+        .sort(compareProductionOrders)
         .slice(0, 12),
-    [productionOrders],
+    [canManageProductionOrders, productionOrders],
   );
   const filteredProducts = useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
@@ -2124,6 +2142,13 @@ function App() {
   };
 
   const selectProductionOrder = (order: ProductionOrder) => {
+    if (!canManageProductionOrders && !hasProductionOrderSequence(order)) {
+      setProblemDialog({
+        title: "ยังไม่ได้จัดลำดับผลิต",
+        message: "กรุณาให้ Administrator หรือ Planing จัดลำดับออเดอร์ก่อน ฝ่ายผลิตจึงจะเลือกออเดอร์นี้ได้",
+      });
+      return;
+    }
     const matchedProduct =
       machineProductChoices.find(
         (product) =>
@@ -2162,12 +2187,29 @@ function App() {
       setProblemDialog({ title: "กรอกออเดอร์ไม่ครบ", message: "กรุณากรอก Part Name และ Part No. ก่อนบันทึกออเดอร์" });
       return;
     }
+    const requestedSequence = Number(productionOrderForm.no.replace(/[^\d.-]/g, "")) || 0;
+    if (
+      requestedSequence > 0 &&
+      productionOrders.some(
+        (order) =>
+          !isCompletedProductionOrder(order) &&
+          Number(order.rowNumber || 0) !== Number(productionOrderForm.rowNumber || 0) &&
+          getProductionOrderSequence(order) === requestedSequence,
+      )
+    ) {
+      setProblemDialog({
+        title: "ลำดับผลิตซ้ำ",
+        message: `ลำดับ ${requestedSequence} ถูกใช้อยู่แล้ว กรุณาเปลี่ยนลำดับของออเดอร์ก่อนบันทึก`,
+      });
+      return;
+    }
     setSavingProductionOrder(true);
     try {
       const savedOrder = await upsertProductionOrder({
         rowNumber: productionOrderForm.rowNumber,
         machineId: currentMachine.id,
         machineName: currentMachine.name,
+        no: productionOrderForm.no.trim(),
         orderNo: productionOrderForm.orderNo.trim(),
         productName: productionOrderForm.productName.trim(),
         partNo: productionOrderForm.partNo.trim(),
@@ -2755,6 +2797,12 @@ function App() {
     } = {},
   ) => {
     const shouldValidateBeforeSave = !options.autoSubmit;
+    if (shouldValidateBeforeSave && isEmployeeEntry && !canManageProductionOrders && !targetDraft.productionOrderRowNumber) {
+      const message = "ฝ่ายผลิตต้องเลือกออเดอร์ที่ Planning/Admin จัดลำดับไว้แล้วก่อนส่งยอด";
+      setStatus(message);
+      setProblemDialog({ title: "ต้องเลือกออเดอร์ตามลำดับผลิต", message });
+      return false;
+    }
     const missingFields = shouldValidateBeforeSave ? getMissingSaveFields(targetDraft) : [];
     if (missingFields.length > 0) {
       showMissingSaveFields(missingFields);
@@ -3433,19 +3481,20 @@ function App() {
                   {productionOrdersError && <p>{productionOrdersError}</p>}
                   {visibleProductionOrders.length > 0 ? (
                     <div className="pending-order-list">
-                      {visibleProductionOrders.map((order, index) => {
+                      {visibleProductionOrders.map((order) => {
                         const choiceKey = productionOrderKey(order);
+                        const sequence = getProductionOrderSequence(order);
                         const isSelected =
                           normalizeText(order.productName) === normalizeText(draft.productName) &&
                           normalizeText(order.partNo) === normalizeText(draft.partNo);
                         return (
                           <button
-                            className={`pending-order-item ${isSelected ? "selected" : ""}`}
+                            className={`pending-order-item ${isSelected ? "selected" : ""} ${sequence ? "" : "unsequenced"}`}
                             key={choiceKey}
                             onClick={() => selectProductionOrder(order)}
                             type="button"
                           >
-                            <span className="pending-order-rank">#{index + 1}</span>
+                            <span className="pending-order-rank">{sequence ? `#${sequence}` : "ยังไม่จัดลำดับ"}</span>
                             <span className="pending-order-main">
                               <strong>{order.productName || "-"}</strong>
                               <small>Part No. {order.partNo || "-"} • Order {order.orderNo || "-"}</small>
@@ -3485,6 +3534,12 @@ function App() {
                           </button>
                         )}
                       </div>
+                      <input
+                        inputMode="numeric"
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, no: event.target.value }))}
+                        placeholder="ลำดับผลิต เช่น 1, 2, 3"
+                        value={productionOrderForm.no}
+                      />
                       <input
                         onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, orderNo: event.target.value }))}
                         placeholder="Order No."

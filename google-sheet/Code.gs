@@ -794,7 +794,7 @@ function upsertProductionOrder(payload) {
   const targetRow = rowNumber >= 3 && rowNumber <= Math.max(lastRow + 1, 3) ? rowNumber : findNextProductionOrderRow(sheet);
   ensureSheetSize(sheet, targetRow, Math.max(PRODUCTION_ORDER_HEADERS.length, 30));
   const currentNo = String(sheet.getRange(targetRow, 1).getDisplayValue() || "");
-  const nextNo = currentNo || String(Math.max(targetRow - 2, 1));
+  const nextNo = String(payload.no == null ? currentNo : payload.no);
   const currentUnit = String(sheet.getRange(targetRow, 8).getDisplayValue() || "");
   const row = [
     nextNo,

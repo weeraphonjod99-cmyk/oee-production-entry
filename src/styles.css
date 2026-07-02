@@ -1155,7 +1155,20 @@ select:disabled {
   font-weight: 1000;
   height: 38px;
   justify-content: center;
+  min-width: 42px;
+  padding: 0 10px;
   width: 42px;
+}
+
+.pending-order-item.unsequenced {
+  background: #fff7ed;
+  border-style: dashed;
+}
+
+.pending-order-item.unsequenced .pending-order-rank {
+  background: #64748b;
+  font-size: 12px;
+  width: auto;
 }
 
 .pending-order-item.selected .pending-order-rank {
