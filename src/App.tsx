@@ -445,7 +445,7 @@ const parseStoredDateTime = (value?: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const employeeStatusHeartbeatMaxAgeMs = 3 * 60 * 1000;
+const employeeStatusHeartbeatMaxAgeMs = 60 * 60 * 1000;
 const employeeStoredDraftResumeMaxAgeMs = 3 * 60 * 1000;
 
 const formatSharedStatusTime = (value?: string) => {
