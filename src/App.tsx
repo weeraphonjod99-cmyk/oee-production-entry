@@ -4004,7 +4004,7 @@ function App() {
 
               <div className="form-actions">
                 <button
-                  className="primary-button"
+                  className={`primary-button ${canSubmitProduction ? "" : "restricted-submit-button"}`}
                   disabled={!canSubmitProduction || saving || Boolean(duplicateEntry)}
                   title={!canSubmitProduction ? "อนุญาตเฉพาะ Admin และ Production เท่านั้น" : undefined}
                   type="submit"
@@ -4154,7 +4154,14 @@ function App() {
             <h2 id="confirm-save-dialog-title">{confirmSaveDialog.title}</h2>
             <p>{confirmSaveDialog.message}</p>
             <div className="modal-actions">
-              <button className="primary-button" type="button" autoFocus disabled={saving} onClick={() => void saveDraft()}>
+              <button
+                className={`primary-button ${canSubmitProduction ? "" : "restricted-submit-button"}`}
+                type="button"
+                autoFocus
+                disabled={!canSubmitProduction || saving}
+                title={!canSubmitProduction ? "อนุญาตเฉพาะ Admin และ Production เท่านั้น" : undefined}
+                onClick={() => void saveDraft()}
+              >
                 ยืนยันบันทึก
               </button>
               <button className="ghost-button" type="button" disabled={saving} onClick={() => setConfirmSaveDialog(null)}>
