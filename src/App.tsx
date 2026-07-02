@@ -229,7 +229,6 @@ const maxShiftWorkMinutes = 590;
 const realtimeRemoteRefreshMs = 2500;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
-const pageAutoRefreshMs = 60 * 60 * 1000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
@@ -1419,14 +1418,6 @@ function App() {
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (saving) return;
-      window.location.reload();
-    }, pageAutoRefreshMs);
-    return () => window.clearInterval(timer);
-  }, [saving]);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
