@@ -33,10 +33,12 @@ import {
   fetchMachines,
   fetchPdSheets,
   fetchProductDefaults,
+  fetchProductionOrders,
   fetchRemoteLogs,
   remoteEnabled,
   updateRemoteLog,
   upsertEmployeeMachineStatus,
+  upsertProductionOrder,
   type EmployeeMachineStatus,
   type PdWorkbook,
   type ProductDefaults,
@@ -68,7 +70,7 @@ import {
   totalOutput,
 } from "./lib/metrics";
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
-import type { EntryDraft, Machine, ProductionLog, ProductMaster } from "./types";
+import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
 type TabId = "employeeEntry" | "entry" | "dashboard" | "reports" | "pd" | "history" | "master" | "users";
 
@@ -84,6 +86,17 @@ type ProductChoice = ProductMaster & {
   latestDate?: string;
   latestGoodQty?: number;
   source?: "master" | "history";
+};
+type ProductionOrderForm = {
+  rowNumber?: number;
+  orderNo: string;
+  productName: string;
+  partNo: string;
+  rmNo: string;
+  orderQty: string;
+  dueDate: string;
+  shift: string;
+  status: string;
 };
 type EmployeeTimerKey = "work" | DowntimeKey;
 type EmployeeActiveTimer = {
@@ -281,6 +294,7 @@ const employeeRoleLabel = (role: AppRole) => {
 
 const isReadOnlyRole = (role?: AppRole) => role === "planning";
 const canSubmitProductionForRole = (role?: AppRole) => role === "admin" || role === "production";
+const canManageProductionOrdersForRole = (role?: AppRole) => role === "admin" || role === "planning";
 
 const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTimerKey) => {
   if (!role || role === "admin" || role === "production") return true;
@@ -1284,6 +1298,32 @@ type EmployeeDraftEvent = {
   durationMinutes?: number;
 };
 
+const emptyProductionOrderForm: ProductionOrderForm = {
+  orderNo: "",
+  productName: "",
+  partNo: "",
+  rmNo: "",
+  orderQty: "",
+  dueDate: "",
+  shift: "",
+  status: "",
+};
+
+const productionOrderKey = (order: ProductionOrder) =>
+  `${order.rowNumber || ""}:${order.orderNo || ""}:${order.productName || ""}:${order.partNo || ""}`;
+
+const orderToForm = (order: ProductionOrder): ProductionOrderForm => ({
+  rowNumber: order.rowNumber,
+  orderNo: order.orderNo || "",
+  productName: order.productName || "",
+  partNo: order.partNo || "",
+  rmNo: order.rmNo || "",
+  orderQty: order.orderQty ? String(order.orderQty) : "",
+  dueDate: order.dueDate || "",
+  shift: order.shift || "",
+  status: order.status || "",
+});
+
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
@@ -1325,6 +1365,11 @@ function App() {
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
+  const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
+  const [productionOrdersLoading, setProductionOrdersLoading] = useState(false);
+  const [productionOrdersError, setProductionOrdersError] = useState("");
+  const [productionOrderForm, setProductionOrderForm] = useState<ProductionOrderForm>(emptyProductionOrderForm);
+  const [savingProductionOrder, setSavingProductionOrder] = useState(false);
   const draftRef = useRef(draft);
   const employeeDraftEventsRef = useRef<EmployeeDraftEvent[]>([]);
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
@@ -1549,6 +1594,7 @@ function App() {
   }, [draft.shift]);
 
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
+  const canManageProductionOrders = canManageProductionOrdersForRole(session?.role);
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
     [localLogs, remoteLogs],
@@ -1571,12 +1617,13 @@ function App() {
     () => buildProductChoices(draft.machineId, machineProducts, allLogs),
     [allLogs, draft.machineId, machineProducts],
   );
-  const machineProductChoiceByKey = useMemo(
-    () => new Map(machineProductChoices.map((product) => [productChoiceKey(product), product])),
-    [machineProductChoices],
+  const visibleProductionOrders = useMemo(
+    () =>
+      productionOrders
+        .filter((order) => order.productName || order.partNo || order.orderNo)
+        .slice(0, 12),
+    [productionOrders],
   );
-  const pendingOrderChoices = useMemo(() => machineProductChoices.slice(0, 8), [machineProductChoices]);
-  const selectedProductChoiceKey = productChoiceKey(draft);
   const filteredProducts = useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
     if (!query) return machineProductChoices.slice(0, 300);
@@ -1711,6 +1758,35 @@ function App() {
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const canSubmitProduction = canSubmitProductionForRole(session?.role);
+
+  useEffect(() => {
+    if (!remoteEnabled || !isEmployeeEntry || !employeeMachineSelected) {
+      setProductionOrders([]);
+      setProductionOrdersError("");
+      return;
+    }
+    let cancelled = false;
+    setProductionOrdersLoading(true);
+    setProductionOrdersError("");
+    fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
+      .then((orders) => {
+        if (cancelled) return;
+        setProductionOrders(orders);
+        setProductionOrderForm(emptyProductionOrderForm);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setProductionOrders([]);
+        setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ");
+      })
+      .finally(() => {
+        if (!cancelled) setProductionOrdersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMachine.id, currentMachine.name, employeeMachineSelected, isEmployeeEntry]);
+
   const totalDraftDowntime = totalDowntime(draft);
   const sharedWorkStartedAt = currentMachineSharedStatus?.workStartedAt || "";
   const visibleWorkStartedAt = isEmployeeEntry ? employeeWorkStartedAt || sharedWorkStartedAt : "";
@@ -2031,16 +2107,74 @@ function App() {
     if (matchedProduct) void loadProductDefaults(matchedProduct, currentMachine);
   };
 
-  const selectProductChoice = (productKey: string) => {
-    const selectedProduct = machineProductChoiceByKey.get(productKey);
-    if (!selectedProduct) return;
-    recordEmployeeDraftEvent("เลือกประวัติงานเก่า", productChoiceLabel(selectedProduct));
+  const selectProductionOrder = (order: ProductionOrder) => {
+    const matchedProduct =
+      machineProductChoices.find(
+        (product) =>
+          normalizeText(product.productName) === normalizeText(order.productName) &&
+          normalizeText(product.partNo) === normalizeText(order.partNo),
+      ) || null;
+    recordEmployeeDraftEvent("เลือก Order รอผลิต", `${order.productName || "-"} / ${order.partNo || "-"}`);
     setProductSearch("");
-    setDraft((prev) => ({
-      ...prev,
-      ...applyProductToDraft(selectedProduct),
-    }));
-    void loadProductDefaults(selectedProduct, currentMachine);
+    setDraft((prev) => {
+      const nextDraft = {
+        ...prev,
+        ...(matchedProduct ? applyProductToDraft(matchedProduct) : {}),
+        productName: order.productName || matchedProduct?.productName || prev.productName,
+        partNo: order.partNo || matchedProduct?.partNo || prev.partNo,
+        step: matchedProduct?.step || prev.step || "-",
+        materialOfProduction: order.rmNo || prev.materialOfProduction || "",
+        note: prev.note.trim()
+          ? `${prev.note.trim()}\nOrder ${order.orderNo || "-"}`
+          : `Order ${order.orderNo || "-"}`,
+      };
+      return nextDraft;
+    });
+    if (matchedProduct) void loadProductDefaults(matchedProduct, currentMachine);
+  };
+
+  const saveProductionOrder = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canManageProductionOrders) {
+      setProblemDialog({ title: "ไม่มีสิทธิ์แก้ไขออเดอร์", message: "อนุญาตเฉพาะ Administrator และ Planing เท่านั้น" });
+      return;
+    }
+    if (!productionOrderForm.productName.trim() || !productionOrderForm.partNo.trim()) {
+      setProblemDialog({ title: "กรอกออเดอร์ไม่ครบ", message: "กรุณากรอก Part Name และ Part No. ก่อนบันทึกออเดอร์" });
+      return;
+    }
+    setSavingProductionOrder(true);
+    try {
+      const savedOrder = await upsertProductionOrder({
+        rowNumber: productionOrderForm.rowNumber,
+        machineId: currentMachine.id,
+        machineName: currentMachine.name,
+        orderNo: productionOrderForm.orderNo.trim(),
+        productName: productionOrderForm.productName.trim(),
+        partNo: productionOrderForm.partNo.trim(),
+        rmNo: productionOrderForm.rmNo.trim(),
+        orderQty: Number(productionOrderForm.orderQty.replace(/,/g, "")) || 0,
+        dueDate: productionOrderForm.dueDate.trim(),
+        shift: productionOrderForm.shift.trim(),
+        status: productionOrderForm.status.trim(),
+        unit: "pcs",
+        updatedBy: session?.displayName || session?.username || "",
+      });
+      const orders = await fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name });
+      setProductionOrders(orders);
+      setProductionOrderForm(emptyProductionOrderForm);
+      setSuccessDialog({
+        title: productionOrderForm.rowNumber ? "แก้ไขออเดอร์แล้ว" : "เพิ่มออเดอร์แล้ว",
+        message: `บันทึก Order ${savedOrder.orderNo || "-"} ลง Google Sheet ของเครื่อง ${currentMachine.name} แล้ว`,
+      });
+    } catch (error) {
+      setProblemDialog({
+        title: "บันทึกออเดอร์ไม่สำเร็จ",
+        message: error instanceof Error ? error.message : "ไม่สามารถบันทึกออเดอร์ลง Google Sheet ได้",
+      });
+    } finally {
+      setSavingProductionOrder(false);
+    }
   };
 
   const handleNumber = (key: keyof EntryDraft, value: string) => {
@@ -3268,36 +3402,112 @@ function App() {
                     <div>
                       <span>ORDER QUEUE</span>
                       <strong>Order ที่รอผลิต / งานที่ต้องผลิต</strong>
+                      <small>อ้างอิง Google Sheet ของเครื่อง {currentMachine.name}</small>
                     </div>
-                    <b>{formatNumber(pendingOrderChoices.length)} รายการ</b>
+                    <b>{productionOrdersLoading ? "กำลังโหลด" : `${formatNumber(visibleProductionOrders.length)} รายการ`}</b>
                   </div>
-                  {pendingOrderChoices.length > 0 ? (
+                  {productionOrdersError && <p>{productionOrdersError}</p>}
+                  {visibleProductionOrders.length > 0 ? (
                     <div className="pending-order-list">
-                      {pendingOrderChoices.map((product, index) => {
-                        const choiceKey = productChoiceKey(product);
-                        const isSelected = choiceKey === selectedProductChoiceKey;
+                      {visibleProductionOrders.map((order, index) => {
+                        const choiceKey = productionOrderKey(order);
+                        const isSelected =
+                          normalizeText(order.productName) === normalizeText(draft.productName) &&
+                          normalizeText(order.partNo) === normalizeText(draft.partNo);
                         return (
                           <button
                             className={`pending-order-item ${isSelected ? "selected" : ""}`}
                             key={choiceKey}
-                            onClick={() => selectProductChoice(choiceKey)}
+                            onClick={() => selectProductionOrder(order)}
                             type="button"
                           >
                             <span className="pending-order-rank">#{index + 1}</span>
                             <span className="pending-order-main">
-                              <strong>{product.productName}</strong>
-                              <small>Part No. {product.partNo} • Step {product.step || "-"}</small>
+                              <strong>{order.productName || "-"}</strong>
+                              <small>Part No. {order.partNo || "-"} • Order {order.orderNo || "-"}</small>
                             </span>
                             <span className="pending-order-meta">
-                              {product.latestDate ? `ล่าสุด ${product.latestDate}` : "จาก Master"}
-                              {product.latestGoodQty ? ` • Good ${formatNumber(product.latestGoodQty)}` : ""}
+                              {order.orderQty ? `จำนวน ${formatNumber(order.orderQty)} ${order.unit || "pcs"}` : "ยังไม่ระบุจำนวน"}
+                              {order.dueDate ? ` • ต้องการ ${order.dueDate}` : ""}
+                              {order.status ? ` • ${order.status}` : ""}
                             </span>
+                            {canManageProductionOrders && (
+                              <span
+                                className="pending-order-edit"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setProductionOrderForm(orderToForm(order));
+                                }}
+                                role="button"
+                                tabIndex={0}
+                              >
+                                <Pencil size={14} /> แก้ไข
+                              </span>
+                            )}
                           </button>
                         );
                       })}
                     </div>
                   ) : (
-                    <p>ยังไม่มีประวัติงานของเครื่องนี้สำหรับแนะนำงานรอผลิต</p>
+                    <p>ยังไม่มีออเดอร์ของเครื่องนี้ใน Google Sheet</p>
+                  )}
+                  {canManageProductionOrders && (
+                    <form className="production-order-form" onSubmit={saveProductionOrder}>
+                      <div className="production-order-form-title">
+                        <strong>{productionOrderForm.rowNumber ? "แก้ไขออเดอร์" : "เพิ่มออเดอร์ใหม่"}</strong>
+                        {productionOrderForm.rowNumber && (
+                          <button type="button" onClick={() => setProductionOrderForm(emptyProductionOrderForm)}>
+                            ล้างฟอร์ม
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, orderNo: event.target.value }))}
+                        placeholder="Order No."
+                        value={productionOrderForm.orderNo}
+                      />
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, productName: event.target.value }))}
+                        placeholder="Part Name / รุ่น"
+                        required
+                        value={productionOrderForm.productName}
+                      />
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, partNo: event.target.value }))}
+                        placeholder="Part No."
+                        required
+                        value={productionOrderForm.partNo}
+                      />
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, rmNo: event.target.value }))}
+                        placeholder="RM No. / Material"
+                        value={productionOrderForm.rmNo}
+                      />
+                      <input
+                        inputMode="numeric"
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, orderQty: event.target.value }))}
+                        placeholder="ยอดสั่งซื้อ"
+                        value={productionOrderForm.orderQty}
+                      />
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+                        placeholder="วันที่ต้องการ"
+                        value={productionOrderForm.dueDate}
+                      />
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, shift: event.target.value }))}
+                        placeholder="กะ"
+                        value={productionOrderForm.shift}
+                      />
+                      <input
+                        onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, status: event.target.value }))}
+                        placeholder="สถานะการผลิต"
+                        value={productionOrderForm.status}
+                      />
+                      <button className="primary-button" disabled={savingProductionOrder} type="submit">
+                        <Save size={16} /> {savingProductionOrder ? "กำลังบันทึก" : "บันทึกออเดอร์"}
+                      </button>
+                    </form>
                   )}
                 </div>
                 <label>

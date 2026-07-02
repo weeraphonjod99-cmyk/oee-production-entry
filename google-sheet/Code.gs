@@ -18,6 +18,33 @@ const KPI_NOTES_SHEET = "kpi_notes";
 const KPI_REFRESH_ACTION = "refreshKpi";
 const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
 const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
+const PRODUCTION_ORDER_SPREADSHEET_ID = "1gR-a77vkgVxDu0jdSZ9RPhnGLC5OabIRHSRGBN0hZ18";
+const PRODUCTION_ORDER_MAX_ROWS = 200;
+const PRODUCTION_ORDER_HEADERS = [
+  "No.",
+  "วันที่เปิดออเดอร์",
+  "Order No.",
+  "Part Name",
+  "Part No.",
+  "RM No.",
+  "ยอดสั่งซื้อ",
+  "",
+  "วันที่ต้องการ ",
+  "กะ",
+  "KPI85 ชิ้น/นาที",
+  "เป้าหมายผลิต/วัน KPI 85%",
+  "คาดเสร็จวันที่",
+  "คาดเสร็จเวลา",
+  "วันที่เริ่ม",
+  "วันที่จบ ",
+  "ยอดการผลิต ",
+  "Ready for painting",
+  "ยอดค้างส่ง ",
+  "NG/ReWork",
+  "สถานะการผลิต ",
+  "%ความคืบหน้า ",
+  "Stock",
+];
 const PD_EXTERNAL_SHEETS = [
   {
     id: "1O1q9jOeTs81xOAUjTTXoDvVSqM5zFl5j",
@@ -291,6 +318,9 @@ function doGet(e) {
     if (action === "employeeMachineStatuses") {
       return jsonResponse({ ok: true, statuses: getEmployeeMachineStatuses() });
     }
+    if (action === "productionOrders") {
+      return jsonResponse({ ok: true, orders: getProductionOrders(e.parameter || {}) });
+    }
     if (action === "auditEmployeeMachineStatuses") {
       return jsonResponse({ ok: true, result: auditEmployeeMachineStatuses() });
     }
@@ -366,6 +396,10 @@ function doPost(e) {
     if (body.action === "clearEmployeeMachineStatus") {
       clearEmployeeMachineStatus(body.payload || {});
       return jsonResponse({ ok: true });
+    }
+    if (body.action === "upsertProductionOrder") {
+      const order = upsertProductionOrder(body.payload || {});
+      return jsonResponse({ ok: true, order: order });
     }
     if (body.action === "getProductDefaults") {
       return jsonResponse({ ok: true, defaults: getProductDefaults(body.payload || {}) });
@@ -620,6 +654,158 @@ function clearEmployeeMachineStatus(payload) {
       return;
     }
   }
+}
+
+function openProductionOrderWorkbook() {
+  return SpreadsheetApp.openById(PRODUCTION_ORDER_SPREADSHEET_ID);
+}
+
+function normalizeOrderMachineName(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function getProductionOrderSheet(machineName, machineId) {
+  const book = openProductionOrderWorkbook();
+  const target = normalizeOrderMachineName(machineName || machineId);
+  const cncTarget = target && target.length <= 3 ? "cnc" + target : "";
+  const sheets = book.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    const normalized = normalizeOrderMachineName(sheets[i].getName());
+    if (normalized === target || (cncTarget && normalized === cncTarget)) return sheets[i];
+  }
+  for (let i = 0; i < sheets.length; i++) {
+    const normalized = normalizeOrderMachineName(sheets[i].getName());
+    if ((target && normalized.indexOf(target) >= 0) || (cncTarget && normalized.indexOf(cncTarget) >= 0)) return sheets[i];
+  }
+  const sheetName = String(machineName || machineId || "Production Orders").slice(0, 90);
+  const sheet = book.insertSheet(sheetName);
+  ensureProductionOrderLayout(sheet);
+  return sheet;
+}
+
+function ensureProductionOrderLayout(sheet) {
+  ensureSheetSize(sheet, 3, Math.max(PRODUCTION_ORDER_HEADERS.length, 30));
+  const current = sheet.getRange(1, 1, 1, PRODUCTION_ORDER_HEADERS.length).getValues()[0];
+  const hasHeader = current.some(function(value) {
+    return String(value || "").trim();
+  });
+  if (!hasHeader) {
+    sheet.getRange(1, 1, 1, PRODUCTION_ORDER_HEADERS.length).setValues([PRODUCTION_ORDER_HEADERS]);
+    sheet.getRange(2, 23, 1, 7).setValues([["Min", "Blance", "Max", "1", "2", "3", "4"]]);
+    sheet.setFrozenRows(2);
+    sheet.getRange(1, 1, 2, PRODUCTION_ORDER_HEADERS.length).setFontWeight("bold").setBackground("#fbbf24").setFontColor("#111827");
+  }
+}
+
+function getProductionOrders(params) {
+  const machineName = String(params.machineName || "");
+  const machineId = String(params.machineId || "");
+  const sheet = getProductionOrderSheet(machineName, machineId);
+  ensureProductionOrderLayout(sheet);
+  const lastRow = Math.max(sheet.getLastRow(), 2);
+  if (lastRow < 3) return [];
+  const rowCount = Math.min(lastRow - 2, PRODUCTION_ORDER_MAX_ROWS);
+  const values = sheet.getRange(3, 1, rowCount, PRODUCTION_ORDER_HEADERS.length).getDisplayValues();
+  const orders = [];
+  for (let index = 0; index < values.length; index++) {
+    const row = values[index];
+    const hasOrder = [row[2], row[3], row[4], row[6], row[20]].some(function(value) {
+      return String(value || "").trim();
+    });
+    if (!hasOrder) continue;
+    orders.push({
+      rowNumber: index + 3,
+      machineId: machineId,
+      machineName: sheet.getName(),
+      no: String(row[0] || ""),
+      openedDate: String(row[1] || ""),
+      orderNo: String(row[2] || ""),
+      productName: String(row[3] || ""),
+      partNo: String(row[4] || ""),
+      rmNo: String(row[5] || ""),
+      orderQty: numberValue(String(row[6] || "").replace(/,/g, "")),
+      unit: String(row[7] || ""),
+      dueDate: String(row[8] || ""),
+      shift: String(row[9] || ""),
+      kpi85: numberValue(String(row[10] || "").replace(/,/g, "")),
+      dailyTarget: numberValue(String(row[11] || "").replace(/,/g, "")),
+      expectedDoneDate: String(row[12] || ""),
+      expectedDoneTime: String(row[13] || ""),
+      startDate: String(row[14] || ""),
+      endDate: String(row[15] || ""),
+      producedQty: numberValue(String(row[16] || "").replace(/,/g, "")),
+      readyForPainting: numberValue(String(row[17] || "").replace(/,/g, "")),
+      backlogQty: numberValue(String(row[18] || "").replace(/,/g, "")),
+      ngRework: numberValue(String(row[19] || "").replace(/,/g, "")),
+      status: String(row[20] || ""),
+      progress: String(row[21] || ""),
+      stock: String(row[22] || ""),
+    });
+  }
+  return orders;
+}
+
+function findNextProductionOrderRow(sheet) {
+  const lastRow = Math.max(sheet.getLastRow(), 2);
+  if (lastRow < 3) return 3;
+  const values = sheet.getRange(3, 1, lastRow - 2, 6).getValues();
+  for (let index = 0; index < values.length; index++) {
+    const isEmpty = values[index].every(function(value) {
+      return String(value || "").trim() === "";
+    });
+    if (isEmpty) return index + 3;
+  }
+  return lastRow + 1;
+}
+
+function upsertProductionOrder(payload) {
+  const machineName = String(payload.machineName || "");
+  const machineId = String(payload.machineId || "");
+  const sheet = getProductionOrderSheet(machineName, machineId);
+  ensureProductionOrderLayout(sheet);
+  const lastRow = Math.max(sheet.getLastRow(), 2);
+  const rowNumber = Number(payload.rowNumber || 0);
+  const targetRow = rowNumber >= 3 && rowNumber <= Math.max(lastRow + 1, 3) ? rowNumber : findNextProductionOrderRow(sheet);
+  ensureSheetSize(sheet, targetRow, Math.max(PRODUCTION_ORDER_HEADERS.length, 30));
+  const currentNo = String(sheet.getRange(targetRow, 1).getDisplayValue() || "");
+  const nextNo = currentNo || String(Math.max(targetRow - 2, 1));
+  const currentUnit = String(sheet.getRange(targetRow, 8).getDisplayValue() || "");
+  const row = [
+    nextNo,
+    String(payload.openedDate || sheet.getRange(targetRow, 2).getDisplayValue() || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd")),
+    String(payload.orderNo || ""),
+    String(payload.productName || ""),
+    String(payload.partNo || ""),
+    String(payload.rmNo || payload.materialOfProduction || ""),
+    numberValue(payload.orderQty || 0) || "",
+    String(payload.unit || currentUnit || "pcs"),
+    String(payload.dueDate || ""),
+    String(payload.shift || ""),
+    numberValue(payload.kpi85 || 0) || "",
+    numberValue(payload.dailyTarget || 0) || "",
+    String(payload.expectedDoneDate || ""),
+    String(payload.expectedDoneTime || ""),
+    String(payload.startDate || ""),
+    String(payload.endDate || ""),
+    numberValue(payload.producedQty || 0) || "",
+    numberValue(payload.readyForPainting || 0) || "",
+    numberValue(payload.backlogQty || 0) || "",
+    numberValue(payload.ngRework || 0) || "",
+    String(payload.status || ""),
+    String(payload.progress || ""),
+    String(payload.stock || ""),
+  ];
+  sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+  return getProductionOrders({ machineId: machineId, machineName: sheet.getName() }).filter(function(order) {
+    return Number(order.rowNumber || 0) === targetRow;
+  })[0] || {
+    rowNumber: targetRow,
+    machineId: machineId,
+    machineName: sheet.getName(),
+    orderNo: String(payload.orderNo || ""),
+    productName: String(payload.productName || ""),
+    partNo: String(payload.partNo || ""),
+  };
 }
 
 function appendSubmitHistory(log, action, formattedRow) {

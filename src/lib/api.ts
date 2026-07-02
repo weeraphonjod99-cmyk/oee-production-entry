@@ -1,4 +1,4 @@
-import type { Machine, ProductionLog } from "../types";
+import type { Machine, ProductionLog, ProductionOrder } from "../types";
 
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL?.trim() ?? "";
 
@@ -110,6 +110,35 @@ export async function fetchEmployeeMachineStatuses(): Promise<EmployeeMachineSta
     throw new Error(data.error || "โหลดสถานะเครื่องจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.statuses) ? data.statuses : [];
+}
+
+export async function fetchProductionOrders(input: { machineId: string; machineName: string }): Promise<ProductionOrder[]> {
+  if (!remoteEnabled) return [];
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "productionOrders");
+  url.searchParams.set("machineId", input.machineId);
+  url.searchParams.set("machineName", input.machineName);
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดออเดอร์การผลิตจาก Google Sheet ไม่สำเร็จ");
+  }
+  return Array.isArray(data.orders) ? data.orders : [];
+}
+
+export async function upsertProductionOrder(order: ProductionOrder): Promise<ProductionOrder> {
+  if (!remoteEnabled) return order;
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "upsertProductionOrder", payload: order }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "บันทึกออเดอร์ลง Google Sheet ไม่สำเร็จ");
+  }
+  return data.order ?? order;
 }
 
 export async function fetchMachines(): Promise<Machine[]> {

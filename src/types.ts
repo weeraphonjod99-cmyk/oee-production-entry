@@ -21,6 +21,36 @@ export type ProductMaster = {
   sampleTestQty: number;
 };
 
+export type ProductionOrder = {
+  rowNumber?: number;
+  machineId?: string;
+  machineName: string;
+  no?: string;
+  openedDate?: string;
+  orderNo: string;
+  productName: string;
+  partNo: string;
+  rmNo?: string;
+  orderQty?: number;
+  unit?: string;
+  dueDate?: string;
+  shift?: string;
+  kpi85?: number;
+  dailyTarget?: number;
+  expectedDoneDate?: string;
+  expectedDoneTime?: string;
+  startDate?: string;
+  endDate?: string;
+  producedQty?: number;
+  readyForPainting?: number;
+  backlogQty?: number;
+  ngRework?: number;
+  status?: string;
+  progress?: string;
+  stock?: string;
+  updatedBy?: string;
+};
+
 export type ProductionLog = {
   id: string;
   recordDate?: string;

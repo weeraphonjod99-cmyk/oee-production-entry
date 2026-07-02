@@ -1092,6 +1092,12 @@ select:disabled {
   font-weight: 1000;
 }
 
+.pending-order-header small {
+  color: #7c2d12;
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .pending-order-header b {
   background: #ffedd5;
   border: 1px solid #fdba74;
@@ -1181,10 +1187,71 @@ select:disabled {
   grid-column: 1 / -1;
 }
 
+.pending-order-edit {
+  align-items: center;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  color: #9a3412;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 950;
+  gap: 5px;
+  grid-column: 1 / -1;
+  justify-self: end;
+  padding: 5px 9px;
+}
+
 .pending-order-panel p {
   color: #9a3412;
   font-weight: 900;
   margin: 0;
+}
+
+.production-order-form {
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 12px;
+}
+
+.production-order-form-title {
+  align-items: center;
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+}
+
+.production-order-form-title strong {
+  color: #9a3412;
+  font-size: 15px;
+  font-weight: 1000;
+}
+
+.production-order-form-title button {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  color: #9a3412;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.production-order-form input {
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 850;
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.production-order-form .primary-button {
+  min-height: 42px;
 }
 
 .production-inline-history-select {
