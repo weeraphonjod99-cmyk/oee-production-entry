@@ -209,7 +209,7 @@ const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
-const maxShiftWorkMinutes = 610;
+const maxShiftWorkMinutes = 590;
 const realtimeRemoteRefreshMs = 2500;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
@@ -218,16 +218,20 @@ const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
+    { label: "08:00-08:10", start: "08:00", end: "08:10", minutes: 10 },
     { label: "10:00-10:10", start: "10:00", end: "10:10", minutes: 10 },
     { label: "12:00-13:00", start: "12:00", end: "13:00", minutes: 60 },
     { label: "15:00-15:10", start: "15:00", end: "15:10", minutes: 10 },
     { label: "17:00-17:30", start: "17:00", end: "17:30", minutes: 30 },
+    { label: "19:50-20:00", start: "19:50", end: "20:00", minutes: 10 },
   ],
   [SHIFT_NIGHT]: [
+    { label: "20:00-20:10", start: "20:00", end: "20:10", minutes: 10 },
     { label: "22:00-22:10", start: "22:00", end: "22:10", minutes: 10 },
     { label: "00:00-01:00", start: "00:00", end: "01:00", minutes: 60 },
     { label: "03:00-03:10", start: "03:00", end: "03:10", minutes: 10 },
     { label: "05:00-05:30", start: "05:00", end: "05:30", minutes: 30 },
+    { label: "07:50-08:00", start: "07:50", end: "08:00", minutes: 10 },
   ],
 } as const;
 
@@ -531,10 +535,7 @@ const getSharedStatusLiveMinutes = (status: EmployeeMachineStatus | undefined, n
   const baseMinutes = Number(status.activeTimerBaseMinutes || 0);
   const baseAt = status.activeTimerBaseAt || status.updatedAt || status.entryUpdatedAt || "";
   if (!baseAt) return baseMinutes;
-  const liveMinutes =
-    status.activeTimerKey === "work"
-      ? getElapsedShiftWorkMinutes(status.date || getTodayInputValue(), status.shift, now, baseAt)
-      : getElapsedWallMinutes(baseAt, now);
+  const liveMinutes = getElapsedShiftWorkMinutes(status.date || getTodayInputValue(), status.shift, now, baseAt);
   return roundNumber(baseMinutes + liveMinutes);
 };
 
@@ -558,12 +559,6 @@ const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now =
   return clampWorkMinutes(elapsed - breakElapsed);
 };
 
-const getElapsedWallMinutes = (startedAt: string, now = new Date()) => {
-  const started = parseStoredDateTime(startedAt);
-  if (!started) return 0;
-  return Math.max(roundNumber((now.getTime() - started.getTime()) / 60000), 0);
-};
-
 const applyEmployeeTimerElapsed = (targetDraft: EntryDraft, timer: EmployeeActiveTimer | null, now = new Date()) => {
   if (!timer) return targetDraft;
   const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
@@ -578,7 +573,7 @@ const applyEmployeeTimerElapsed = (targetDraft: EntryDraft, timer: EmployeeActiv
     };
   }
 
-  const elapsed = getElapsedWallMinutes(timer.startedAt, now);
+  const elapsed = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now, timer.startedAt);
   if (elapsed <= 0) return targetDraft;
   const nextMinutes =
     timer.key === "meetingMinutes"
@@ -2175,19 +2170,14 @@ function App() {
   };
 
   const getEmployeeTimerDuration = (timer: EmployeeActiveTimer, endedAt: Date) =>
-    timer.key === "work"
-      ? getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, endedAt, timer.originalStartedAt ?? timer.startedAt)
-      : getElapsedWallMinutes(timer.originalStartedAt ?? timer.startedAt, endedAt);
+    getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, endedAt, timer.originalStartedAt ?? timer.startedAt);
 
   const getEmployeeTimerDurationForDraft = (
     targetDraft: EntryDraft,
-    key: EmployeeTimerKey,
+    _key: EmployeeTimerKey,
     startedAt: string,
     endedAt: Date,
-  ) =>
-    key === "work"
-      ? getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, endedAt, startedAt)
-      : getElapsedWallMinutes(startedAt, endedAt);
+  ) => getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, endedAt, startedAt);
 
   const buildEmployeeButtonDetails = (
     targetDraft: EntryDraft,
@@ -2957,10 +2947,7 @@ function App() {
     if (typeof event.durationMinutes === "number") return event.durationMinutes;
     const activeStartedAt = activeTimer?.originalStartedAt ?? activeTimer?.startedAt;
     if (!event.startedAt || !activeTimer || activeTimer.key !== event.key || activeStartedAt !== event.startedAt) return null;
-    if (event.key === "work") {
-      return getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, employeeReportNow, event.startedAt);
-    }
-    return getElapsedWallMinutes(event.startedAt, employeeReportNow);
+    return getElapsedShiftWorkMinutes(draft.date || getTodayInputValue(), draft.shift, employeeReportNow, event.startedAt);
   };
 
   const getEmployeeTimerEventRange = (event: EmployeeDraftEvent) => {
@@ -3449,7 +3436,7 @@ function App() {
                     <b>นาที</b>
                   </div>
                   {isEmployeeEntry && (
-                    <small className="field-help">คำนวณอัตโนมัติจากเวลาจริงในกะ 08:00-20:00 / 20:00-08:00 หักพัก H แล้ว สูงสุด 610 นาที</small>
+                    <small className="field-help">คำนวณอัตโนมัติจากเวลาจริงในกะ 08:00-20:00 / 20:00-08:00 หักพัก H แล้ว สูงสุด {maxShiftWorkMinutes} นาที</small>
                   )}
                 </label>
                 <label className="runtime-input-block">
