@@ -213,7 +213,7 @@ const maxShiftWorkMinutes = 610;
 const realtimeRemoteRefreshMs = 2500;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
-const pageAutoRefreshMs = 10 * 60 * 1000;
+const pageAutoRefreshMs = 60 * 60 * 1000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
