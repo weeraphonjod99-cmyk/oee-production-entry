@@ -277,7 +277,7 @@ const getEmployeeTimerToneClass = (key?: string) => {
 };
 
 const employeeTimerRolePermissions: Partial<Record<AppRole, EmployeeTimerKey[]>> = {
-  qc: ["work", "moldRepairMinutes"],
+  qc: ["inspectionMinutes"],
   tooling_repair: ["inspectionMinutes"],
   technician: ["work"],
   planning: [],
