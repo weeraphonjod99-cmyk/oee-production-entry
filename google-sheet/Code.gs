@@ -6,6 +6,8 @@ const PRODUCT_MASTER_SHEET = "product_master";
 const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 const USER_SHEET = "app_users";
 const EMPLOYEE_STATUS_SHEET = "employee_machine_status";
+const SUBMIT_HISTORY_SHEET = "submit_history";
+const SUBMIT_HISTORY_SHEET_ID = 1754160605;
 const KPI_DASHBOARD_SHEET = "kpi_dashboard";
 const KPI_MACHINE_SHEET = "kpi_machine";
 const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
@@ -151,6 +153,55 @@ const EMPLOYEE_STATUS_HEADERS = [
   "expiresAt",
 ];
 
+const SUBMIT_HISTORY_HEADERS = [
+  "historyId",
+  "action",
+  "entryDate",
+  "entryTime",
+  "submittedAt",
+  "entryUser",
+  "productionDate",
+  "shift",
+  "shiftStartAt",
+  "shiftEndAt",
+  "machineId",
+  "machineName",
+  "productName",
+  "partNo",
+  "step",
+  "materialOfProduction",
+  "goodQty",
+  "ngQty",
+  "testQty",
+  "totalQty",
+  "workMinutes",
+  "normalMinutes",
+  "downtimeMinutes",
+  "machineSpeed",
+  "cavityQty",
+  "recordDate",
+  "recordTime",
+  "logId",
+  "formattedSheet",
+  "formattedRow",
+  "buttonDetails",
+  "note",
+  "createdAt",
+];
+
+const SUBMIT_HISTORY_NUMBER_HEADERS = [
+  "goodQty",
+  "ngQty",
+  "testQty",
+  "totalQty",
+  "workMinutes",
+  "normalMinutes",
+  "downtimeMinutes",
+  "machineSpeed",
+  "cavityQty",
+  "formattedRow",
+];
+
 const LOG_DATE_HEADERS = ["recordDate", "date"];
 
 const MACHINE_NUMBER_HEADERS = ["capacityUnits", "capacityMinutes", "rowCount"];
@@ -278,6 +329,18 @@ function doGet(e) {
     if (action === "migrateOeeTestColumns") {
       return jsonResponse({ ok: true, result: migrateOeeTestColumns() });
     }
+    if (action === "setupSubmitHistory") {
+      const sheet = ensureSubmitHistorySheet();
+      return jsonResponse({
+        ok: true,
+        result: {
+          sheetId: sheet.getSheetId(),
+          sheetName: sheet.getName(),
+          spreadsheetId: sheet.getParent().getId(),
+          spreadsheetUrl: sheet.getParent().getUrl(),
+        },
+      });
+    }
     return jsonResponse({ ok: true, service: "oee-production-entry" });
   } catch (error) {
     return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) });
@@ -348,9 +411,10 @@ function appendLog(payload) {
     source: "google-sheet",
   });
   assertNoDuplicateOeeLog(log, "", true);
-  appendFormattedOeeRow(log);
+  const formattedRow = appendFormattedOeeRow(log);
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
+  appendSubmitHistory(log, "บันทึกยอดใหม่", formattedRow);
   return log;
 }
 
@@ -384,10 +448,12 @@ function upsertLog(payload) {
 
   if (rowIndex >= 0) {
     writeSerializedLogRow(sheet, rowIndex + 1, log);
+    appendSubmitHistory(log, "แก้ไขรายการบันทึก", { sheetName: LOG_SHEET, row: rowIndex + 1 });
     return log;
   }
 
   writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
+  appendSubmitHistory(log, "บันทึกยอดใหม่", { sheetName: LOG_SHEET, row: Math.max(sheet.getLastRow(), 2) });
   return log;
 }
 
@@ -529,6 +595,130 @@ function clearEmployeeMachineStatus(payload) {
       sheet.getRange(i + 1, statusColumn, 1, 4).setValues([["cleared", "", nowIso, nowIso]]);
       return;
     }
+  }
+}
+
+function appendSubmitHistory(log, action, formattedRow) {
+  const now = new Date();
+  const sheet = ensureSubmitHistorySheet();
+  const row = Math.max(sheet.getLastRow() + 1, 2);
+  ensureRowExists(sheet, row);
+  applyTypedRowFormats(sheet, row, SUBMIT_HISTORY_HEADERS, SUBMIT_HISTORY_NUMBER_HEADERS);
+  sheet.getRange(row, 1, 1, SUBMIT_HISTORY_HEADERS.length).setValues([
+    SUBMIT_HISTORY_HEADERS.map(function(header) {
+      return serializeTypedValue(header, buildSubmitHistoryValue(header, log, action, formattedRow, now), SUBMIT_HISTORY_NUMBER_HEADERS);
+    }),
+  ]);
+  return { row: row, sheetName: sheet.getName() };
+}
+
+function buildSubmitHistoryValue(header, log, action, formattedRow, now) {
+  const totalQty = numberValue(log.goodQty) + numberValue(log.ngQty) + numberValue(log.testQty);
+  const formatted = formattedRow || {};
+  const values = {
+    historyId: Utilities.getUuid(),
+    action: action || "บันทึกยอด",
+    entryDate: formatRecordDate(log.recordDate) || todayBangkok(now),
+    entryTime: formatRecordTime(log.recordTime) || timeBangkok(now),
+    submittedAt: formatRecordDateTime(log.submittedAt) || dateTimeBangkok(now),
+    entryUser: String(log.entryUser || log.userName || ""),
+    productionDate: formatRecordDate(log.date) || todayBangkok(now),
+    shift: String(toOriginalShift(log.shift) || ""),
+    shiftStartAt: String(log.shiftStartAt || ""),
+    shiftEndAt: String(log.shiftEndAt || ""),
+    machineId: String(log.machineId || ""),
+    machineName: String(log.machineName || ""),
+    productName: String(log.productName || ""),
+    partNo: String(log.partNo || ""),
+    step: String(log.step || "-"),
+    materialOfProduction: String(log.materialOfProduction || ""),
+    goodQty: numberValue(log.goodQty),
+    ngQty: numberValue(log.ngQty),
+    testQty: numberValue(log.testQty),
+    totalQty: totalQty,
+    workMinutes: numberValue(log.workMinutes),
+    normalMinutes: numberValue(log.normalMinutes),
+    downtimeMinutes: getSubmitHistoryDowntimeMinutes(log),
+    machineSpeed: numberValue(log.machineSpeed),
+    cavityQty: numberValue(log.cavityQty),
+    recordDate: formatRecordDate(log.recordDate) || todayBangkok(now),
+    recordTime: formatRecordTime(log.recordTime) || timeBangkok(now),
+    logId: String(log.id || ""),
+    formattedSheet: String(formatted.sheetName || ""),
+    formattedRow: numberValue(formatted.row),
+    buttonDetails: String(log.buttonDetails || ""),
+    note: String(log.note || ""),
+    createdAt: String(log.createdAt || now.toISOString()),
+  };
+  return values[header] == null ? "" : values[header];
+}
+
+function getSubmitHistoryDowntimeMinutes(log) {
+  return (
+    numberValue(log.changeoverMinutes) +
+    numberValue(log.inspectionMinutes) +
+    numberValue(log.equipmentRepairMinutes) +
+    numberValue(log.moldRepairMinutes) +
+    numberValue(log.materialChangeMinutes) +
+    numberValue(log.emergencyStopMinutes) +
+    Math.max(numberValue(log.meetingMinutes) - OEE_SHIFT_BREAK_MINUTES, 0) +
+    numberValue(log.plannedStopMinutes)
+  );
+}
+
+function ensureSubmitHistorySheet() {
+  const book = getWorkbook();
+  let sheet = getSheetById(book, SUBMIT_HISTORY_SHEET_ID) || book.getSheetByName(SUBMIT_HISTORY_SHEET);
+  if (!sheet) {
+    sheet = book.insertSheet(SUBMIT_HISTORY_SHEET);
+  }
+  if (sheet.getName() !== SUBMIT_HISTORY_SHEET) {
+    try {
+      sheet.setName(SUBMIT_HISTORY_SHEET);
+    } catch (error) {
+      // Keep the existing tab name if Google Sheets rejects the rename.
+    }
+  }
+  ensureSubmitHistoryHeaders(sheet);
+  return sheet;
+}
+
+function getSheetById(book, sheetId) {
+  const wantedId = Number(sheetId || 0);
+  if (!wantedId) return null;
+  const sheets = book.getSheets();
+  for (let index = 0; index < sheets.length; index++) {
+    if (sheets[index].getSheetId() === wantedId) return sheets[index];
+  }
+  return null;
+}
+
+function ensureSubmitHistoryHeaders(sheet) {
+  ensureSheetSize(sheet, 1, SUBMIT_HISTORY_HEADERS.length);
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, SUBMIT_HISTORY_HEADERS.length).setValues([SUBMIT_HISTORY_HEADERS]);
+  } else {
+    const current = sheet.getRange(1, 1, 1, SUBMIT_HISTORY_HEADERS.length).getValues()[0].map(String);
+    const hasHeaders = SUBMIT_HISTORY_HEADERS.every(function(header, index) {
+      return current[index] === header;
+    });
+    if (!hasHeaders) {
+      sheet.insertRowsBefore(1, 1);
+      sheet.getRange(1, 1, 1, SUBMIT_HISTORY_HEADERS.length).setValues([SUBMIT_HISTORY_HEADERS]);
+    }
+  }
+  formatHeader(sheet, SUBMIT_HISTORY_HEADERS.length);
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, 6, 130);
+  sheet.setColumnWidths(7, 10, 130);
+  sheet.setColumnWidths(17, 12, 105);
+  sheet.setColumnWidth(29, 130);
+  sheet.setColumnWidth(30, 95);
+  sheet.setColumnWidth(31, 420);
+  sheet.setColumnWidth(32, 240);
+  if (sheet.getLastRow() >= 2) {
+    applySheetTypeFormats(sheet, SUBMIT_HISTORY_HEADERS, SUBMIT_HISTORY_NUMBER_HEADERS, sheet.getLastRow());
+    sheet.getRange(2, 31, sheet.getLastRow() - 1, 2).setWrap(true);
   }
 }
 
@@ -2808,6 +2998,7 @@ function setupProductionWorkbook() {
   importCsvSheet(PRODUCT_MASTER_SHEET, PRODUCT_MASTER_HEADERS, PRODUCT_MASTER_CSV_URL);
   setupDowntimeCatalog();
   ensureUsersSheet();
+  ensureSubmitHistorySheet();
   migrateOeeEntryTimestampColumns();
   migrateOeeTestColumns();
   return sheet.getParent();
