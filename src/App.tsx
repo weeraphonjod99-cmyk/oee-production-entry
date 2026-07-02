@@ -2184,23 +2184,40 @@ function App() {
       return;
     }
     const requestedSequence = Number(productionOrderForm.no.replace(/[^\d.-]/g, "")) || 0;
-    if (
-      requestedSequence > 0 &&
-      productionOrders.some(
-        (order) =>
-          !isCompletedProductionOrder(order) &&
-          Number(order.rowNumber || 0) !== Number(productionOrderForm.rowNumber || 0) &&
-          getProductionOrderSequence(order) === requestedSequence,
-      )
-    ) {
-      setProblemDialog({
-        title: "ลำดับผลิตซ้ำ",
-        message: `ลำดับ ${requestedSequence} ถูกใช้อยู่แล้ว กรุณาเปลี่ยนลำดับของออเดอร์ก่อนบันทึก`,
-      });
-      return;
-    }
+    const editingRowNumber = Number(productionOrderForm.rowNumber || 0);
+    const currentOrder = productionOrders.find((order) => Number(order.rowNumber || 0) === editingRowNumber);
+    const previousSequence = currentOrder ? getProductionOrderSequence(currentOrder) : 0;
+    const orderUpdater = session?.displayName || session?.username || "";
+    const shiftedOrders =
+      requestedSequence > 0
+        ? productionOrders
+            .filter((order) => !isCompletedProductionOrder(order))
+            .filter((order) => Number(order.rowNumber || 0) !== editingRowNumber)
+            .map((order) => {
+              const sequence = getProductionOrderSequence(order);
+              if (sequence <= 0) return null;
+              if (previousSequence > 0 && requestedSequence > previousSequence) {
+                return sequence > previousSequence && sequence <= requestedSequence
+                  ? { order, nextSequence: sequence - 1 }
+                  : null;
+              }
+              return sequence >= requestedSequence && (previousSequence <= 0 || sequence < previousSequence)
+                ? { order, nextSequence: sequence + 1 }
+                : null;
+            })
+            .filter((item): item is { order: ProductionOrder; nextSequence: number } => Boolean(item))
+        : [];
     setSavingProductionOrder(true);
     try {
+      for (const item of shiftedOrders) {
+        await upsertProductionOrder({
+          ...item.order,
+          machineId: currentMachine.id,
+          machineName: currentMachine.name,
+          no: String(item.nextSequence),
+          updatedBy: orderUpdater,
+        });
+      }
       const savedOrder = await upsertProductionOrder({
         rowNumber: productionOrderForm.rowNumber,
         machineId: currentMachine.id,
@@ -2215,7 +2232,7 @@ function App() {
         shift: productionOrderForm.shift.trim(),
         status: productionOrderForm.status.trim(),
         unit: "pcs",
-        updatedBy: session?.displayName || session?.username || "",
+        updatedBy: orderUpdater,
       });
       const orders = await fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name });
       setProductionOrders(orders);
