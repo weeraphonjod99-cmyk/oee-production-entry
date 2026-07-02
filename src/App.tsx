@@ -1602,13 +1602,6 @@ function App() {
         ? applyShiftClockRuntime(withActiveDowntime, employeeReportNow, employeeWorkStartedAt)
         : withActiveDowntime;
     });
-    if (activeTimer) {
-      setEmployeeActiveTimer({
-        ...activeTimer,
-        startedAt: employeeReportNow.toISOString(),
-        originalStartedAt: activeTimer.originalStartedAt ?? activeTimer.startedAt,
-      });
-    }
   }, [employeeReportNow, tab, editingLog, employeeWorkStartedAt]);
 
   useEffect(() => {
@@ -1793,6 +1786,33 @@ function App() {
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const canSubmitProduction = canSubmitProductionForRole(session?.role);
+  const employeeDraftAutosaveSignature = useMemo(() => {
+    const activeKey = employeeActiveTimer?.key || "";
+    const downtimeSnapshot = downtimeFields.map((field) => [
+      field.key,
+      activeKey === field.key ? "active" : Number(draft[field.key] || 0),
+    ]);
+    return JSON.stringify({
+      cavityQty: draft.cavityQty || 0,
+      date: draft.date,
+      downtime: downtimeSnapshot,
+      events: employeeDraftEvents.map((event) => [event.id, event.key, event.startedAt, event.endedAt, event.durationMinutes]),
+      goodQty: draft.goodQty || 0,
+      machineId: draft.machineId,
+      machineSpeed: draft.machineSpeed || 0,
+      materialOfProduction: draft.materialOfProduction || "",
+      ngQty: draft.ngQty || 0,
+      note: draft.note || "",
+      partNo: draft.partNo || "",
+      productName: draft.productName || "",
+      productionOrderRowNumber: draft.productionOrderRowNumber || 0,
+      shift: draft.shift,
+      step: draft.step || "",
+      testQty: draft.testQty || 0,
+      timer: activeKey ? [activeKey, employeeActiveTimer?.originalStartedAt || employeeActiveTimer?.startedAt || ""] : "",
+      workMinutes: employeeWorkStartedAt || activeKey ? "live" : draft.workMinutes || 0,
+    });
+  }, [draft, employeeActiveTimer?.key, employeeActiveTimer?.originalStartedAt, employeeActiveTimer?.startedAt, employeeDraftEvents, employeeWorkStartedAt]);
 
   useEffect(() => {
     if (!remoteEnabled || !isEmployeeEntry || employeeMachineSelected) {
@@ -3044,10 +3064,10 @@ function App() {
     const hasDraftChangeActivity = employeeDraftActive || employeeDraftEvents.length > 0 || Boolean(employeeWorkStartedAt) || Boolean(employeeActiveTimer);
     if (!isEmployeeEntry || !hasDraftChangeActivity || editingLog || autoSubmittingEmployeeDraft.current) return;
     const timer = window.setTimeout(() => {
-      writeEmployeeStoredDraft(draft);
+      writeEmployeeStoredDraft(draftRef.current);
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [draft, editingLog, employeeActiveTimer, employeeDraftActive, employeeDraftEvents, employeeDraftUpdatedAt, employeeWorkStartedAt, isEmployeeEntry]);
+  }, [editingLog, employeeDraftActive, employeeDraftAutosaveSignature, employeeDraftEvents.length, employeeWorkStartedAt, isEmployeeEntry]);
 
   useEffect(() => {
     if (!remoteLoaded) return;
