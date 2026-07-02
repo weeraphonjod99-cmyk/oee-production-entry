@@ -2183,10 +2183,6 @@ function App() {
       setProblemDialog({ title: "ไม่มีสิทธิ์แก้ไขออเดอร์", message: "อนุญาตเฉพาะ Administrator และ Planing เท่านั้น" });
       return;
     }
-    if (!productionOrderForm.productName.trim() || !productionOrderForm.partNo.trim()) {
-      setProblemDialog({ title: "กรอกออเดอร์ไม่ครบ", message: "กรุณากรอก Part Name และ Part No. ก่อนบันทึกออเดอร์" });
-      return;
-    }
     const requestedSequence = Number(productionOrderForm.no.replace(/[^\d.-]/g, "")) || 0;
     if (
       requestedSequence > 0 &&
@@ -3548,13 +3544,11 @@ function App() {
                       <input
                         onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, productName: event.target.value }))}
                         placeholder="Part Name / รุ่น"
-                        required
                         value={productionOrderForm.productName}
                       />
                       <input
                         onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, partNo: event.target.value }))}
                         placeholder="Part No."
-                        required
                         value={productionOrderForm.partNo}
                       />
                       <input
