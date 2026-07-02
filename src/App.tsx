@@ -230,6 +230,7 @@ const realtimeRemoteRefreshMs = 2500;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
+const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
@@ -1410,6 +1411,7 @@ function App() {
   const autoSubmittingEmployeeDraft = useRef(false);
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
   const employeeAutoSubmitKeyRef = useRef("");
+  const employeeSelectedMachineRestoredRef = useRef(false);
   const machinesSignatureRef = useRef(getMachinesSignature(seedMachines));
   const remoteLogsSignatureRef = useRef("");
   const employeeStatusesSignatureRef = useRef("");
@@ -2140,6 +2142,7 @@ function App() {
 
   const openEmployeeMachineEntry = (machineId: string) => {
     if (employeeMachineSelected && employeeDraftActive) writeEmployeeStoredDraft(draft);
+    window.localStorage.setItem(EMPLOYEE_SELECTED_MACHINE_KEY, machineId);
     if (!loadEmployeeStoredDraftForMachine(machineId)) {
       const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
       const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
@@ -2167,6 +2170,23 @@ function App() {
     setProductSearch("");
     setStatus(`เลือกเครื่อง ${machines.find((machine) => machine.id === machineId)?.name ?? machineId} สำหรับกรอกยอดพนักงาน`);
   };
+
+  const returnToEmployeeMachineMenu = () => {
+    window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
+    setEmployeeMachineSelected(false);
+  };
+
+  useEffect(() => {
+    if (employeeSelectedMachineRestoredRef.current || tab !== "employeeEntry" || employeeMachineSelected) return;
+    const storedMachineId = window.localStorage.getItem(EMPLOYEE_SELECTED_MACHINE_KEY);
+    if (!storedMachineId) return;
+    if (!machines.some((machine) => machine.id === storedMachineId)) {
+      if (machines.length > 0) window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
+      return;
+    }
+    employeeSelectedMachineRestoredRef.current = true;
+    openEmployeeMachineEntry(storedMachineId);
+  }, [employeeMachineSelected, machines, tab]);
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
     const matchedProduct = findMatchingProduct(machineProductChoices, key, value, draft);
@@ -3274,14 +3294,14 @@ function App() {
           </div>
         </div>
         <nav>
-          <button
-            className={`employee-entry ${tab === "employeeEntry" ? "active" : ""}`}
-            onClick={() => {
-              setTab("employeeEntry");
-              setEmployeeMachineSelected(false);
-            }}
-            type="button"
-          >
+            <button
+              className={`employee-entry ${tab === "employeeEntry" ? "active" : ""}`}
+              onClick={() => {
+                setTab("employeeEntry");
+                returnToEmployeeMachineMenu();
+              }}
+              type="button"
+            >
             <span className="nav-icon-badge">
               <ClipboardCheck size={18} />
             </span>
@@ -3447,7 +3467,7 @@ function App() {
                 <Gauge size={20} />
                 <h2>{editingLog ? "แก้ไขยอดผลิต" : "กรอกยอดผลิต"}</h2>
                 {isEmployeeEntry && !editingLog && (
-                  <button className="ghost-button machine-menu-back" onClick={() => setEmployeeMachineSelected(false)} type="button">
+                  <button className="ghost-button machine-menu-back" onClick={returnToEmployeeMachineMenu} type="button">
                     <ArrowLeft size={16} /> เลือกเครื่อง
                   </button>
                 )}
