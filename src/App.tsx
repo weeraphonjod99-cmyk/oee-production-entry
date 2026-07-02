@@ -1233,6 +1233,9 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   partNo: log.partNo,
   step: log.step,
   materialOfProduction: log.materialOfProduction || "",
+  productionOrderRowNumber: log.productionOrderRowNumber,
+  productionOrderNo: log.productionOrderNo || "",
+  productionOrderQty: Number(log.productionOrderQty || 0),
   workMinutes: clampWorkMinutes(Number(log.workMinutes || 0) || Number(log.normalMinutes || 0) + totalDowntime(log)),
   timeSlots: clampTimeSlots(Number(log.timeSlots || 0), Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot),
   minutesPerSlot: Number(log.minutesPerSlot || 0) || defaultMinutesPerSlot,
@@ -1311,6 +1314,17 @@ const emptyProductionOrderForm: ProductionOrderForm = {
 
 const productionOrderKey = (order: ProductionOrder) =>
   `${order.rowNumber || ""}:${order.orderNo || ""}:${order.productName || ""}:${order.partNo || ""}`;
+
+const isCompletedProductionOrder = (order: ProductionOrder) => {
+  const status = normalizeText(order.status);
+  return status.includes("จบ") || status.includes("complete") || status.includes("closed") || status.includes("finished");
+};
+
+const clearProductionOrderSelection = {
+  productionOrderRowNumber: undefined,
+  productionOrderNo: "",
+  productionOrderQty: 0,
+};
 
 const orderToForm = (order: ProductionOrder): ProductionOrderForm => ({
   rowNumber: order.rowNumber,
@@ -1620,7 +1634,7 @@ function App() {
   const visibleProductionOrders = useMemo(
     () =>
       productionOrders
-        .filter((order) => order.productName || order.partNo || order.orderNo)
+        .filter((order) => !isCompletedProductionOrder(order) && (order.productName || order.partNo || order.orderNo))
         .slice(0, 12),
     [productionOrders],
   );
@@ -2098,10 +2112,12 @@ function App() {
         ? {
             ...prev,
             ...applyProductToDraft(matchedProduct),
+            ...clearProductionOrderSelection,
           }
         : {
             ...prev,
             [key]: value,
+            ...clearProductionOrderSelection,
           },
     );
     if (matchedProduct) void loadProductDefaults(matchedProduct, currentMachine);
@@ -2124,6 +2140,9 @@ function App() {
         partNo: order.partNo || matchedProduct?.partNo || prev.partNo,
         step: matchedProduct?.step || prev.step || "-",
         materialOfProduction: order.rmNo || prev.materialOfProduction || "",
+        productionOrderRowNumber: order.rowNumber,
+        productionOrderNo: order.orderNo || "",
+        productionOrderQty: Number(order.orderQty || 0),
         note: prev.note.trim()
           ? `${prev.note.trim()}\nOrder ${order.orderNo || "-"}`
           : `Order ${order.orderNo || "-"}`,
@@ -2797,6 +2816,11 @@ function App() {
         fetchRemoteLogs()
           .then((logs) => setRemoteLogs(logs))
           .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
+        if (saved.productionOrderRowNumber && saved.machineId === currentMachine.id) {
+          fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
+            .then((orders) => setProductionOrders(orders))
+            .catch((error) => setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ"));
+        }
       }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });

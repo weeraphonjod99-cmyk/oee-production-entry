@@ -20,6 +20,31 @@ const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
 const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
 const PRODUCTION_ORDER_SPREADSHEET_ID = "1gR-a77vkgVxDu0jdSZ9RPhnGLC5OabIRHSRGBN0hZ18";
 const PRODUCTION_ORDER_MAX_ROWS = 200;
+const PRODUCTION_ORDER_COLUMNS = {
+  no: 1,
+  openedDate: 2,
+  orderNo: 3,
+  productName: 4,
+  partNo: 5,
+  rmNo: 6,
+  orderQty: 7,
+  unit: 8,
+  dueDate: 9,
+  shift: 10,
+  kpi85: 11,
+  dailyTarget: 12,
+  expectedDoneDate: 13,
+  expectedDoneTime: 14,
+  startDate: 15,
+  endDate: 16,
+  producedQty: 17,
+  readyForPainting: 18,
+  backlogQty: 19,
+  ngRework: 20,
+  status: 21,
+  progress: 22,
+  stock: 23,
+};
 const PRODUCTION_ORDER_HEADERS = [
   "No.",
   "วันที่เปิดออเดอร์",
@@ -450,6 +475,7 @@ function appendLog(payload) {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
   appendSubmitHistory(log, "บันทึกยอดใหม่", formattedRow);
+  log.productionOrderProgress = updateProductionOrderProgressFromLog(log);
   return log;
 }
 
@@ -806,6 +832,99 @@ function upsertProductionOrder(payload) {
     productName: String(payload.productName || ""),
     partNo: String(payload.partNo || ""),
   };
+}
+
+function parseProductionOrderNumber(value) {
+  const text = String(value || "").replace(/,/g, "").replace(/[^\d.-]/g, "");
+  return numberValue(text);
+}
+
+function setProductionOrderCell(sheet, row, column, value, options) {
+  const cell = sheet.getRange(row, column);
+  if (options && options.keepFormula && String(cell.getFormula() || "").trim()) return;
+  cell.setValue(value);
+}
+
+function findProductionOrderRowForLog(sheet, log) {
+  const requestedRow = Number(log.productionOrderRowNumber || 0);
+  if (requestedRow >= 3 && requestedRow <= sheet.getMaxRows()) return requestedRow;
+
+  const lastRow = Math.max(sheet.getLastRow(), 2);
+  if (lastRow < 3) return 0;
+  const values = sheet.getRange(3, 1, Math.min(lastRow - 2, PRODUCTION_ORDER_MAX_ROWS), PRODUCTION_ORDER_HEADERS.length).getDisplayValues();
+  const orderNo = normalizeLookup(log.productionOrderNo || "");
+  const productName = normalizeLookup(log.productName || "");
+  const partNo = normalizeLookup(log.partNo || "");
+  const activeStatuses = ["", "กำลังผลิต", "รอผลิต", "pending", "inprogress", "in progress"];
+
+  if (orderNo) {
+    for (let index = 0; index < values.length; index++) {
+      if (normalizeLookup(values[index][PRODUCTION_ORDER_COLUMNS.orderNo - 1]) === orderNo) return index + 3;
+    }
+  }
+
+  for (let index = 0; index < values.length; index++) {
+    const row = values[index];
+    const rowProduct = normalizeLookup(row[PRODUCTION_ORDER_COLUMNS.productName - 1]);
+    const rowPart = normalizeLookup(row[PRODUCTION_ORDER_COLUMNS.partNo - 1]);
+    const rowStatus = normalizeLookup(row[PRODUCTION_ORDER_COLUMNS.status - 1]);
+    if (rowProduct !== productName || rowPart !== partNo) continue;
+    if (activeStatuses.indexOf(rowStatus) >= 0) return index + 3;
+  }
+
+  return 0;
+}
+
+function updateProductionOrderProgressFromLog(log) {
+  try {
+    if (!log || (!log.productionOrderRowNumber && !log.productionOrderNo)) return null;
+    const goodQty = numberValue(log.goodQty);
+    if (goodQty <= 0) return null;
+
+    const sheet = getProductionOrderSheet(log.machineName || "", log.machineId || "");
+    ensureProductionOrderLayout(sheet);
+    const targetRow = findProductionOrderRowForLog(sheet, log);
+    if (!targetRow) return null;
+
+    const row = sheet.getRange(targetRow, 1, 1, PRODUCTION_ORDER_HEADERS.length).getDisplayValues()[0];
+    const orderQty = parseProductionOrderNumber(row[PRODUCTION_ORDER_COLUMNS.orderQty - 1]) || numberValue(log.productionOrderQty);
+    if (orderQty <= 0) return null;
+
+    const currentProduced = parseProductionOrderNumber(row[PRODUCTION_ORDER_COLUMNS.producedQty - 1]);
+    const currentNg = parseProductionOrderNumber(row[PRODUCTION_ORDER_COLUMNS.ngRework - 1]);
+    const nextProduced = roundNumber(currentProduced + goodQty);
+    const nextNg = roundNumber(currentNg + numberValue(log.ngQty));
+    const backlog = Math.max(roundNumber(orderQty - nextProduced), 0);
+    const progressPercent = Math.min(roundNumber((nextProduced / orderQty) * 100), 100);
+    const completed = nextProduced >= orderQty;
+    const submittedDate = formatRecordDate(log.submittedAt) || formatRecordDate(log.date) || todayBangkok(new Date());
+    const productionDate = formatRecordDate(log.date) || submittedDate;
+
+    if (!String(row[PRODUCTION_ORDER_COLUMNS.startDate - 1] || "").trim()) {
+      setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.startDate, productionDate, { keepFormula: true });
+    }
+    setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.producedQty, nextProduced);
+    setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.backlogQty, backlog, { keepFormula: true });
+    if (numberValue(log.ngQty) > 0) {
+      setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.ngRework, nextNg, { keepFormula: true });
+    }
+    setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.progress, progressPercent + "%", { keepFormula: true });
+    setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.status, completed ? "จบการผลิตแล้ว" : "กำลังผลิต");
+    if (completed) {
+      setProductionOrderCell(sheet, targetRow, PRODUCTION_ORDER_COLUMNS.endDate, submittedDate, { keepFormula: true });
+    }
+
+    return {
+      completed: completed,
+      orderQty: orderQty,
+      producedQty: nextProduced,
+      remainingQty: backlog,
+      rowNumber: targetRow,
+      sheetName: sheet.getName(),
+    };
+  } catch (error) {
+    return { error: String(error && error.message ? error.message : error) };
+  }
 }
 
 function appendSubmitHistory(log, action, formattedRow) {
