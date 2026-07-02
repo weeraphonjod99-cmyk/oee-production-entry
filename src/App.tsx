@@ -276,6 +276,7 @@ const employeeRoleLabel = (role: AppRole) => {
 };
 
 const isReadOnlyRole = (role?: AppRole) => role === "planning";
+const canSubmitProductionForRole = (role?: AppRole) => role === "admin" || role === "production";
 
 const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTimerKey) => {
   if (!role || role === "admin" || role === "production") return true;
@@ -1697,6 +1698,7 @@ function App() {
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
+  const canSubmitProduction = canSubmitProductionForRole(session?.role);
   const totalDraftDowntime = totalDowntime(draft);
   const sharedWorkStartedAt = currentMachineSharedStatus?.workStartedAt || "";
   const visibleWorkStartedAt = isEmployeeEntry ? employeeWorkStartedAt || sharedWorkStartedAt : "";
@@ -2795,6 +2797,12 @@ function App() {
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
+    if (!canSubmitProduction) {
+      const message = `Role ${employeeRoleLabel(session?.role || "production")} ไม่มีสิทธิ์กดปุ่มส่งยอดบันทึก อนุญาตเฉพาะ Admin และ Production`;
+      setStatus(message);
+      setProblemDialog({ title: "ไม่มีสิทธิ์ส่งยอดบันทึก", message });
+      return;
+    }
     const now = new Date();
     const activeTimer = employeeActiveTimerRef.current;
     const finalized = isEmployeeEntry && !editingLog ? finalizeEmployeeDraftForSubmit(draft, activeTimer, now) : null;
@@ -2825,6 +2833,12 @@ function App() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canSubmitProduction) {
+      const message = `Role ${employeeRoleLabel(session?.role || "production")} ไม่มีสิทธิ์กดปุ่มส่งยอดบันทึก อนุญาตเฉพาะ Admin และ Production`;
+      setStatus(message);
+      setProblemDialog({ title: "ไม่มีสิทธิ์ส่งยอดบันทึก", message });
+      return;
+    }
     if (readOnlyEntry) {
       const message = "Role Planing ดูได้อย่างเดียว ไม่สามารถกรอกหรือบันทึกได้";
       setStatus(message);
@@ -3692,7 +3706,12 @@ function App() {
               </fieldset>
 
               <div className="form-actions">
-                <button className="primary-button" disabled={readOnlyEntry || saving || Boolean(duplicateEntry)} type="submit">
+                <button
+                  className="primary-button"
+                  disabled={!canSubmitProduction || saving || Boolean(duplicateEntry)}
+                  title={!canSubmitProduction ? "อนุญาตเฉพาะ Admin และ Production เท่านั้น" : undefined}
+                  type="submit"
+                >
                   <Save size={18} /> {saving ? "กำลังบันทึก" : editingLog ? "บันทึกการแก้ไข" : isEmployeeEntry ? "ส่งยอดบันทึก" : "บันทึกยอด"}
                 </button>
                 <button className="ghost-button" disabled={readOnlyEntry} onClick={() => resetDraft()} type="button">
