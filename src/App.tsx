@@ -3034,9 +3034,6 @@ function App() {
               <BarChart3 size={18} /> Dashboard
             </button>
           )}
-          <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")} type="button">
-            <FileText size={18} /> Reports
-          </button>
           <button className={tab === "pd" ? "active" : ""} onClick={() => setTab("pd")} type="button">
             <TableProperties size={18} /> PD Sheets
           </button>
