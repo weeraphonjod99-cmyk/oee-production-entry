@@ -8,6 +8,7 @@ const USER_SHEET = "app_users";
 const EMPLOYEE_STATUS_SHEET = "employee_machine_status";
 const SUBMIT_HISTORY_SHEET = "submit_history";
 const SUBMIT_HISTORY_SHEET_ID = 1754160605;
+const EMPLOYEE_STATUS_HEARTBEAT_MAX_AGE_MS = 3 * 60 * 1000;
 const KPI_DASHBOARD_SHEET = "kpi_dashboard";
 const KPI_MACHINE_SHEET = "kpi_machine";
 const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
@@ -464,17 +465,43 @@ function getEmployeeMachineStatuses() {
   const rows = [];
   for (let i = 1; i < values.length; i++) {
     const item = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
-    if (!item.machineId || item.status !== "active") continue;
-    if (!item.activeTimerKey && !item.workStartedAt) continue;
-    if (item.expiresAt) {
-      const expiresAt = new Date(item.expiresAt);
-      if (!isNaN(expiresAt.getTime()) && expiresAt.getTime() < now.getTime()) continue;
-    }
+    if (!isEmployeeMachineStatusFresh(item, now)) continue;
     rows.push(item);
   }
   return rows.sort(function(a, b) {
     return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   });
+}
+
+function getEmployeeMachineStatusLastSeenAt(item) {
+  const candidates = [
+    item.updatedAt,
+    item.entryUpdatedAt,
+    item.buttonDetailsUpdatedAt,
+    item.activeTimerBaseAt,
+    item.activeTimerStartedAt,
+    item.workStartedAt,
+  ];
+  for (let i = 0; i < candidates.length; i++) {
+    if (!candidates[i]) continue;
+    const parsed = new Date(candidates[i]);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
+}
+
+function isEmployeeMachineStatusFresh(item, now) {
+  if (!item.machineId || item.status !== "active") return false;
+  if (!item.activeTimerKey && !item.workStartedAt) return false;
+
+  const lastSeenAt = getEmployeeMachineStatusLastSeenAt(item);
+  if (!lastSeenAt || now.getTime() - lastSeenAt.getTime() > EMPLOYEE_STATUS_HEARTBEAT_MAX_AGE_MS) return false;
+
+  if (item.expiresAt) {
+    const expiresAt = new Date(item.expiresAt);
+    if (!isNaN(expiresAt.getTime()) && expiresAt.getTime() < now.getTime()) return false;
+  }
+  return true;
 }
 
 function auditEmployeeMachineStatuses() {
@@ -491,10 +518,7 @@ function auditEmployeeMachineStatuses() {
   for (let i = 1; i < values.length; i++) {
     const item = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
     if (!item.machineId || item.status !== "active") continue;
-    const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
-    const expired = expiresAt && !isNaN(expiresAt.getTime()) && expiresAt.getTime() < now.getTime();
-    const hasLiveActivity = Boolean(item.activeTimerKey || item.workStartedAt);
-    if (!expired && hasLiveActivity) continue;
+    if (isEmployeeMachineStatusFresh(item, now)) continue;
     const row = i + 1;
     sheet.getRange(row, statusColumn).setValue("cleared");
     sheet.getRange(row, updatedAtColumn).setValue(nowIso);

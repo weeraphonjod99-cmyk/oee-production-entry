@@ -445,6 +445,9 @@ const parseStoredDateTime = (value?: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const employeeStatusHeartbeatMaxAgeMs = 3 * 60 * 1000;
+const employeeStoredDraftResumeMaxAgeMs = 3 * 60 * 1000;
+
 const formatSharedStatusTime = (value?: string) => {
   const date = parseStoredDateTime(value);
   return date ? formatClock(date) : "-";
@@ -470,6 +473,10 @@ const getMachinesSignature = (items: Machine[]) =>
 const isFreshEmployeeMachineStatus = (status: EmployeeMachineStatus) => {
   if (status.status !== "active") return false;
   if (!status.activeTimerKey && !status.workStartedAt) return false;
+  const lastSeenAt = parseStoredDateTime(
+    status.updatedAt || status.entryUpdatedAt || status.buttonDetailsUpdatedAt || status.activeTimerBaseAt || status.activeTimerStartedAt || status.workStartedAt,
+  );
+  if (!lastSeenAt || Date.now() - lastSeenAt.getTime() > employeeStatusHeartbeatMaxAgeMs) return false;
   const expiresAt = parseStoredDateTime(status.expiresAt);
   return !expiresAt || expiresAt.getTime() >= Date.now();
 };
@@ -1917,6 +1924,11 @@ function App() {
       const minutesPerSlot = stored.draft.minutesPerSlot || defaultMinutesPerSlot;
       const workMinutes = clampWorkMinutes(stored.draft.workMinutes);
       const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
+      const storedLastSeenAt = parseStoredDateTime(stored.savedAt || stored.entryUpdatedAt);
+      const canResumeLiveDraft =
+        Boolean(storedLastSeenAt) && Date.now() - storedLastSeenAt!.getTime() <= employeeStoredDraftResumeMaxAgeMs;
+      const restoredActiveTimer = canResumeLiveDraft ? stored.activeTimer ?? null : null;
+      const restoredWorkStartedAt = canResumeLiveDraft ? stored.workStartedAt || "" : "";
       const storedBaseDraft = applyAutomaticBreakMinutes({
         ...stored.draft,
         date: savedDate,
@@ -1927,10 +1939,10 @@ function App() {
         workMinutes,
       });
       const storedActiveDraft =
-        stored.activeTimer && stored.activeTimer.key !== "work"
-          ? applyEmployeeTimerElapsed(storedBaseDraft, stored.activeTimer)
+        restoredActiveTimer && restoredActiveTimer.key !== "work"
+          ? applyEmployeeTimerElapsed(storedBaseDraft, restoredActiveTimer)
           : storedBaseDraft;
-      setDraft(stored.workStartedAt ? applyShiftClockRuntime(storedActiveDraft, new Date(), stored.workStartedAt) : storedActiveDraft);
+      setDraft(restoredWorkStartedAt ? applyShiftClockRuntime(storedActiveDraft, new Date(), restoredWorkStartedAt) : storedActiveDraft);
       setDateManuallyEdited(true);
       setProductSearch("");
       setDowntimePressTimes({});
@@ -1939,11 +1951,13 @@ function App() {
       setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || stored.savedAt || "");
       employeeDraftEventsRef.current = Array.isArray(stored.entryEvents) ? stored.entryEvents : [];
       setEmployeeDraftEvents(employeeDraftEventsRef.current);
-      setEmployeeWorkStartedAt(stored.workStartedAt || "");
-      setEmployeeActiveTimer(stored.activeTimer ?? null);
-      employeeActiveTimerRef.current = stored.activeTimer ?? null;
+      setEmployeeWorkStartedAt(restoredWorkStartedAt);
+      setEmployeeActiveTimer(restoredActiveTimer);
+      employeeActiveTimerRef.current = restoredActiveTimer;
       if (stored.savedAt) setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
-      publishEmployeeMachineStatus(stored);
+      if (canResumeLiveDraft) {
+        publishEmployeeMachineStatus({ ...stored, activeTimer: restoredActiveTimer, workStartedAt: restoredWorkStartedAt });
+      }
       return true;
     } catch {
       window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
