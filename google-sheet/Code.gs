@@ -418,6 +418,9 @@ function doGet(e) {
     if (action === "repairSheetTypes") {
       return jsonResponse({ ok: true, result: repairSheetTypes() });
     }
+    if (action === "auditOeeMachineSheets") {
+      return jsonResponse({ ok: true, result: auditOeeMachineSheets() });
+    }
     if (action === "migrateOeeEntryTimestampColumns") {
       return jsonResponse({ ok: true, result: migrateOeeEntryTimestampColumns() });
     }
@@ -2234,6 +2237,132 @@ function repairSheetTypes() {
   });
 
   return { sheets: typedSheets, rows: typedRows };
+}
+
+function auditOeeMachineSheets() {
+  const entryColumns = migrateOeeEntryTimestampColumns();
+  const testColumns = migrateOeeTestColumns();
+  const formulas = repairOeeFormulas();
+  const types = repairSheetTypes();
+  const styles = formatOeeMachineSheets();
+  const historySheet = ensureSubmitHistorySheet();
+
+  return {
+    entryColumns: entryColumns,
+    testColumns: testColumns,
+    formulas: formulas,
+    types: types,
+    styles: styles,
+    storage: {
+      logSheet: LOG_SHEET,
+      submitHistorySheet: historySheet.getName(),
+      submitHistorySheetId: historySheet.getSheetId(),
+    },
+    refreshedAt: new Date().toISOString(),
+  };
+}
+
+function formatOeeMachineSheets() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  const result = {
+    sheets: 0,
+    rows: 0,
+    skipped: [],
+  };
+
+  book.getSheets().forEach(function(sheet) {
+    if (!isOeeDataSheet(sheet, machineByName)) return;
+    try {
+      ensureOeeEntryTimestampColumns(sheet);
+      ensureOeeTestColumn(sheet);
+      const layout = getOeeLayout(sheet);
+      const rowCount = Math.max(sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, 0);
+      const lastColumn = Math.max(sheet.getLastColumn(), layout.oeeRate || 0);
+
+      try {
+        sheet.setFrozenRows(OEE_HEADER_ROW);
+      } catch (freezeRowsError) {
+        // Some imported sheets contain merged title cells; formatting should continue.
+      }
+      try {
+        sheet.setFrozenColumns(Math.min(10, lastColumn));
+      } catch (freezeColumnsError) {
+        // Some imported sheets contain merged title cells; formatting should continue.
+      }
+      sheet.getRange(OEE_HEADER_ROW, 1, 1, lastColumn)
+        .setBackground("#fbbc04")
+        .setFontColor("#000000")
+        .setFontWeight("bold")
+        .setHorizontalAlignment("center")
+        .setVerticalAlignment("middle")
+        .setWrap(true);
+      sheet.getRange(1, 1, 2, lastColumn)
+        .setHorizontalAlignment("center")
+        .setVerticalAlignment("middle")
+        .setWrap(true);
+      if (lastColumn >= 35) {
+        sheet.getRange(1, 35, 1, 1)
+          .setBackground("#ff0000")
+          .setFontColor("#000000")
+          .setFontWeight("bold")
+          .setHorizontalAlignment("center");
+      }
+
+      applyOeeMachineDataFormats(sheet, layout, rowCount);
+      applyOeeMachineColumnWidths(sheet, layout, lastColumn);
+
+      result.sheets++;
+      result.rows += rowCount;
+    } catch (error) {
+      result.skipped.push({
+        sheet: sheet.getName(),
+        error: String(error && error.message ? error.message : error),
+      });
+    }
+  });
+
+  return result;
+}
+
+function applyOeeMachineDataFormats(sheet, layout, rowCount) {
+  if (rowCount <= 0) return;
+
+  if (layout.entryDate) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryDate, rowCount, 1).setNumberFormat("yyyy-mm-dd");
+  if (layout.entryTime) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryTime, rowCount, 1).setNumberFormat("@");
+  if (layout.entryUser) sheet.getRange(OEE_FIRST_DATA_ROW, layout.entryUser, rowCount, 1).setNumberFormat("@");
+  if (layout.submittedAt) sheet.getRange(OEE_FIRST_DATA_ROW, layout.submittedAt, rowCount, 1).setNumberFormat("@");
+  if (layout.buttonDetails) sheet.getRange(OEE_FIRST_DATA_ROW, layout.buttonDetails, rowCount, 1).setNumberFormat("@").setWrap(true);
+
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.date, rowCount, 1).setNumberFormat("yyyy-mm-dd");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.shift, rowCount, 1).setNumberFormat("@");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.productName, rowCount, 1).setNumberFormat("@").setWrap(true);
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.partNo, rowCount, 1).setNumberFormat("@").setWrap(true);
+  if (layout.hasStep) {
+    sheet.getRange(OEE_FIRST_DATA_ROW, layout.step, rowCount, 1).setNumberFormat("@").setWrap(true);
+  }
+
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalSlot, rowCount, 1).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.downtimeStart, rowCount, 8).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalMinutes, rowCount, 9).setNumberFormat("0.00");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.goodQty, rowCount, 4).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.theoreticalImpulse, rowCount, 4).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, layout.equipmentUtilizationRate, rowCount, 4).setNumberFormat("0.00%");
+}
+
+function applyOeeMachineColumnWidths(sheet, layout, lastColumn) {
+  sheet.setColumnWidth(1, 55);
+  if (lastColumn >= 2) sheet.setColumnWidth(2, 105);
+  if (lastColumn >= 3) sheet.setColumnWidth(3, 90);
+  if (lastColumn >= 4) sheet.setColumnWidth(4, 140);
+  if (lastColumn >= 5) sheet.setColumnWidth(5, 145);
+  if (lastColumn >= 6) sheet.setColumnWidth(6, 360);
+  sheet.setColumnWidth(layout.productName, 145);
+  sheet.setColumnWidth(layout.partNo, 120);
+  if (layout.hasStep) sheet.setColumnWidth(layout.step, 70);
+  if (lastColumn > layout.normalSlot) {
+    sheet.setColumnWidths(layout.normalSlot, lastColumn - layout.normalSlot + 1, 72);
+  }
 }
 
 function rewriteTypedDataRows(sheet, headers, numberHeaders) {
