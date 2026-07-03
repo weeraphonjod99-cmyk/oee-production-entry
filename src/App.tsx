@@ -1164,6 +1164,15 @@ function uniqueLogs(logs: ProductionLog[]) {
   return [...map.values()].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`));
 }
 
+function withCanonicalMachineName<T extends { machineId?: string; machineName?: string }>(
+  item: T,
+  machineNameById: Map<string, string>,
+): T {
+  const canonicalName = item.machineId ? machineNameById.get(item.machineId) : "";
+  if (!canonicalName || item.machineName === canonicalName) return item;
+  return { ...item, machineName: canonicalName };
+}
+
 const sameProductKey = (left: Pick<ProductionLog | ProductMaster, "machineId" | "productName" | "partNo" | "step">) =>
   [left.machineId, left.productName, left.partNo, left.step || "-"].map(normalizeText).join("::");
 
@@ -1699,11 +1708,28 @@ function App() {
     });
   }, [draft.shift]);
 
+  const machineNameById = useMemo(() => new Map(machines.map((machine) => [machine.id, machine.name])), [machines]);
+  const canonicalProducts = useMemo(
+    () => products.map((product) => withCanonicalMachineName(product, machineNameById)),
+    [machineNameById],
+  );
+  const canonicalEmployeeSharedMachineStatuses = useMemo(
+    () => employeeSharedMachineStatuses.map((status) => withCanonicalMachineName(status, machineNameById)),
+    [employeeSharedMachineStatuses, machineNameById],
+  );
+  const canonicalMachineOrderSummaries = useMemo(
+    () =>
+      machineOrderSummaries.map((summary) => ({
+        ...withCanonicalMachineName(summary, machineNameById),
+        pendingOrders: summary.pendingOrders.map((order) => withCanonicalMachineName(order, machineNameById)),
+      })),
+    [machineNameById, machineOrderSummaries],
+  );
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const canManageProductionOrders = canManageProductionOrdersForRole(session?.role);
   const allLogs = useMemo(
-    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs]),
-    [localLogs, remoteLogs],
+    () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs].map((log) => withCanonicalMachineName(log, machineNameById))),
+    [localLogs, machineNameById, remoteLogs],
   );
   const duplicateLogsByKey = useMemo(() => {
     const map = new Map<string, ProductionLog[]>();
@@ -1716,8 +1742,8 @@ function App() {
     return map;
   }, [allLogs]);
   const machineProducts = useMemo(
-    () => products.filter((product) => product.machineId === draft.machineId),
-    [draft.machineId],
+    () => canonicalProducts.filter((product) => product.machineId === draft.machineId),
+    [canonicalProducts, draft.machineId],
   );
   const machineProductChoices = useMemo(
     () => buildProductChoices(draft.machineId, machineProducts, allLogs),
@@ -1754,11 +1780,11 @@ function App() {
   const stepOptions = useMemo(() => uniqueProductValues(partScopedChoices, "step"), [partScopedChoices]);
   const productCountByMachineId = useMemo(() => {
     const map = new Map<string, number>();
-    for (const product of products) {
+    for (const product of canonicalProducts) {
       map.set(product.machineId, (map.get(product.machineId) ?? 0) + 1);
     }
     return map;
-  }, [products]);
+  }, [canonicalProducts]);
   const machineLogSummaryByMachineId = useMemo(() => {
     const map = new Map<string, { latestLog?: ProductionLog; logCount: number }>();
     for (const log of allLogs) {
@@ -1773,12 +1799,12 @@ function App() {
     return map;
   }, [allLogs]);
   const employeeSharedStatusByMachineId = useMemo(
-    () => new Map(employeeSharedMachineStatuses.map((status) => [status.machineId, status])),
-    [employeeSharedMachineStatuses],
+    () => new Map(canonicalEmployeeSharedMachineStatuses.map((status) => [status.machineId, status])),
+    [canonicalEmployeeSharedMachineStatuses],
   );
   const machineOrderSummaryByMachineId = useMemo(
-    () => new Map(machineOrderSummaries.map((summary) => [summary.machineId, summary])),
-    [machineOrderSummaries],
+    () => new Map(canonicalMachineOrderSummaries.map((summary) => [summary.machineId, summary])),
+    [canonicalMachineOrderSummaries],
   );
   const currentMachineSharedStatus = employeeSharedStatusByMachineId.get(draft.machineId);
   const currentMachineSharedActivity = getEmployeeMachineActivityLabel(currentMachineSharedStatus);
@@ -2210,7 +2236,7 @@ function App() {
 
   const selectMachine = (machineId: string) => {
     const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
-    const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
+    const nextProduct = canonicalProducts.find((product) => product.machineId === machine.id) ?? defaultProduct;
     recordEmployeeDraftEvent("เปลี่ยนเครื่อง", machine.name);
     setProductSearch("");
     setEmployeeWorkStartedAt("");
@@ -2230,7 +2256,7 @@ function App() {
     window.localStorage.setItem(EMPLOYEE_SELECTED_MACHINE_KEY, machineId);
     if (!loadEmployeeStoredDraftForMachine(machineId)) {
       const machine = machines.find((item) => item.id === machineId) ?? defaultMachine;
-      const nextProduct = products.find((product) => product.machineId === machine.id) ?? defaultProduct;
+      const nextProduct = canonicalProducts.find((product) => product.machineId === machine.id) ?? defaultProduct;
       const nextDraft = createEmptyDraft(machine, nextProduct);
       const preparedDraft = {
         ...nextDraft,
@@ -2661,7 +2687,7 @@ function App() {
   };
 
   const resetDraft = (options: { clearProduct?: boolean } = {}) => {
-    const product = products.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
+    const product = canonicalProducts.find((item) => item.machineId === draft.machineId) ?? defaultProduct;
     const nextDraft = createEmptyDraft(currentMachine, product);
     setDraft(
       options.clearProduct
@@ -4430,10 +4456,10 @@ function App() {
           <section className="table-view">
             <div className="master-stats">
               <Kpi label="Machines" value={formatNumber(machines.length)} tone="green" />
-              <Kpi label="Products" value={formatNumber(products.length)} tone="blue" />
+              <Kpi label="Products" value={formatNumber(canonicalProducts.length)} tone="blue" />
               <Kpi label="Seed logs" value={formatNumber(seedLogs.length)} tone="amber" />
             </div>
-            <MasterTable />
+            <MasterTable products={canonicalProducts} />
           </section>
         )}
 
@@ -6453,7 +6479,7 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
   );
 }
 
-function MasterTable() {
+function MasterTable({ products }: { products: ProductMaster[] }) {
   const [query, setQuery] = useState("");
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
