@@ -25,7 +25,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { machines as seedMachines, products, seedLogs } from "./data/oeeMasterData.generated";
+import { machines as rawSeedMachines, products as rawProducts, seedLogs as rawSeedLogs } from "./data/oeeMasterData.generated";
 import {
   appendRemoteLog,
   clearEmployeeMachineStatus,
@@ -115,6 +115,26 @@ type PendingEmployeeTimer = {
   pressedTime: string;
   startedAt: string;
 };
+
+const hiddenMachineIds = new Set([
+  "1-arc-stack",
+  "2-arc-stack",
+  "3-cut-chamber",
+  "4-gv2",
+  "5-arc-chute",
+  "6-arc-chute",
+  "7-arc-chute",
+  "8-arc-chute",
+]);
+const isVisibleMachineId = (machineId: string) => !hiddenMachineIds.has(String(machineId || "").trim());
+const isVisibleMachine = (machine: Pick<Machine, "id">) => isVisibleMachineId(machine.id);
+const isVisibleProduct = (product: Pick<ProductMaster, "machineId">) => isVisibleMachineId(product.machineId);
+const isVisibleLog = (log: Pick<ProductionLog, "machineId">) => isVisibleMachineId(log.machineId);
+const isVisibleEmployeeStatus = (status: Pick<EmployeeMachineStatus, "machineId">) => isVisibleMachineId(status.machineId);
+const isVisibleOrderSummary = (summary: Pick<ProductionOrderMachineSummary, "machineId">) => isVisibleMachineId(summary.machineId);
+const seedMachines = rawSeedMachines.filter(isVisibleMachine);
+const products = rawProducts.filter(isVisibleProduct);
+const seedLogs = rawSeedLogs.filter(isVisibleLog);
 
 const getThailandDateTimeParts = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -1469,13 +1489,14 @@ function App() {
   }, [employeeSharedMachineStatuses]);
 
   useEffect(() => {
-    setLocalLogs(loadLocalLogs());
+    setLocalLogs(loadLocalLogs().filter(isVisibleLog));
     if (!remoteEnabled) return;
     fetchRemoteLogs()
       .then((logs) => {
-        remoteLogsSignatureRef.current = getRemoteLogsSignature(logs);
-        setRemoteLogs(logs);
-        setStatus(`เชื่อมต่อ Google Sheet แล้ว (${logs.length} records)`);
+        const visibleLogs = logs.filter(isVisibleLog);
+        remoteLogsSignatureRef.current = getRemoteLogsSignature(visibleLogs);
+        setRemoteLogs(visibleLogs);
+        setStatus(`เชื่อมต่อ Google Sheet แล้ว (${visibleLogs.length} records)`);
       })
       .catch((error) => setStatus(error instanceof Error ? error.message : "เชื่อมต่อ Google Sheet ไม่สำเร็จ"))
       .finally(() => setRemoteLoaded(true));
@@ -1489,7 +1510,7 @@ function App() {
       if (refreshing) return;
       refreshing = true;
       try {
-        const nextMachines = await fetchMachines();
+        const nextMachines = (await fetchMachines()).filter(isVisibleMachine);
         if (cancelled || nextMachines.length === 0) return;
         const signature = getMachinesSignature(nextMachines);
         if (signature !== machinesSignatureRef.current) {
@@ -1520,7 +1541,7 @@ function App() {
       if (refreshing || document.hidden) return;
       refreshing = true;
       try {
-        const logs = await fetchRemoteLogs();
+        const logs = (await fetchRemoteLogs()).filter(isVisibleLog);
         const signature = getRemoteLogsSignature(logs);
         if (!cancelled && signature !== remoteLogsSignatureRef.current) {
           remoteLogsSignatureRef.current = signature;
@@ -1549,7 +1570,7 @@ function App() {
       if (refreshing || document.hidden) return;
       refreshing = true;
       try {
-        const statuses = await fetchEmployeeMachineStatuses();
+        const statuses = (await fetchEmployeeMachineStatuses()).filter(isVisibleEmployeeStatus);
         const freshStatuses = statuses
           .filter(isFreshEmployeeMachineStatus)
           .filter((status) => {
@@ -1886,7 +1907,7 @@ function App() {
     fetchProductionOrderSummaries()
       .then((summaries) => {
         if (cancelled) return;
-        setMachineOrderSummaries(summaries);
+        setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary));
       })
       .catch((error) => {
         if (cancelled) return;
@@ -2999,7 +3020,7 @@ function App() {
       setLocalLogs(next);
       if (remoteEnabled) {
         fetchRemoteLogs()
-          .then((logs) => setRemoteLogs(logs))
+          .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
           .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
         if (saved.productionOrderRowNumber && saved.machineId === currentMachine.id) {
           fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })

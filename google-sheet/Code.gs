@@ -11,6 +11,19 @@ const SUBMIT_HISTORY_SHEET_ID = 1754160605;
 const EMPLOYEE_STATUS_HEARTBEAT_MAX_AGE_MS = 60 * 60 * 1000;
 const EMPLOYEE_STATUS_CACHE_KEY = "employee_machine_statuses_v2";
 const EMPLOYEE_STATUS_CACHE_SECONDS = 3;
+const HIDDEN_MACHINE_IDS = {
+  "1-arc-stack": true,
+  "2-arc-stack": true,
+  "3-cut-chamber": true,
+  "4-gv2": true,
+  "5-arc-chute": true,
+  "6-arc-chute": true,
+  "7-arc-chute": true,
+  "8-arc-chute": true,
+};
+function isVisibleMachineId(machineId) {
+  return !HIDDEN_MACHINE_IDS[String(machineId || "").trim()];
+}
 const KPI_DASHBOARD_SHEET = "kpi_dashboard";
 const KPI_MACHINE_SHEET = "kpi_machine";
 const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
@@ -545,6 +558,7 @@ function getEmployeeMachineStatuses() {
   const rows = [];
   for (let i = 1; i < values.length; i++) {
     const item = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
+    if (!isVisibleMachineId(item.machineId)) continue;
     if (!isEmployeeMachineStatusFresh(item, now)) continue;
     rows.push(item);
   }
@@ -2327,8 +2341,13 @@ function getLogs(limit) {
     .filter((row) => row.some((cell) => cell !== ""))
     .map((row) => rowToObject(headers, row))
     .filter(isUsableLog)
+    .filter(function(log) {
+      return isVisibleMachineId(log.machineId);
+    })
     .reverse();
-  return mergeLogs(productionLogs, getLegacyOeeLogs()).slice(0, limit);
+  return mergeLogs(productionLogs, getLegacyOeeLogs().filter(function(log) {
+    return isVisibleMachineId(log.machineId);
+  })).slice(0, limit);
 }
 
 function refreshKpiSheets() {
@@ -3369,6 +3388,7 @@ function getMachines() {
   return rows.slice(1).map(function(row) {
     const id = String(row[0] || "").trim();
     const name = String(row[1] || "").trim();
+    if (!isVisibleMachineId(id)) return null;
     if (!id || !name) return null;
     return {
       id: id,
