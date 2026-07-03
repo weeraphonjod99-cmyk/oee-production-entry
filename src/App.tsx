@@ -326,6 +326,7 @@ const canSubmitProductionForRole = (role?: AppRole) => role === "admin" || role 
 const canManageProductionOrdersForRole = (role?: AppRole) => role === "admin" || role === "planning";
 
 const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTimerKey) => {
+  if (key === "newModelMinutes") return role === "admin" || role === "tooling_repair";
   if (!role || role === "admin" || role === "production") return true;
   return (employeeTimerRolePermissions[role] ?? []).includes(key);
 };
