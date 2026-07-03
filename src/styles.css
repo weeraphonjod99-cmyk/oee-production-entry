@@ -1601,6 +1601,17 @@ select:disabled {
   background: #105b37;
 }
 
+.downtime-press-button.timer-tone-n,
+.downtime-press-button.code-n {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.downtime-press-button.timer-tone-n:hover,
+.downtime-press-button.code-n:hover {
+  background: #ea580c;
+}
+
 .downtime-press-button:disabled,
 .downtime-press-button:disabled:hover {
   animation: none;
@@ -1625,6 +1636,17 @@ select:disabled {
   background: var(--timer-solid, #facc15) !important;
   color: var(--timer-text, #061635) !important;
   box-shadow: 0 0 0 4px var(--timer-ring, rgba(250, 204, 21, 0.24)), 0 16px 34px var(--timer-shadow-strong, rgba(245, 158, 11, 0.28));
+}
+
+.downtime-press-button.timer-tone-n.active-timer,
+.downtime-press-button.timer-tone-n.active-timer:hover,
+.downtime-press-button.timer-tone-n.shared-active-timer,
+.downtime-press-button.timer-tone-n.shared-active-timer:hover {
+  --timer-solid: #facc15;
+  --timer-solid-strong: #f59e0b;
+  --timer-ring: rgba(250, 204, 21, 0.32);
+  --timer-shadow-strong: rgba(245, 158, 11, 0.38);
+  --timer-text: #061635;
 }
 
 @keyframes activeTimerButtonPulse {
