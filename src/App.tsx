@@ -3335,12 +3335,16 @@ function App() {
       if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
       return true;
     } catch (error) {
-      if (options.keepDraftOnRemoteError) {
+      if (remoteEnabled || options.keepDraftOnRemoteError) {
         const message =
           error instanceof Error
-            ? `${error.message} - เก็บคิวส่งยอดฉุกเฉินไว้ จะส่งซ้ำเมื่อระบบออนไลน์`
-            : "เก็บคิวส่งยอดฉุกเฉินไว้ จะส่งซ้ำเมื่อระบบออนไลน์";
+            ? `${error.message} - ยังไม่บันทึกลง Google Sheet ข้อมูลยังค้างไว้ให้กดส่งยอดใหม่`
+            : "ยังไม่บันทึกลง Google Sheet ข้อมูลยังค้างไว้ให้กดส่งยอดใหม่";
         setStatus(message);
+        setProblemDialog({
+          title: "บันทึก Google Sheet ไม่สำเร็จ",
+          message,
+        });
         return false;
       }
       const localLog = { ...log, source: "local" as const };
