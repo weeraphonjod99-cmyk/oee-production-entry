@@ -57,6 +57,7 @@ export function exportLogsCsv(logs: ProductionLog[]) {
     "emergencyStopMinutes",
     "meetingMinutes",
     "plannedStopMinutes",
+    "newModelMinutes",
     "goodQty",
     "ngQty",
     "testQty",

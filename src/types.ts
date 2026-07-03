@@ -85,6 +85,7 @@ export type ProductionLog = {
   emergencyStopMinutes: number;
   meetingMinutes: number;
   plannedStopMinutes: number;
+  newModelMinutes?: number;
   goodQty: number;
   ngQty: number;
   testQty: number;

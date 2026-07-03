@@ -150,6 +150,7 @@ const LOG_HEADERS = [
   "emergencyStopMinutes",
   "meetingMinutes",
   "plannedStopMinutes",
+  "newModelMinutes",
   "goodQty",
   "ngQty",
   "testQty",
@@ -174,6 +175,7 @@ const LOG_NUMBER_HEADERS = [
   "emergencyStopMinutes",
   "meetingMinutes",
   "plannedStopMinutes",
+  "newModelMinutes",
   "goodQty",
   "ngQty",
   "testQty",
@@ -207,6 +209,7 @@ const EMPLOYEE_STATUS_HEADERS = [
   "emergencyStopMinutes",
   "meetingMinutes",
   "plannedStopMinutes",
+  "newModelMinutes",
   "note",
   "activeTimerKey",
   "activeTimerLabel",
@@ -295,6 +298,7 @@ const EMPLOYEE_STATUS_NUMBER_HEADERS = [
   "emergencyStopMinutes",
   "meetingMinutes",
   "plannedStopMinutes",
+  "newModelMinutes",
   "activeTimerBaseMinutes",
 ];
 
@@ -345,6 +349,7 @@ const DOWNTIME_CATALOG_ROWS = [
   ["emergencyStopMinutes", "หยุดไม่ทราบสาเหตุ", "Emergency stop", 60],
   ["meetingMinutes", "ประชุม / 5S / เปลี่ยนกะ", "Meeting or shift break", 70],
   ["plannedStopMinutes", "หยุดตามแผน", "Planned stop", 80],
+  ["newModelMinutes", "ทดลองงานใหม่ / New model", "New model", 90],
 ];
 
 function doGet(e) {
@@ -662,6 +667,7 @@ function upsertEmployeeMachineStatus(payload) {
     emergencyStopMinutes: Number(payload.emergencyStopMinutes || 0),
     meetingMinutes: Number(payload.meetingMinutes || 0),
     plannedStopMinutes: Number(payload.plannedStopMinutes || 0),
+    newModelMinutes: Number(payload.newModelMinutes || 0),
     note: String(payload.note || ""),
     activeTimerKey: String(payload.activeTimerKey || ""),
     activeTimerLabel: String(payload.activeTimerLabel || ""),
@@ -1173,7 +1179,8 @@ function getSubmitHistoryDowntimeMinutes(log) {
     numberValue(log.materialChangeMinutes) +
     numberValue(log.emergencyStopMinutes) +
     Math.max(numberValue(log.meetingMinutes) - OEE_SHIFT_BREAK_MINUTES, 0) +
-    numberValue(log.plannedStopMinutes)
+    numberValue(log.plannedStopMinutes) +
+    numberValue(log.newModelMinutes)
   );
 }
 
@@ -1879,6 +1886,7 @@ function writeOeeInputRow(sheet, layout, row, log) {
     log.emergencyStopMinutes,
     log.meetingMinutes,
     log.plannedStopMinutes,
+    log.newModelMinutes,
   ]));
   const workSlots = roundNumber(workMinutes / minutesPerSlot);
 
@@ -2762,6 +2770,7 @@ function normalizeKpiLog(raw, capacityLookup) {
     raw.emergencyStopMinutes,
     raw.meetingMinutes,
     raw.plannedStopMinutes,
+    raw.newModelMinutes,
   ]);
   const rawNormalMinutes = numberValue(raw.normalMinutes);
   const normalMinutes = rawNormalMinutes > 0 ? rawNormalMinutes : Math.max(workMinutes - downtimeMinutes, 0);

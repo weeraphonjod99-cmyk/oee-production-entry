@@ -8,7 +8,8 @@ export type DowntimeKey =
   | "materialChangeMinutes"
   | "emergencyStopMinutes"
   | "meetingMinutes"
-  | "plannedStopMinutes";
+  | "plannedStopMinutes"
+  | "newModelMinutes";
 
 export const downtimeFields: Array<{ key: DowntimeKey; label: string; shortLabel: string }> = [
   { key: "changeoverMinutes", label: "เปลี่ยนรุ่น", shortLabel: "Change" },
@@ -19,6 +20,7 @@ export const downtimeFields: Array<{ key: DowntimeKey; label: string; shortLabel
   { key: "emergencyStopMinutes", label: "หยุดไม่ทราบสาเหตุ", shortLabel: "Stop" },
   { key: "meetingMinutes", label: "ประชุม/5S/เปลี่ยนกะ", shortLabel: "Meeting" },
   { key: "plannedStopMinutes", label: "หยุดตามแผน", shortLabel: "Plan" },
+  { key: "newModelMinutes", label: "ทดลองงานใหม่ / New model", shortLabel: "New model" },
 ];
 
 const normalizeShiftCode = (value: unknown) => {

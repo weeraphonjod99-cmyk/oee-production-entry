@@ -507,6 +507,19 @@ h3 {
   --timer-text: #ffffff;
 }
 
+.timer-tone-n {
+  --timer-bg: #ffedd5;
+  --timer-bg-strong: #fdba74;
+  --timer-border: #f97316;
+  --timer-border-strong: #ea580c;
+  --timer-ring: rgba(249, 115, 22, 0.28);
+  --timer-shadow: rgba(249, 115, 22, 0.2);
+  --timer-shadow-strong: rgba(234, 88, 12, 0.34);
+  --timer-solid: #f97316;
+  --timer-solid-strong: #ea580c;
+  --timer-text: #ffffff;
+}
+
 .timer-tone-b,
 .timer-tone-f,
 .timer-tone-g,
@@ -1520,6 +1533,12 @@ select:disabled {
   background: #e0f2fe;
   border-color: #38bdf8;
   color: #075985;
+}
+
+.excel-code-badge.code-n {
+  background: #ffedd5;
+  border-color: #f97316;
+  color: #9a3412;
 }
 
 .downtime-slot-input {

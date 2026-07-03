@@ -60,6 +60,7 @@ export type EmployeeMachineStatus = {
   emergencyStopMinutes?: number;
   meetingMinutes?: number;
   plannedStopMinutes?: number;
+  newModelMinutes?: number;
   note?: string;
   activeTimerKey?: string;
   activeTimerLabel?: string;

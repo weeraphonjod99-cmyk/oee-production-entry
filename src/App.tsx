@@ -218,6 +218,7 @@ const downtimeExcelCodes = {
   emergencyStopMinutes: "G",
   meetingMinutes: "H",
   plannedStopMinutes: "X",
+  newModelMinutes: "N",
 } as const;
 const productionWorkExcelCode = "A";
 const employeeMachineActivityLabels: Record<string, string> = {
@@ -230,6 +231,7 @@ const employeeMachineActivityLabels: Record<string, string> = {
   emergencyStopMinutes: "G หยุดไม่ทราบสาเหตุ",
   meetingMinutes: "H ประชุม/5S/เปลี่ยนกะ",
   plannedStopMinutes: "X หยุดตามแผน",
+  newModelMinutes: "N ทดลองงานใหม่ / New model",
 };
 const getEmployeeMachineActivityLabel = (status?: Pick<EmployeeMachineStatus, "activeTimerKey" | "activeTimerLabel" | "workStartedAt">) => {
   if (!status) return "";
@@ -289,6 +291,7 @@ const getExcelCodeTone = (code: string) => {
   if (code === "A") return "code-a";
   if (code === "C") return "code-c";
   if (code === "E") return "code-e";
+  if (code === "N") return "code-n";
   return "code-default";
 };
 const getEmployeeTimerExcelCode = (key?: string) => {
@@ -372,6 +375,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     emergencyStopMinutes: 0,
     meetingMinutes: getShiftBreakMinutes(currentShift.shift),
     plannedStopMinutes: 0,
+    newModelMinutes: 0,
     goodQty: 0,
     ngQty: 0,
     testQty: 0,
@@ -557,6 +561,7 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
         status.emergencyStopMinutes || 0,
         status.meetingMinutes || 0,
         status.plannedStopMinutes || 0,
+        status.newModelMinutes || 0,
         status.activeTimerStartedAt || "",
         status.activeTimerBaseAt || "",
         status.activeTimerBaseMinutes || 0,
@@ -597,6 +602,7 @@ const getEmployeeStatusPublishSignature = (status: EmployeeMachineStatus) =>
     status.emergencyStopMinutes || 0,
     status.meetingMinutes || 0,
     status.plannedStopMinutes || 0,
+    status.newModelMinutes || 0,
     status.activeTimerStartedAt || "",
     status.workStartedAt || "",
     status.entryStartedAt || "",
@@ -1309,6 +1315,7 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   emergencyStopMinutes: Number(log.emergencyStopMinutes || 0),
   meetingMinutes: Math.max(Number(log.meetingMinutes || 0), getShiftBreakMinutes(log.shift)),
   plannedStopMinutes: Number(log.plannedStopMinutes || 0),
+  newModelMinutes: Number(log.newModelMinutes || 0),
   goodQty: Number(log.goodQty || 0),
   ngQty: Number(log.ngQty || 0),
   testQty: Number(log.testQty || 0),
@@ -2791,6 +2798,7 @@ function App() {
       emergencyStopMinutes: Number(stored.draft.emergencyStopMinutes || 0),
       meetingMinutes: Number(stored.draft.meetingMinutes || 0),
       plannedStopMinutes: Number(stored.draft.plannedStopMinutes || 0),
+      newModelMinutes: Number(stored.draft.newModelMinutes || 0),
       note: stored.draft.note || "",
       activeTimerKey: stored.activeTimer?.key || "",
       activeTimerLabel: stored.activeTimer ? getEmployeeTimerLabel(stored.activeTimer.key) : "",
