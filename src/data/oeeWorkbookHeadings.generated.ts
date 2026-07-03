@@ -2870,7 +2870,7 @@ export const oeeWorkbookHeadings = {
       ]
     },
     {
-      "sheetName": "C1",
+      "sheetName": "CNC-C1",
       "rowCount": 66,
       "columnCount": 37,
       "hasStep": false,
@@ -2942,7 +2942,7 @@ export const oeeWorkbookHeadings = {
       ]
     },
     {
-      "sheetName": "C2",
+      "sheetName": "CNC-C2",
       "rowCount": 100,
       "columnCount": 37,
       "hasStep": false,
@@ -3014,7 +3014,7 @@ export const oeeWorkbookHeadings = {
       ]
     },
     {
-      "sheetName": "C3",
+      "sheetName": "CNC-C3",
       "rowCount": 53,
       "columnCount": 37,
       "hasStep": false,
@@ -3086,7 +3086,7 @@ export const oeeWorkbookHeadings = {
       ]
     },
     {
-      "sheetName": "C4",
+      "sheetName": "CNC-C4",
       "rowCount": 60,
       "columnCount": 37,
       "hasStep": false,
@@ -3158,7 +3158,7 @@ export const oeeWorkbookHeadings = {
       ]
     },
     {
-      "sheetName": "C5",
+      "sheetName": "CNC-C5",
       "rowCount": 62,
       "columnCount": 37,
       "hasStep": false,
@@ -3230,7 +3230,7 @@ export const oeeWorkbookHeadings = {
       ]
     },
     {
-      "sheetName": "C6",
+      "sheetName": "CNC-C6",
       "rowCount": 59,
       "columnCount": 37,
       "hasStep": false,

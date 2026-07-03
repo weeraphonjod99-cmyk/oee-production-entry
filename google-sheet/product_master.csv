@@ -401,22 +401,22 @@ sw-3-spot-cjqst-base-unit-fr-rh-5038789-ab,sw-3-spot,SW#3 Spot,"CJQST BASE UNIT 
 sw-3-spot-cjqst-base-unit-fr-rh-5038709-aa,sw-3-spot,SW#3 Spot,"CJQST BASE UNIT FR,RH",5038709-AA,-,474,3,0
 sw-3-spot-cjqst-base-unit-fr-lh-5038788-aa,sw-3-spot,SW#3 Spot,"CJQST BASE UNIT FR,LH",5038788-AA,-,1610,5,0
 8-rubber-cap-rubber-cap-tm-755a-1,8-rubber-cap,#8 Rubber Cap,Rubber Cap,TM-755A-1,-,621488,0,0
-c1-passive-bracket-sb-068c-2,c1,C1,PASSIVE BRACKET,SB-068C-2,-,5875,115,0
-c1-passive-brkt-sb-092b-2,c1,C1,PASSIVE BRKT,SB-092B-2,-,3003,121,0
-c1-bracket-sb-075b-1-1,c1,C1,BRACKET,SB-075B-1-1,-,2988,13,0
-c1-inner-11-728a-1,c1,C1,INNER,11-728A-1,-,2467,7,0
-c2-inner-tm-865a-2,c2,C2,INNER,TM-865A-2,-,131391,186,0
-c3-rhs-active-bracket-sb-069a-1,c3,C3,RHS ACTIVE BRACKET,SB-069A-1,-,6834,16,0
-c3-brkt-th-524a-1,c3,C3,BRKT,TH-524A-1,-,1022,119,0
-c4-bracket-sb-075b-1-1,c4,C4,BRACKET,SB-075B-1-1,-,19224,45,0
-c4-passive-brkt-sb-092b-2,c4,C4,PASSIVE BRKT,SB-092B-2,-,1872,81,0
-c4-brkt-rr-diff-mtg-th-403b-1,c4,C4,BRKT RR DIFF MTG,TH-403B-1,-,1365,118,0
-c5-3du-resolver-cover-0135-080005,c5,C5,3DU RESOLVER COVER,0135-080005,-,6618,227,0
-c5-inner-11-728a-1,c5,C5,INNER,11-728A-1,-,3163,45,0
-c5-rhs-active-bracket-sb-069a-1,c5,C5,RHS ACTIVE BRACKET,SB-069A-1,-,104,0,0
-c5-inner-11-711c-1,c5,C5,INNER,11-711C-1,-,2872,14,0
-c5-brkt-th-523a-1,c5,C5,BRKT,TH-523A-1,-,1593,3,0
-c6-3du-resolver-cover-0135-080005,c6,C6,3DU RESOLVER COVER,0135-080005,-,1094,30,0
-c6-inner-11-711c-1,c6,C6,INNER,11-711C-1,-,10057,30,0
-c6-inner-11-728a-1,c6,C6,INNER,11-728A-1,-,8465,134,0
-c6-bracket-sb-075b-1-1,c6,C6,BRACKET,SB-075B-1-1,-,4898,62,0
+c1-passive-bracket-sb-068c-2,c1,CNC-C1,PASSIVE BRACKET,SB-068C-2,-,5875,115,0
+c1-passive-brkt-sb-092b-2,c1,CNC-C1,PASSIVE BRKT,SB-092B-2,-,3003,121,0
+c1-bracket-sb-075b-1-1,c1,CNC-C1,BRACKET,SB-075B-1-1,-,2988,13,0
+c1-inner-11-728a-1,c1,CNC-C1,INNER,11-728A-1,-,2467,7,0
+c2-inner-tm-865a-2,c2,CNC-C2,INNER,TM-865A-2,-,131391,186,0
+c3-rhs-active-bracket-sb-069a-1,c3,CNC-C3,RHS ACTIVE BRACKET,SB-069A-1,-,6834,16,0
+c3-brkt-th-524a-1,c3,CNC-C3,BRKT,TH-524A-1,-,1022,119,0
+c4-bracket-sb-075b-1-1,c4,CNC-C4,BRACKET,SB-075B-1-1,-,19224,45,0
+c4-passive-brkt-sb-092b-2,c4,CNC-C4,PASSIVE BRKT,SB-092B-2,-,1872,81,0
+c4-brkt-rr-diff-mtg-th-403b-1,c4,CNC-C4,BRKT RR DIFF MTG,TH-403B-1,-,1365,118,0
+c5-3du-resolver-cover-0135-080005,c5,CNC-C5,3DU RESOLVER COVER,0135-080005,-,6618,227,0
+c5-inner-11-728a-1,c5,CNC-C5,INNER,11-728A-1,-,3163,45,0
+c5-rhs-active-bracket-sb-069a-1,c5,CNC-C5,RHS ACTIVE BRACKET,SB-069A-1,-,104,0,0
+c5-inner-11-711c-1,c5,CNC-C5,INNER,11-711C-1,-,2872,14,0
+c5-brkt-th-523a-1,c5,CNC-C5,BRKT,TH-523A-1,-,1593,3,0
+c6-3du-resolver-cover-0135-080005,c6,CNC-C6,3DU RESOLVER COVER,0135-080005,-,1094,30,0
+c6-inner-11-711c-1,c6,CNC-C6,INNER,11-711C-1,-,10057,30,0
+c6-inner-11-728a-1,c6,CNC-C6,INNER,11-728A-1,-,8465,134,0
+c6-bracket-sb-075b-1-1,c6,CNC-C6,BRACKET,SB-075B-1-1,-,4898,62,0

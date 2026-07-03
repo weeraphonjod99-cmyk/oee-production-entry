@@ -37,9 +37,9 @@ sw1-spot,SW1# spot,68,340,true,33
 sw-2-spot,SW#2 Spot,80,400,false,130
 sw-3-spot,SW#3 Spot,54,270,false,77
 8-rubber-cap,#8 Rubber Cap,48,240,false,111
-c1,C1,67,335,false,66
-c2,C2,126,630,false,100
-c3,C3,77,385,false,53
-c4,C4,101,505,false,60
-c5,C5,76,380,false,62
-c6,C6,100,500,false,59
+c1,CNC-C1,67,335,false,66
+c2,CNC-C2,126,630,false,100
+c3,CNC-C3,77,385,false,53
+c4,CNC-C4,101,505,false,60
+c5,CNC-C5,76,380,false,62
+c6,CNC-C6,100,500,false,59

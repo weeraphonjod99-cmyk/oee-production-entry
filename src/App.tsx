@@ -132,6 +132,20 @@ const isVisibleProduct = (product: Pick<ProductMaster, "machineId">) => isVisibl
 const isVisibleLog = (log: Pick<ProductionLog, "machineId">) => isVisibleMachineId(log.machineId);
 const isVisibleEmployeeStatus = (status: Pick<EmployeeMachineStatus, "machineId">) => isVisibleMachineId(status.machineId);
 const isVisibleOrderSummary = (summary: Pick<ProductionOrderMachineSummary, "machineId">) => isVisibleMachineId(summary.machineId);
+const canonicalMachineNameOverrides: Record<string, string> = {
+  c1: "CNC-C1",
+  c2: "CNC-C2",
+  c3: "CNC-C3",
+  c4: "CNC-C4",
+  c5: "CNC-C5",
+  c6: "CNC-C6",
+};
+const withCanonicalMachineDisplayName = (machine: Machine): Machine => {
+  const canonicalName = canonicalMachineNameOverrides[machine.id];
+  if (!canonicalName || machine.name === canonicalName) return machine;
+  return { ...machine, name: canonicalName };
+};
+const normalizeMachineList = (items: Machine[]) => items.filter(isVisibleMachine).map(withCanonicalMachineDisplayName);
 const fallbackMachines: Machine[] = [
   {
     id: "1-ocp-80t",
@@ -1664,7 +1678,7 @@ function App() {
       void import("./data/oeeMasterData.generated")
         .then((seedData) => {
           if (cancelled) return;
-          const nextMachines = seedData.machines.filter(isVisibleMachine);
+          const nextMachines = normalizeMachineList(seedData.machines);
           const nextProducts = seedData.products.filter(isVisibleProduct);
           const nextLogs = seedData.seedLogs.filter(isVisibleLog);
           setSeedProducts(nextProducts);
@@ -1754,7 +1768,7 @@ function App() {
       if (refreshing) return;
       refreshing = true;
       try {
-        const nextMachines = (await fetchMachines()).filter(isVisibleMachine);
+        const nextMachines = normalizeMachineList(await fetchMachines());
         if (cancelled || nextMachines.length === 0) return;
         const signature = getMachinesSignature(nextMachines);
         if (signature !== machinesSignatureRef.current) {
