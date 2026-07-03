@@ -1511,13 +1511,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
         return sum + fieldMinutes;
       }, 0)
     : 0;
-  const buttonDetailLines = sharedStatus?.buttonDetails
-    ? sharedStatus.buttonDetails
-        .split(/\n+/)
-        .filter(Boolean)
-        .slice(-3)
-    : [];
-
+  const buttonDetailLines: string[] = [];
   return (
     <button className={`machine-icon-card ${hasDraft ? timerToneClass : ""}`} onClick={() => onOpen(machine.id)} type="button">
       <span className="machine-card-header">
@@ -1574,7 +1568,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
             Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
             {sharedStatus.materialOfProduction || "-"}
           </small>
-          {buttonDetailLines.length > 0 && (
+          {false && (
             <span className="machine-status-details">
               <span className="machine-status-details-title">รายละเอียดการกดล่าสุด</span>
               <span className="machine-status-detail-list">
