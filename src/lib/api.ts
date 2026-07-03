@@ -84,6 +84,19 @@ export type ProductionOrderMachineSummary = {
   pendingOrders: ProductionOrder[];
 };
 
+export type OnlineUsersSummary = {
+  activeWindowSeconds: number;
+  onlineCount: number;
+  updatedAt: string;
+  users?: Array<{
+    clientId: string;
+    username: string;
+    displayName: string;
+    role: string;
+    lastSeenAt: string;
+  }>;
+};
+
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
   try {
@@ -215,6 +228,28 @@ export async function fetchMachines(): Promise<Machine[]> {
     throw new Error(data.error || "โหลดรายชื่อเครื่องจักรจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.machines) ? data.machines : [];
+}
+
+export async function heartbeatOnlineUser(input: {
+  clientId: string;
+  displayName: string;
+  role: string;
+  userAgent?: string;
+  username: string;
+}): Promise<OnlineUsersSummary> {
+  if (!remoteEnabled) {
+    return { activeWindowSeconds: 0, onlineCount: 1, updatedAt: new Date().toISOString(), users: [] };
+  }
+  const response = await fetchWithRetry(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "onlineUserHeartbeat", payload: input }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "อัปเดตจำนวนผู้ใช้งานออนไลน์ไม่สำเร็จ");
+  }
+  return data.online ?? { activeWindowSeconds: 0, onlineCount: 1, updatedAt: new Date().toISOString(), users: [] };
 }
 
 export async function upsertEmployeeMachineStatus(status: EmployeeMachineStatus): Promise<EmployeeMachineStatus> {

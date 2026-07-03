@@ -36,6 +36,7 @@ import {
   fetchProductionOrders,
   fetchProductionOrderSummaries,
   fetchRemoteLogs,
+  heartbeatOnlineUser,
   remoteEnabled,
   reorderProductionOrder,
   updateRemoteLog,
@@ -256,7 +257,18 @@ const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
+const ONLINE_CLIENT_ID_KEY = "oee-production-online-client-id-v1";
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
+const getOnlineClientId = () => {
+  const existing = window.localStorage.getItem(ONLINE_CLIENT_ID_KEY);
+  if (existing) return existing;
+  const generated =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  window.localStorage.setItem(ONLINE_CLIENT_ID_KEY, generated);
+  return generated;
+};
 const shiftBreakSchedules = {
   [SHIFT_DAY]: [
     { label: "08:00-08:10", start: "08:00", end: "08:10", minutes: 10 },
@@ -1435,6 +1447,8 @@ const orderToForm = (order: ProductionOrder): ProductionOrderForm => ({
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
+  const [onlineUserCount, setOnlineUserCount] = useState(1);
+  const [onlineUserUpdatedAt, setOnlineUserUpdatedAt] = useState("");
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
   const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
@@ -1504,6 +1518,51 @@ function App() {
   useEffect(() => {
     employeeSharedMachineStatusesRef.current = employeeSharedMachineStatuses;
   }, [employeeSharedMachineStatuses]);
+
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    let refreshing = false;
+    const updateOnlineUsers = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const online = await heartbeatOnlineUser({
+          clientId: getOnlineClientId(),
+          displayName: session.displayName,
+          role: session.role,
+          userAgent: navigator.userAgent,
+          username: session.username,
+        });
+        if (!cancelled) {
+          setOnlineUserCount(Math.max(1, Number(online.onlineCount || 1)));
+          setOnlineUserUpdatedAt(online.updatedAt || new Date().toISOString());
+        }
+      } catch {
+        if (!cancelled && !remoteEnabled) {
+          setOnlineUserCount(1);
+          setOnlineUserUpdatedAt(new Date().toISOString());
+        }
+      } finally {
+        refreshing = false;
+      }
+    };
+    void updateOnlineUsers();
+    const timer = window.setInterval(() => {
+      void updateOnlineUsers();
+    }, 45000);
+    const updateWhenVisible = () => {
+      if (!document.hidden) void updateOnlineUsers();
+    };
+    window.addEventListener("focus", updateWhenVisible);
+    document.addEventListener("visibilitychange", updateWhenVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", updateWhenVisible);
+      document.removeEventListener("visibilitychange", updateWhenVisible);
+    };
+  }, [session]);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs().filter(isVisibleLog));
@@ -3563,6 +3622,12 @@ function App() {
             <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel</h1>
           </div>
           <div className="topbar-actions">
+            <div className="online-users-badge" title={onlineUserUpdatedAt ? `อัปเดตล่าสุด ${formatSharedStatusTime(onlineUserUpdatedAt)}` : "กำลังนับผู้ใช้งานออนไลน์"}>
+              <UserRound size={17} />
+              <span>ออนไลน์</span>
+              <strong>{formatNumber(onlineUserCount)}</strong>
+              <small>คน</small>
+            </div>
             <button className="ghost-button" onClick={shareApp} type="button">
               <Share2 size={17} /> Share
             </button>

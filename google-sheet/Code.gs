@@ -5,9 +5,11 @@ const MACHINE_SHEET = "machines";
 const PRODUCT_MASTER_SHEET = "product_master";
 const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 const USER_SHEET = "app_users";
+const ONLINE_USER_SHEET = "app_online_users";
 const EMPLOYEE_STATUS_SHEET = "employee_machine_status";
 const SUBMIT_HISTORY_SHEET = "submit_history";
 const SUBMIT_HISTORY_SHEET_ID = 1754160605;
+const ONLINE_USER_ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 const EMPLOYEE_STATUS_HEARTBEAT_MAX_AGE_MS = 60 * 60 * 1000;
 const EMPLOYEE_STATUS_CACHE_KEY = "employee_machine_statuses_v2";
 const EMPLOYEE_STATUS_CACHE_SECONDS = 3;
@@ -339,6 +341,15 @@ const DEFAULT_USER_ROWS = [
   ["production", "Production", "production", "86a1f963447b489c579084029ae10e1c31ffcc90081bc220fa9da83bf1dfe89f", true, "", "", true],
 ];
 
+const ONLINE_USER_HEADERS = [
+  "clientId",
+  "username",
+  "displayName",
+  "role",
+  "lastSeenAt",
+  "userAgent",
+];
+
 const DOWNTIME_CATALOG_ROWS = [
   ["key", "thLabel", "enLabel", "sortOrder"],
   ["changeoverMinutes", "เปลี่ยนรุ่น", "Changeover", 10],
@@ -361,6 +372,9 @@ function doGet(e) {
     }
     if (action === "machines") {
       return jsonResponse({ ok: true, machines: getMachines() });
+    }
+    if (action === "onlineUsers") {
+      return jsonResponse({ ok: true, online: getOnlineUsersSummary() });
     }
     if (action === "employeeMachineStatuses") {
       return jsonResponse({ ok: true, statuses: getEmployeeMachineStatuses() });
@@ -455,6 +469,9 @@ function doPost(e) {
       const order = reorderProductionOrder(body.payload || {});
       return jsonResponse({ ok: true, order: order });
     }
+    if (body.action === "onlineUserHeartbeat") {
+      return jsonResponse({ ok: true, online: onlineUserHeartbeat(body.payload || {}) });
+    }
     if (body.action === "getProductDefaults") {
       return jsonResponse({ ok: true, defaults: getProductDefaults(body.payload || {}) });
     }
@@ -480,6 +497,88 @@ function doPost(e) {
   } catch (error) {
     return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) });
   }
+}
+
+function onlineUserHeartbeat(payload) {
+  const clientId = String(payload.clientId || "").trim();
+  if (!clientId) {
+    throw new Error("clientId is required");
+  }
+  const now = new Date();
+  const sheet = ensureSheet(ONLINE_USER_SHEET, ONLINE_USER_HEADERS);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const values = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    for (let index = 1; index < values.length; index += 1) {
+      if (String(values[index][0] || "") === clientId) {
+        rowIndex = index + 1;
+        break;
+      }
+    }
+    const row = [
+      clientId,
+      String(payload.username || "").trim(),
+      String(payload.displayName || "").trim(),
+      String(payload.role || "").trim(),
+      now.toISOString(),
+      String(payload.userAgent || "").slice(0, 180),
+    ];
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, ONLINE_USER_HEADERS.length).setValues([row]);
+    } else {
+      sheet.appendRow(row);
+    }
+    return pruneAndReadOnlineUsers(sheet, now);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getOnlineUsersSummary() {
+  const sheet = ensureSheet(ONLINE_USER_SHEET, ONLINE_USER_HEADERS);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    return pruneAndReadOnlineUsers(sheet, new Date());
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function pruneAndReadOnlineUsers(sheet, now) {
+  const rows = sheet.getDataRange().getValues();
+  const activeUsers = [];
+  for (let index = rows.length - 1; index >= 1; index -= 1) {
+    const lastSeenAt = parseOnlineUserDate(rows[index][4]);
+    if (!lastSeenAt || now.getTime() - lastSeenAt.getTime() > ONLINE_USER_ACTIVE_WINDOW_MS) {
+      sheet.deleteRow(index + 1);
+      continue;
+    }
+    activeUsers.push({
+      clientId: String(rows[index][0] || ""),
+      username: String(rows[index][1] || ""),
+      displayName: String(rows[index][2] || ""),
+      role: String(rows[index][3] || ""),
+      lastSeenAt: lastSeenAt.toISOString(),
+    });
+  }
+  activeUsers.sort(function(left, right) {
+    return String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""));
+  });
+  return {
+    activeWindowSeconds: Math.floor(ONLINE_USER_ACTIVE_WINDOW_MS / 1000),
+    onlineCount: activeUsers.length,
+    updatedAt: now.toISOString(),
+    users: activeUsers,
+  };
+}
+
+function parseOnlineUserDate(value) {
+  if (value instanceof Date) return value;
+  const date = new Date(String(value || ""));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function appendLog(payload) {

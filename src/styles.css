@@ -326,6 +326,35 @@ textarea:disabled {
   justify-content: flex-end;
 }
 
+.online-users-badge {
+  align-items: center;
+  background: #ecfdf3;
+  border: 1px solid #9ee7bd;
+  border-radius: 8px;
+  color: #075e3b;
+  display: inline-flex;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.online-users-badge svg {
+  color: #12804a;
+}
+
+.online-users-badge span,
+.online-users-badge small {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.online-users-badge strong {
+  color: #001a41;
+  font-size: 20px;
+  line-height: 1;
+}
+
 .eyebrow {
   color: #667085;
   font-size: 13px;
@@ -4096,6 +4125,12 @@ td:nth-child(10) {
   .topbar-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .online-users-badge {
+    justify-content: center;
+    min-width: 0;
     width: 100%;
   }
 
