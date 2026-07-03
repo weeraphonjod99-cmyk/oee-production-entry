@@ -2612,13 +2612,11 @@ function App() {
       recordTime: isFirstEmployeeEntry ? pressedTime : runtimeDraft.recordTime || pressedTime,
       note: runtimeDraft.note.trim() ? `${runtimeDraft.note.trim()}\n${noteLine}` : noteLine,
     };
-    setDraft(nextDraft);
     setEmployeeActiveTimer(nextTimer);
     employeeActiveTimerRef.current = nextTimer;
     const entryStartedAt = isFirstEmployeeEntry ? startedAt : employeeDraftStartedAt || startedAt;
     if (isFirstEmployeeEntry || !employeeDraftStartedAt) setEmployeeDraftStartedAt(startedAt);
     setEmployeeDraftActive(true);
-    setEmployeeDraftUpdatedAt(startedAt);
     recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`, {
       at: startedAt,
       key,
@@ -2626,20 +2624,24 @@ function App() {
       startedAt,
     });
     if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
-    const stored = buildEmployeeStoredDraft(nextDraft, !employeeDraftActive, {
+    const entryEventsSnapshot = employeeDraftEventsRef.current;
+    const stored = persistEmployeeStoredDraft(buildEmployeeStoredDraft(nextDraft, !employeeDraftActive, {
       activeTimer: nextTimer,
+      entryEvents: entryEventsSnapshot,
       entryStartedAt,
       entryUpdatedAt: startedAt,
       workStartedAt: workStart,
-    });
-    window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+    }));
+    setDraft(stored.draft);
+    setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || startedAt);
     publishEmployeeMachineStatus(stored);
-    refreshEmployeeDraftMachineIds();
     setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
     if (key !== "work") setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setStatus(`บันทึกเวลา ${label} เริ่ม ${pressedTime}`);
     setPendingEmployeeTimer(null);
     setSuccessDialog({ title: "การกรอกสำเร็จ", message: `บันทึกเวลา ${label} เวลา ${pressedTime} แล้ว` });
+    setStatus(`บันทึกร่าง ${label} เวลา ${pressedTime} แล้ว ยังไม่ส่ง Google Sheet จนกว่าจะกดส่งยอดบันทึก`);
+    setSuccessDialog({ title: "บันทึกร่างสำเร็จ", message: `บันทึกร่าง ${label} เวลา ${pressedTime} แล้ว ยังไม่ส่งยอดจนกว่าจะกดส่งยอดบันทึก` });
   };
 
   const pressEmployeeWorkStartRealtime = () => {
@@ -2898,11 +2900,21 @@ function App() {
     }
   };
 
-  const writeEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false) => {
-    const stored = preserveEmergencySubmitFields(buildEmployeeStoredDraft(targetDraft, freshRecordTime));
-    window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
-    publishEmployeeMachineStatus(stored);
+  const persistEmployeeStoredDraft = (stored: StoredEmployeeDraft) => {
+    const preserved = preserveEmergencySubmitFields(stored);
+    window.localStorage.setItem(getEmployeeDraftStorageKey(preserved.draft.machineId), JSON.stringify(preserved));
+    setEmployeeDraftMachineIds((items) => {
+      const next = new Set(items);
+      next.add(preserved.draft.machineId);
+      return next;
+    });
     refreshEmployeeDraftMachineIds();
+    return preserved;
+  };
+
+  const writeEmployeeStoredDraft = (targetDraft: EntryDraft, freshRecordTime = false) => {
+    const stored = persistEmployeeStoredDraft(buildEmployeeStoredDraft(targetDraft, freshRecordTime));
+    publishEmployeeMachineStatus(stored);
     setEmployeeDraftActive(true);
     setEmployeeDraftStartedAt(stored.entryStartedAt || "");
     setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || "");
@@ -2916,8 +2928,7 @@ function App() {
     const publishLiveStatus = () => {
       if (autoSubmittingEmployeeDraft.current) return;
       const nowIso = new Date().toISOString();
-      const stored = preserveEmergencySubmitFields(buildEmployeeStoredDraft(draftRef.current, false, { entryUpdatedAt: nowIso }));
-      window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
+      const stored = persistEmployeeStoredDraft(buildEmployeeStoredDraft(draftRef.current, false, { entryUpdatedAt: nowIso }));
       publishEmployeeMachineStatus(stored);
     };
     const timer = window.setInterval(publishLiveStatus, employeeLiveStatusPublishMs);
