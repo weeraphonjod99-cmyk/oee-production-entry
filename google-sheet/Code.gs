@@ -9,6 +9,8 @@ const EMPLOYEE_STATUS_SHEET = "employee_machine_status";
 const SUBMIT_HISTORY_SHEET = "submit_history";
 const SUBMIT_HISTORY_SHEET_ID = 1754160605;
 const EMPLOYEE_STATUS_HEARTBEAT_MAX_AGE_MS = 60 * 60 * 1000;
+const EMPLOYEE_STATUS_CACHE_KEY = "employee_machine_statuses_v2";
+const EMPLOYEE_STATUS_CACHE_SECONDS = 3;
 const KPI_DASHBOARD_SHEET = "kpi_dashboard";
 const KPI_MACHINE_SHEET = "kpi_machine";
 const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
@@ -528,6 +530,15 @@ function upsertLog(payload) {
 }
 
 function getEmployeeMachineStatuses() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(EMPLOYEE_STATUS_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (error) {
+      cache.remove(EMPLOYEE_STATUS_CACHE_KEY);
+    }
+  }
   const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
   const values = sheet.getDataRange().getValues();
   const now = new Date();
@@ -537,9 +548,15 @@ function getEmployeeMachineStatuses() {
     if (!isEmployeeMachineStatusFresh(item, now)) continue;
     rows.push(item);
   }
-  return rows.sort(function(a, b) {
+  const sortedRows = rows.sort(function(a, b) {
     return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   });
+  try {
+    cache.put(EMPLOYEE_STATUS_CACHE_KEY, JSON.stringify(sortedRows), EMPLOYEE_STATUS_CACHE_SECONDS);
+  } catch (error) {
+    // Keep realtime reads working even when detailed status text is too large for CacheService.
+  }
+  return sortedRows;
 }
 
 function getEmployeeMachineStatusLastSeenAt(item) {
@@ -595,6 +612,9 @@ function auditEmployeeMachineStatuses() {
     cleared++;
   }
 
+  if (cleared > 0) {
+    CacheService.getScriptCache().remove(EMPLOYEE_STATUS_CACHE_KEY);
+  }
   return { checked: checked, cleared: cleared, at: nowIso };
 }
 
@@ -647,33 +667,40 @@ function upsertEmployeeMachineStatus(payload) {
     throw new Error("machineId is required");
   }
 
-  const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
-  const values = sheet.getDataRange().getValues();
-  let rowIndex = -1;
-  let existingStatus = null;
-  for (let i = 1; i < values.length; i++) {
-    if (String(values[i][0]) === status.machineId) {
-      rowIndex = i + 1;
-      existingStatus = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
-      break;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const sheet = ensureSheet(EMPLOYEE_STATUS_SHEET, EMPLOYEE_STATUS_HEADERS);
+    const values = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    let existingStatus = null;
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]) === status.machineId) {
+        rowIndex = i + 1;
+        existingStatus = rowToObject(EMPLOYEE_STATUS_HEADERS, values[i]);
+        break;
+      }
     }
-  }
-  if (existingStatus && existingStatus.status === "cleared") {
-    const existingUpdatedAt = new Date(existingStatus.updatedAt || existingStatus.expiresAt || "");
-    const incomingUpdatedAt = new Date(payload.updatedAt || payload.entryUpdatedAt || payload.savedAt || "");
-    if (!isNaN(existingUpdatedAt.getTime()) && !isNaN(incomingUpdatedAt.getTime()) && incomingUpdatedAt.getTime() <= existingUpdatedAt.getTime()) {
-      return existingStatus;
+    if (existingStatus && existingStatus.status === "cleared") {
+      const existingUpdatedAt = new Date(existingStatus.updatedAt || existingStatus.expiresAt || "");
+      const incomingUpdatedAt = new Date(payload.updatedAt || payload.entryUpdatedAt || payload.savedAt || "");
+      if (!isNaN(existingUpdatedAt.getTime()) && !isNaN(incomingUpdatedAt.getTime()) && incomingUpdatedAt.getTime() <= existingUpdatedAt.getTime()) {
+        return existingStatus;
+      }
     }
+    const row = EMPLOYEE_STATUS_HEADERS.map(function(header) {
+      return status[header] || "";
+    });
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, EMPLOYEE_STATUS_HEADERS.length).setValues([row]);
+    } else {
+      sheet.appendRow(row);
+    }
+    CacheService.getScriptCache().remove(EMPLOYEE_STATUS_CACHE_KEY);
+    return status;
+  } finally {
+    lock.releaseLock();
   }
-  const row = EMPLOYEE_STATUS_HEADERS.map(function(header) {
-    return status[header] || "";
-  });
-  if (rowIndex > 0) {
-    sheet.getRange(rowIndex, 1, 1, EMPLOYEE_STATUS_HEADERS.length).setValues([row]);
-  } else {
-    sheet.appendRow(row);
-  }
-  return status;
 }
 
 function clearEmployeeMachineStatus(payload) {
@@ -686,6 +713,7 @@ function clearEmployeeMachineStatus(payload) {
       const statusColumn = EMPLOYEE_STATUS_HEADERS.indexOf("status") + 1;
       const nowIso = payload.clearedAt ? String(payload.clearedAt) : new Date().toISOString();
       sheet.getRange(i + 1, statusColumn, 1, 4).setValues([["cleared", "", nowIso, nowIso]]);
+      CacheService.getScriptCache().remove(EMPLOYEE_STATUS_CACHE_KEY);
       return;
     }
   }

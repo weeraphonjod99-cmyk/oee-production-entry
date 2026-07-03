@@ -92,6 +92,34 @@ async function parseJsonResponse(response: Response) {
   }
 }
 
+const requestTimeoutMs = 12000;
+
+const sleep = (ms: number) => new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}) {
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
+}
+
+async function fetchWithRetry(input: RequestInfo | URL, init: RequestInit = {}, attempts = 2) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= attempts; attempt++) {
+    try {
+      return await fetchWithTimeout(input, init);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= attempts) break;
+      await sleep(500 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
 export async function fetchRemoteLogs(limit = 3000): Promise<ProductionLog[]> {
   if (!remoteEnabled) return [];
   const url = new URL(APPS_SCRIPT_URL);
@@ -111,7 +139,7 @@ export async function fetchEmployeeMachineStatuses(): Promise<EmployeeMachineSta
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set("action", "employeeMachineStatuses");
   url.searchParams.set("_", String(Date.now()));
-  const response = await fetch(url.toString(), { cache: "no-store" });
+  const response = await fetchWithRetry(url.toString(), { cache: "no-store" });
   const data = await parseJsonResponse(response);
   if (!response.ok || data.ok === false) {
     throw new Error(data.error || "โหลดสถานะเครื่องจาก Google Sheet ไม่สำเร็จ");
@@ -190,7 +218,7 @@ export async function fetchMachines(): Promise<Machine[]> {
 
 export async function upsertEmployeeMachineStatus(status: EmployeeMachineStatus): Promise<EmployeeMachineStatus> {
   if (!remoteEnabled) return status;
-  const response = await fetch(APPS_SCRIPT_URL, {
+  const response = await fetchWithRetry(APPS_SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ action: "upsertEmployeeMachineStatus", payload: status }),

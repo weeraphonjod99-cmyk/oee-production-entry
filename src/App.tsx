@@ -227,7 +227,9 @@ const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 590;
-const realtimeRemoteRefreshMs = 2500;
+const realtimeRemoteRefreshMs = 10000;
+const employeeLiveStatusPublishMs = 30000;
+const employeeStatusHeartbeatMs = 60000;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
@@ -547,6 +549,40 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
       ].join(":"),
     )
     .join("|");
+
+const getEmployeeStatusPublishSignature = (status: EmployeeMachineStatus) =>
+  [
+    status.machineId,
+    status.activeTimerKey || "",
+    status.activeTimerLabel || "",
+    status.userName || "",
+    status.date || "",
+    status.shift || "",
+    status.productName || "",
+    status.partNo || "",
+    status.step || "",
+    status.materialOfProduction || "",
+    status.goodQty || 0,
+    status.ngQty || 0,
+    status.testQty || 0,
+    status.timeSlots || 0,
+    status.minutesPerSlot || 0,
+    status.machineSpeed || 0,
+    status.cavityQty || 0,
+    status.changeoverMinutes || 0,
+    status.inspectionMinutes || 0,
+    status.equipmentRepairMinutes || 0,
+    status.moldRepairMinutes || 0,
+    status.materialChangeMinutes || 0,
+    status.emergencyStopMinutes || 0,
+    status.meetingMinutes || 0,
+    status.plannedStopMinutes || 0,
+    status.activeTimerStartedAt || "",
+    status.workStartedAt || "",
+    status.entryStartedAt || "",
+    status.buttonDetails || "",
+    status.note || "",
+  ].join(":");
 
 const getSharedStatusLiveMinutes = (status: EmployeeMachineStatus | undefined, now = new Date()) => {
   if (!status?.activeTimerKey) return null;
@@ -1418,11 +1454,19 @@ function App() {
   const machinesSignatureRef = useRef(getMachinesSignature(seedMachines));
   const remoteLogsSignatureRef = useRef("");
   const employeeStatusesSignatureRef = useRef("");
+  const employeePublishedStatusSignatureRef = useRef("");
+  const employeePublishedStatusAtRef = useRef(0);
+  const employeeStatusesEmptyReadsRef = useRef(0);
+  const employeeSharedMachineStatusesRef = useRef<EmployeeMachineStatus[]>([]);
   const employeeClearedMachineAtRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+
+  useEffect(() => {
+    employeeSharedMachineStatusesRef.current = employeeSharedMachineStatuses;
+  }, [employeeSharedMachineStatuses]);
 
   useEffect(() => {
     setLocalLogs(loadLocalLogs());
@@ -1514,6 +1558,12 @@ function App() {
             const statusUpdatedAt = parseStoredDateTime(status.updatedAt || status.entryUpdatedAt);
             return Boolean(statusUpdatedAt && statusUpdatedAt.getTime() > clearedAt.getTime());
           });
+        if (freshStatuses.length === 0 && employeeSharedMachineStatusesRef.current.length > 0) {
+          employeeStatusesEmptyReadsRef.current += 1;
+          if (employeeStatusesEmptyReadsRef.current < 2) return;
+        } else {
+          employeeStatusesEmptyReadsRef.current = 0;
+        }
         const signature = getEmployeeStatusesSignature(freshStatuses);
         if (!cancelled && signature !== employeeStatusesSignatureRef.current) {
           employeeStatusesSignatureRef.current = signature;
@@ -1525,12 +1575,15 @@ function App() {
         refreshing = false;
       }
     };
-    void refreshSharedMachineStatuses();
+    const initialTimer = window.setTimeout(() => {
+      void refreshSharedMachineStatuses();
+    }, Math.floor(Math.random() * 1500));
     const timer = window.setInterval(() => {
       void refreshSharedMachineStatuses();
     }, realtimeRemoteRefreshMs);
     return () => {
       cancelled = true;
+      window.clearTimeout(initialTimer);
       window.clearInterval(timer);
     };
   }, [tab, employeeClearedMachineAt]);
@@ -2737,7 +2790,16 @@ function App() {
       employeeStatusesSignatureRef.current = getEmployeeStatusesSignature(next);
       return next;
     });
-    void upsertEmployeeMachineStatus(status).catch(() => undefined);
+    const nowMs = Date.now();
+    const publishSignature = getEmployeeStatusPublishSignature(status);
+    const shouldPublishRemote =
+      publishSignature !== employeePublishedStatusSignatureRef.current ||
+      nowMs - employeePublishedStatusAtRef.current >= employeeStatusHeartbeatMs;
+    if (shouldPublishRemote) {
+      employeePublishedStatusSignatureRef.current = publishSignature;
+      employeePublishedStatusAtRef.current = nowMs;
+      void upsertEmployeeMachineStatus(status).catch(() => undefined);
+    }
   };
 
   const buildEmployeeStoredDraft = (
@@ -2828,7 +2890,7 @@ function App() {
       window.localStorage.setItem(getEmployeeDraftStorageKey(stored.draft.machineId), JSON.stringify(stored));
       publishEmployeeMachineStatus(stored);
     };
-    const timer = window.setInterval(publishLiveStatus, 5000);
+    const timer = window.setInterval(publishLiveStatus, employeeLiveStatusPublishMs);
     publishLiveStatus();
     return () => window.clearInterval(timer);
   }, [editingLog, employeeDraftActive, employeeMachineSelected, employeeWorkStartedAt, employeeActiveTimer?.key, tab]);
