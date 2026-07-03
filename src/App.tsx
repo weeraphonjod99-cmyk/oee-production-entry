@@ -24,8 +24,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { machines as rawSeedMachines, products as rawProducts, seedLogs as rawSeedLogs } from "./data/oeeMasterData.generated";
+import { FormEvent, memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   appendRemoteLog,
   clearEmployeeMachineStatus,
@@ -133,9 +132,16 @@ const isVisibleProduct = (product: Pick<ProductMaster, "machineId">) => isVisibl
 const isVisibleLog = (log: Pick<ProductionLog, "machineId">) => isVisibleMachineId(log.machineId);
 const isVisibleEmployeeStatus = (status: Pick<EmployeeMachineStatus, "machineId">) => isVisibleMachineId(status.machineId);
 const isVisibleOrderSummary = (summary: Pick<ProductionOrderMachineSummary, "machineId">) => isVisibleMachineId(summary.machineId);
-const seedMachines = rawSeedMachines.filter(isVisibleMachine);
-const products = rawProducts.filter(isVisibleProduct);
-const seedLogs = rawSeedLogs.filter(isVisibleLog);
+const fallbackMachines: Machine[] = [
+  {
+    id: "1-ocp-80t",
+    name: "1# OCP-80T",
+    capacityUnits: 38,
+    capacityMinutes: 190,
+    hasStep: false,
+    rowCount: 0,
+  },
+];
 
 const getThailandDateTimeParts = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -241,8 +247,18 @@ const getEmployeeMachineActivityLabel = (status?: Pick<EmployeeMachineStatus, "a
   return "ร่างรอบันทึก";
 };
 
-const defaultMachine = seedMachines[0];
-const defaultProduct = products.find((product) => product.machineId === defaultMachine.id) ?? products[0];
+const defaultMachine = fallbackMachines[0];
+const defaultProduct: ProductMaster = {
+  id: "default-product",
+  machineId: defaultMachine.id,
+  machineName: defaultMachine.name,
+  partNo: "",
+  productName: "",
+  sampleGoodQty: 0,
+  sampleNgQty: 0,
+  sampleTestQty: 0,
+  step: "-",
+};
 const SHIFT_DAY = "day";
 const SHIFT_NIGHT = "night";
 const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
@@ -582,8 +598,6 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
         status.buttonDetailsUpdatedAt || "",
         status.note || "",
         status.entryUpdatedAt || "",
-        status.updatedAt || "",
-        status.expiresAt || "",
       ].join(":"),
     )
     .join("|");
@@ -1444,6 +1458,120 @@ const orderToForm = (order: ProductionOrder): ProductionOrderForm => ({
   status: order.status || "",
 });
 
+type EmployeeMachineCardView = {
+  activityCode: string;
+  activityStatus: string;
+  hasDraft: boolean;
+  latestLog?: ProductionLog;
+  logCount: number;
+  machine: Machine;
+  orderSummary?: ProductionOrderMachineSummary;
+  productCount: number;
+  sharedStatus?: EmployeeMachineStatus;
+  timerToneClass: string;
+};
+
+type EmployeeMachineCardProps = {
+  card: EmployeeMachineCardView;
+  liveNowMs: number;
+  machineOrderSummariesError: string;
+  machineOrderSummariesLoading: boolean;
+  onOpen: (machineId: string) => void;
+};
+
+const EmployeeMachineCard = memo(function EmployeeMachineCard({
+  card,
+  liveNowMs,
+  machineOrderSummariesError,
+  machineOrderSummariesLoading,
+  onOpen,
+}: EmployeeMachineCardProps) {
+  const { activityCode, activityStatus, hasDraft, latestLog, logCount, machine, orderSummary, productCount, sharedStatus, timerToneClass } = card;
+  const sharedLiveMinutes = sharedStatus ? getSharedStatusLiveMinutes(sharedStatus, liveNowMs ? new Date(liveNowMs) : new Date()) : null;
+  const buttonDetailLines = sharedStatus?.buttonDetails
+    ? sharedStatus.buttonDetails
+        .split(/\n+/)
+        .filter(Boolean)
+        .slice(-3)
+    : [];
+
+  return (
+    <button className={`machine-icon-card ${hasDraft ? timerToneClass : ""}`} onClick={() => onOpen(machine.id)} type="button">
+      <span className="machine-card-header">
+        <span className="machine-icon-symbol">
+          <StampingPressIcon />
+        </span>
+        <strong className="machine-card-name">{machine.name}</strong>
+      </span>
+      {hasDraft && activityStatus && (
+        <span className={`machine-activity-badge ${timerToneClass}`}>
+          {activityCode && <b>{activityCode}</b>}
+          <span>{activityStatus.replace(/^[A-Z]\s*/, "")}</span>
+        </span>
+      )}
+      <span className="machine-card-main">
+        <small>
+          {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
+        </small>
+      </span>
+      <span className={`machine-order-status ${(orderSummary?.pendingCount || 0) > 0 ? "has-orders" : "no-orders"}`}>
+        {machineOrderSummariesLoading ? (
+          <strong>กำลังโหลดออเดอร์...</strong>
+        ) : machineOrderSummariesError ? (
+          <strong>โหลดออเดอร์ไม่ได้</strong>
+        ) : (orderSummary?.pendingCount || 0) > 0 ? (
+          <>
+            <strong>มีออเดอร์รอผลิต {formatNumber(orderSummary?.pendingCount || 0)} รายการ</strong>
+            {(orderSummary?.pendingOrders || []).slice(0, 2).map((order, orderIndex) => (
+              <small key={`${machine.id}-order-${order.rowNumber || orderIndex}`}>
+                #{getProductionOrderSequence(order) || orderIndex + 1} {order.productName || "-"} / {order.partNo || "-"}
+              </small>
+            ))}
+          </>
+        ) : (
+          <strong>ไม่มีออเดอร์การผลิต</strong>
+        )}
+      </span>
+      {sharedStatus && (
+        <span className="machine-shared-status">
+          <strong>{activityStatus || "กำลังกรอก"}</strong>
+          <b>{sharedStatus.userName ? `ผู้กรอก: ${sharedStatus.userName}` : "มีผู้ใช้งานกำลังกรอก"}</b>
+          <small>{sharedStatus.productName || "-"} / {sharedStatus.partNo || "-"}</small>
+          <small>
+            {sharedStatus.activeTimerLabel
+              ? `กำลังนับ: ${sharedStatus.activeTimerLabel}`
+              : `อัปเดตล่าสุด: ${formatSharedStatusTime(sharedStatus.entryUpdatedAt || sharedStatus.updatedAt)}`}
+          </small>
+          <small>
+            Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT{" "}
+            {formatRate(sharedStatus.downtimeMinutes || 0)} นาที
+          </small>
+          {sharedStatus.activeTimerLabel && sharedLiveMinutes !== null && <small>ใช้เวลา {formatDurationMinutes(sharedLiveMinutes)}</small>}
+          <small>
+            Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
+            {sharedStatus.materialOfProduction || "-"}
+          </small>
+          {buttonDetailLines.length > 0 && (
+            <span className="machine-status-details">
+              <span className="machine-status-details-title">รายละเอียดการกดล่าสุด</span>
+              <span className="machine-status-detail-list">
+                {buttonDetailLines.map((detail, detailIndex) => (
+                  <span className="machine-status-detail-item" key={`${machine.id}-detail-${detailIndex}`}>
+                    {detail}
+                  </span>
+                ))}
+              </span>
+            </span>
+          )}
+        </span>
+      )}
+      <span className="machine-card-detail">
+        {latestLog ? `${latestLog.date} · ${shiftLabel(latestLog.shift)} · Good ${formatNumber(latestLog.goodQty)}` : "ยังไม่มีประวัติล่าสุด"}
+      </span>
+    </button>
+  );
+});
+
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
@@ -1465,7 +1593,9 @@ function App() {
   const [dashboardFilters, setDashboardFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
-  const [machines, setMachines] = useState<Machine[]>(seedMachines);
+  const [machines, setMachines] = useState<Machine[]>(fallbackMachines);
+  const [seedProducts, setSeedProducts] = useState<ProductMaster[]>([]);
+  const [seedLogs, setSeedLogs] = useState<ProductionLog[]>([]);
   const [draft, setDraft] = useState<EntryDraft>(() => createEmptyDraft(defaultMachine, defaultProduct));
   const [employeeClearedMachineAt, setEmployeeClearedMachineAt] = useState<Record<string, string>>({});
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
@@ -1502,7 +1632,7 @@ function App() {
   const employeeActiveTimerRef = useRef<EmployeeActiveTimer | null>(null);
   const employeeAutoSubmitKeyRef = useRef("");
   const employeeSelectedMachineRestoredRef = useRef(false);
-  const machinesSignatureRef = useRef(getMachinesSignature(seedMachines));
+  const machinesSignatureRef = useRef(getMachinesSignature(fallbackMachines));
   const remoteLogsSignatureRef = useRef("");
   const employeeStatusesSignatureRef = useRef("");
   const employeePublishedStatusSignatureRef = useRef("");
@@ -1518,6 +1648,35 @@ function App() {
   useEffect(() => {
     employeeSharedMachineStatusesRef.current = employeeSharedMachineStatuses;
   }, [employeeSharedMachineStatuses]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void import("./data/oeeMasterData.generated")
+        .then((seedData) => {
+          if (cancelled) return;
+          const nextMachines = seedData.machines.filter(isVisibleMachine);
+          const nextProducts = seedData.products.filter(isVisibleProduct);
+          const nextLogs = seedData.seedLogs.filter(isVisibleLog);
+          setSeedProducts(nextProducts);
+          setSeedLogs(nextLogs);
+          setMachines((current) => {
+            const stillUsingFallback =
+              current.length === fallbackMachines.length && current.every((machine, index) => machine.id === fallbackMachines[index]?.id);
+            if (!stillUsingFallback || nextMachines.length === 0) return current;
+            machinesSignatureRef.current = getMachinesSignature(nextMachines);
+            return nextMachines;
+          });
+        })
+        .catch(() => {
+          // Keep the lightweight fallback if the generated offline data cannot be loaded.
+        });
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -1769,8 +1928,8 @@ function App() {
 
   const machineNameById = useMemo(() => new Map(machines.map((machine) => [machine.id, machine.name])), [machines]);
   const canonicalProducts = useMemo(
-    () => products.map((product) => withCanonicalMachineName(product, machineNameById)),
-    [machineNameById],
+    () => seedProducts.map((product) => withCanonicalMachineName(product, machineNameById)),
+    [machineNameById, seedProducts],
   );
   const canonicalEmployeeSharedMachineStatuses = useMemo(
     () => employeeSharedMachineStatuses.map((status) => withCanonicalMachineName(status, machineNameById)),
@@ -1876,7 +2035,6 @@ function App() {
         const logSummary = machineLogSummaryByMachineId.get(machine.id);
         const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "");
         const timerExcelCode = getEmployeeTimerExcelCode(activeTimerKey);
-        const sharedLiveMinutes = getSharedStatusLiveMinutes(sharedStatus, employeeReportNow);
         return {
           activityCode: timerExcelCode,
           hasDraft:
@@ -1886,7 +2044,6 @@ function App() {
           machine,
           productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
-          sharedLiveMinutes,
           timerToneClass: getEmployeeTimerToneClass(activeTimerKey),
           activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
           latestLog: logSummary?.latestLog,
@@ -1898,7 +2055,6 @@ function App() {
       draft.machineId,
       employeeDraftActive,
       employeeDraftMachineIds,
-      employeeReportNow,
       employeeSharedStatusByMachineId,
       machineLogSummaryByMachineId,
       machineOrderSummaryByMachineId,
@@ -2310,7 +2466,7 @@ function App() {
     void loadProductDefaults(nextProduct, machine);
   };
 
-  const openEmployeeMachineEntry = (machineId: string) => {
+  const openEmployeeMachineEntry = useCallback((machineId: string) => {
     if (employeeMachineSelected && employeeDraftActive) writeEmployeeStoredDraft(draft);
     window.localStorage.setItem(EMPLOYEE_SELECTED_MACHINE_KEY, machineId);
     if (!loadEmployeeStoredDraftForMachine(machineId)) {
@@ -2339,7 +2495,7 @@ function App() {
     setEmployeeMachineSelected(true);
     setProductSearch("");
     setStatus(`เลือกเครื่อง ${machines.find((machine) => machine.id === machineId)?.name ?? machineId} สำหรับกรอกยอดพนักงาน`);
-  };
+  }, [allLogs, canonicalProducts, draft, employeeDraftActive, employeeMachineSelected, machines]);
 
   const returnToEmployeeMachineMenu = () => {
     window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
@@ -2356,7 +2512,7 @@ function App() {
     }
     employeeSelectedMachineRestoredRef.current = true;
     openEmployeeMachineEntry(storedMachineId);
-  }, [employeeMachineSelected, machines, tab]);
+  }, [employeeMachineSelected, machines, openEmployeeMachineEntry, tab]);
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
     const matchedProduct = findMatchingProduct(machineProductChoices, key, value, draft);
@@ -3653,87 +3809,15 @@ function App() {
               <span>{formatNumber(machines.length)} เครื่อง</span>
             </div>
             <div className="machine-icon-grid">
-              {employeeMachineCards.map(({ activityCode, activityStatus, hasDraft, latestLog, logCount, machine, orderSummary, productCount, sharedLiveMinutes, sharedStatus, timerToneClass }) => (
-                <button
-                  className={`machine-icon-card ${hasDraft ? timerToneClass : ""}`}
-                  key={machine.id}
-                  onClick={() => openEmployeeMachineEntry(machine.id)}
-                  type="button"
-                >
-                  <span className="machine-card-header">
-                    <span className="machine-icon-symbol">
-                      <StampingPressIcon />
-                    </span>
-                    <strong className="machine-card-name">{machine.name}</strong>
-                  </span>
-                  {hasDraft && activityStatus && (
-                    <span className={`machine-activity-badge ${timerToneClass}`}>
-                      {activityCode && <b>{activityCode}</b>}
-                      <span>{activityStatus.replace(/^[A-Z]\s*/, "")}</span>
-                    </span>
-                  )}
-                  <span className="machine-card-main">
-                    <small>
-                      {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
-                    </small>
-                  </span>
-                  <span className={`machine-order-status ${(orderSummary?.pendingCount || 0) > 0 ? "has-orders" : "no-orders"}`}>
-                    {machineOrderSummariesLoading ? (
-                      <strong>กำลังโหลดออเดอร์...</strong>
-                    ) : machineOrderSummariesError ? (
-                      <strong>โหลดออเดอร์ไม่ได้</strong>
-                    ) : (orderSummary?.pendingCount || 0) > 0 ? (
-                      <>
-                        <strong>มีออเดอร์รอผลิต {formatNumber(orderSummary?.pendingCount || 0)} รายการ</strong>
-                        {(orderSummary?.pendingOrders || []).slice(0, 2).map((order, orderIndex) => (
-                          <small key={`${machine.id}-order-${order.rowNumber || orderIndex}`}>
-                            #{getProductionOrderSequence(order) || orderIndex + 1} {order.productName || "-"} / {order.partNo || "-"}
-                          </small>
-                        ))}
-                      </>
-                    ) : (
-                      <strong>ไม่มีออเดอร์การผลิต</strong>
-                    )}
-                  </span>
-                  {sharedStatus && (
-                    <span className="machine-shared-status">
-                      <strong>{activityStatus || "กำลังกรอก"}</strong>
-                      <b>{sharedStatus.userName ? `ผู้กรอก: ${sharedStatus.userName}` : "มีผู้ใช้งานกำลังกรอก"}</b>
-                      <small>{sharedStatus.productName || "-"} / {sharedStatus.partNo || "-"}</small>
-                      <small>
-                        {sharedStatus.activeTimerLabel
-                          ? `กำลังนับ: ${sharedStatus.activeTimerLabel}`
-                          : `อัปเดตล่าสุด: ${formatSharedStatusTime(sharedStatus.entryUpdatedAt || sharedStatus.updatedAt)}`}
-                      </small>
-                      <small>
-                        Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT {formatRate(sharedStatus.downtimeMinutes || 0)} นาที
-                      </small>
-                      {sharedStatus.activeTimerLabel && sharedLiveMinutes !== null && <small>ใช้เวลา {formatDurationMinutes(sharedLiveMinutes)}</small>}
-                      <small>
-                        Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
-                        {sharedStatus.materialOfProduction || "-"}
-                      </small>
-                      {sharedStatus.buttonDetails && (
-                        <span className="machine-status-details">
-                          <span className="machine-status-details-title">รายละเอียดการกด</span>
-                          <span className="machine-status-detail-list">
-                            {sharedStatus.buttonDetails
-                              .split(/\n+/)
-                              .filter(Boolean)
-                              .map((detail, detailIndex) => (
-                                <span className="machine-status-detail-item" key={`${machine.id}-detail-${detailIndex}`}>
-                                  {detail}
-                                </span>
-                              ))}
-                          </span>
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  <span className="machine-card-detail">
-                    {latestLog ? `${latestLog.date} · ${shiftLabel(latestLog.shift)} · Good ${formatNumber(latestLog.goodQty)}` : "ยังไม่มีประวัติล่าสุด"}
-                  </span>
-                </button>
+              {employeeMachineCards.map((card) => (
+                <EmployeeMachineCard
+                  card={card}
+                  key={card.machine.id}
+                  liveNowMs={card.sharedStatus ? employeeReportNow.getTime() : 0}
+                  machineOrderSummariesError={machineOrderSummariesError}
+                  machineOrderSummariesLoading={machineOrderSummariesLoading}
+                  onOpen={openEmployeeMachineEntry}
+                />
               ))}
             </div>
           </section>
