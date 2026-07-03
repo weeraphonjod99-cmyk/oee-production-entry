@@ -3405,35 +3405,7 @@ function App() {
   };
 
   const submitEmergencyStoredEmployeeDrafts = async () => {
-    if (!remoteEnabled || !navigator.onLine || autoSubmittingEmployeeDraft.current) return;
-    const draftKeys = machines.map((machine) => getEmployeeDraftStorageKey(machine.id));
-    for (const draftKey of draftKeys) {
-      const raw = window.localStorage.getItem(draftKey);
-      if (!raw) continue;
-      try {
-        const stored = JSON.parse(raw) as StoredEmployeeDraft;
-        if (!stored?.draft || !stored.emergencySubmitRequestedAt || !hasEmployeeStoredDraftActivity(stored)) continue;
-        const submittedAt = parseStoredDateTime(stored.emergencySubmitRequestedAt) || parseStoredDateTime(stored.savedAt) || new Date();
-        autoSubmittingEmployeeDraft.current = true;
-        const saved = await submitProductionDraft(stored.draft, {
-          activeTimer: stored.activeTimer ?? null,
-          autoSubmit: true,
-          entryEvents: Array.isArray(stored.entryEvents) ? stored.entryEvents : [],
-          entryUser: (Array.isArray(stored.entryEvents) ? stored.entryEvents.find((event) => event.user)?.user : "") || session?.displayName || session?.username || "",
-          keepDraftOnRemoteError: true,
-          resetAfterSave: stored.draft.machineId === draftRef.current.machineId,
-          submittedAt,
-        });
-        if (saved && stored.draft.machineId === draftRef.current.machineId) {
-          clearEmployeeActiveTimer();
-          setEmployeeWorkStartedAt("");
-        }
-      } catch {
-        refreshEmployeeDraftMachineIds();
-      } finally {
-        autoSubmittingEmployeeDraft.current = false;
-      }
-    }
+    return;
   };
 
   const autoSubmitStoredEmployeeDraft = async () => {
@@ -3532,42 +3504,14 @@ function App() {
 
   useEffect(() => {
     if (!remoteLoaded) return;
-    void submitEmergencyStoredEmployeeDrafts();
     void autoSubmitCurrentEmployeeDraft();
     void autoSubmitStoredEmployeeDraft();
     const timer = window.setInterval(() => {
-      void submitEmergencyStoredEmployeeDrafts();
       void autoSubmitCurrentEmployeeDraft();
       void autoSubmitStoredEmployeeDraft();
     }, 30000);
     return () => window.clearInterval(timer);
   }, [allLogs, draft, editingLog, employeeDraftActive, employeeWorkStartedAt, isEmployeeEntry, remoteLoaded]);
-
-  useEffect(() => {
-    if (!isEmployeeEntry || editingLog) return;
-    const queueSystemProblemSubmit = (reason: string) => {
-      queueEmergencyEmployeeSubmit(reason);
-    };
-    const handleOffline = () => queueSystemProblemSubmit("ระบบตัดขาดหรือออฟไลน์");
-    const handleOnline = () => {
-      void submitEmergencyStoredEmployeeDrafts();
-    };
-    const handlePageHide = () => queueSystemProblemSubmit("หน้าเว็บถูกปิดหรือหลุด");
-    const handleError = () => queueSystemProblemSubmit("ระบบเกิด error");
-    const handleUnhandledRejection = () => queueSystemProblemSubmit("ระบบเกิด error");
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("pagehide", handlePageHide);
-    window.addEventListener("error", handleError);
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-    return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("pagehide", handlePageHide);
-      window.removeEventListener("error", handleError);
-      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
-    };
-  }, [editingLog, isEmployeeEntry]);
 
   const saveDraft = async () => {
     setConfirmSaveDialog(null);
