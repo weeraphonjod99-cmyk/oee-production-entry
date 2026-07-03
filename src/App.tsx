@@ -1488,6 +1488,15 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
 }: EmployeeMachineCardProps) {
   const { activityCode, activityStatus, hasDraft, latestLog, logCount, machine, orderSummary, productCount, sharedStatus, timerToneClass } = card;
   const sharedLiveMinutes = sharedStatus ? getSharedStatusLiveMinutes(sharedStatus, liveNowMs ? new Date(liveNowMs) : new Date()) : null;
+  const sharedLiveDowntimeMinutes = sharedStatus
+    ? downtimeFields.reduce((sum, field) => {
+        const fieldMinutes =
+          sharedStatus.activeTimerKey === field.key && sharedLiveMinutes !== null
+            ? sharedLiveMinutes
+            : Number(sharedStatus[field.key] || 0);
+        return sum + fieldMinutes;
+      }, 0)
+    : 0;
   const buttonDetailLines = sharedStatus?.buttonDetails
     ? sharedStatus.buttonDetails
         .split(/\n+/)
@@ -1544,7 +1553,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
           </small>
           <small>
             Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT{" "}
-            {formatRate(sharedStatus.downtimeMinutes || 0)} นาที
+            {formatRate(sharedLiveDowntimeMinutes || sharedStatus.downtimeMinutes || 0)} นาที
           </small>
           {sharedStatus.activeTimerLabel && sharedLiveMinutes !== null && <small>ใช้เวลา {formatDurationMinutes(sharedLiveMinutes)}</small>}
           <small>
@@ -2028,6 +2037,15 @@ function App() {
   const currentMachineSharedActivity = getEmployeeMachineActivityLabel(currentMachineSharedStatus);
   const currentMachineSharedTimerKey = currentMachineSharedStatus?.activeTimerKey || "";
   const currentMachineSharedLiveMinutes = getSharedStatusLiveMinutes(currentMachineSharedStatus, employeeReportNow);
+  const currentMachineSharedDowntimeMinutes = currentMachineSharedStatus
+    ? downtimeFields.reduce((sum, field) => {
+        const fieldMinutes =
+          currentMachineSharedTimerKey === field.key && currentMachineSharedLiveMinutes !== null
+            ? currentMachineSharedLiveMinutes
+            : Number(currentMachineSharedStatus[field.key] || 0);
+        return sum + fieldMinutes;
+      }, 0)
+    : null;
   const employeeMachineCards = useMemo(
     () =>
       machines.map((machine) => {
@@ -2204,11 +2222,12 @@ function App() {
   const visibleWorkStartedAt = isEmployeeEntry ? employeeWorkStartedAt || sharedWorkStartedAt : "";
   const visibleWorkDate = employeeWorkStartedAt ? draft.date : currentMachineSharedStatus?.date || draft.date;
   const visibleWorkShift = employeeWorkStartedAt ? draft.shift : currentMachineSharedStatus?.shift || draft.shift;
-  const visibleDowntimeMinutes = employeeWorkStartedAt ? totalDraftDowntime : Number(currentMachineSharedStatus?.downtimeMinutes ?? totalDraftDowntime);
+  const visibleDowntimeMinutes = employeeWorkStartedAt ? totalDraftDowntime : currentMachineSharedDowntimeMinutes ?? totalDraftDowntime;
   const liveClockWorkMinutes =
     isEmployeeEntry && visibleWorkStartedAt
       ? getElapsedShiftWorkMinutes(visibleWorkDate || getTodayInputValue(), visibleWorkShift, employeeReportNow, visibleWorkStartedAt)
       : draft.workMinutes;
+  const visibleWorkMinutes = isEmployeeEntry ? liveClockWorkMinutes : draft.workMinutes;
   const computedNormalMinutes = Math.max(liveClockWorkMinutes - visibleDowntimeMinutes, 0);
   const employeeEntryStartedAt = useMemo(
     () =>
@@ -2241,6 +2260,13 @@ function App() {
     : "ยังไม่กดเริ่มงานจริง";
   const employeeDraftUpdatedLabel = employeeDraftUpdatedAt ? new Date(employeeDraftUpdatedAt).toLocaleString("th-TH") : "-";
   const employeeDraftTimeline = employeeDraftEvents.slice(0, 8);
+  const visibleDowntimeFieldMinutes = (key: DowntimeKey) => {
+    if (!isEmployeeEntry) return Number(draft[key] || 0);
+    if (employeeActiveTimer?.key === key) return Number(draft[key] || 0);
+    if (!currentMachineSharedStatus) return Number(draft[key] || 0);
+    if (currentMachineSharedTimerKey === key && currentMachineSharedLiveMinutes !== null) return currentMachineSharedLiveMinutes;
+    return Number(currentMachineSharedStatus[key] || 0);
+  };
   const employeeOperatorName = session?.displayName || session?.username || "ไม่ระบุผู้กรอก";
   const employeeTimerEventsByKey = useMemo(() => {
     const grouped = new Map<EmployeeTimerKey, EmployeeDraftEvent[]>();
@@ -4190,7 +4216,7 @@ function App() {
                       readOnly={isEmployeeEntry}
                       required
                       type="number"
-                      value={draft.workMinutes}
+                      value={isEmployeeEntry ? numberInputValue(visibleWorkMinutes) : draft.workMinutes}
                     />
                     <b>นาที</b>
                   </div>
@@ -4358,7 +4384,7 @@ function App() {
                         <b>ช่อง</b>
                       </div>
                     )}
-                    <small>{formatRate(Number(draft[field.key] || 0))} นาที</small>
+                    <small>{formatRate(visibleDowntimeFieldMinutes(field.key))} นาที</small>
                     {isEmployeeEntry && downtimePressTimes[field.key] && (
                       <small className="downtime-press-time">กดล่าสุด {downtimePressTimes[field.key]}</small>
                     )}
@@ -4432,9 +4458,9 @@ function App() {
                     </div>
                     <div>
                       <span>เวลาผลิต</span>
-                      <b>{formatNumber(draft.workMinutes)} นาที</b>
+                      <b>{formatNumber(visibleWorkMinutes)} นาที</b>
                       <small>
-                        Downtime {formatNumber(totalDraftDowntime)} / Normal {formatNumber(computedNormalMinutes)}
+                        Downtime {formatNumber(visibleDowntimeMinutes)} / Normal {formatNumber(computedNormalMinutes)}
                       </small>
                     </div>
                   </div>
