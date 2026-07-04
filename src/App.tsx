@@ -1559,9 +1559,9 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
         </small>
       </span>
       <span className={`machine-order-status ${(orderSummary?.pendingCount || 0) > 0 ? "has-orders" : "no-orders"}`}>
-        {machineOrderSummariesLoading ? (
+        {machineOrderSummariesLoading && !orderSummary ? (
           <strong>กำลังโหลดออเดอร์...</strong>
-        ) : machineOrderSummariesError ? (
+        ) : machineOrderSummariesError && !orderSummary ? (
           <strong>โหลดออเดอร์ไม่ได้</strong>
         ) : (orderSummary?.pendingCount || 0) > 0 ? (
           <>
@@ -2334,6 +2334,7 @@ function App() {
 
   useEffect(() => {
     if (!remoteEnabled || !isEmployeeEntry || employeeMachineSelected) {
+      setMachineOrderSummariesLoading(false);
       if (!isEmployeeEntry) {
         setMachineOrderSummaries([]);
         setMachineOrderSummariesError("");
@@ -2350,7 +2351,6 @@ function App() {
       })
       .catch((error) => {
         if (cancelled) return;
-        setMachineOrderSummaries([]);
         setMachineOrderSummariesError(error instanceof Error ? error.message : "โหลดสรุปออเดอร์การผลิตไม่สำเร็จ");
       })
       .finally(() => {
