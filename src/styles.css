@@ -1556,9 +1556,9 @@ select:disabled {
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 310px;
-  padding: 8px;
+  gap: 6px;
+  min-height: 170px;
+  padding: 6px;
 }
 
 .slot-help {
@@ -1654,25 +1654,25 @@ select:disabled {
   flex-direction: column;
   font-size: 0;
   font-weight: 950;
-  gap: 8px;
+  gap: 5px;
   justify-content: center;
   line-height: 1.25;
-  min-height: 150px;
-  padding: 16px;
+  min-height: 76px;
+  padding: 10px 12px;
   text-align: center;
   width: 100%;
 }
 
 .downtime-button-code {
   display: block;
-  font-size: 46px;
+  font-size: 30px;
   font-weight: 1000;
   line-height: 1;
 }
 
 .downtime-button-title {
   display: block;
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 1000;
   line-height: 1.16;
   max-width: 100%;
@@ -1680,7 +1680,7 @@ select:disabled {
 
 .downtime-button-action {
   display: block;
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 900;
   line-height: 1.2;
   opacity: 0.94;
