@@ -536,7 +536,8 @@ const parseStoredDateTime = (value?: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const employeeStatusHeartbeatMaxAgeMs = 60 * 60 * 1000;
+const employeeStatusHeartbeatMaxAgeMs = 16 * 60 * 60 * 1000;
+const employeeStatusesEmptyReadGrace = 12;
 const employeeStoredDraftResumeMaxAgeMs = 3 * 60 * 1000;
 
 const formatSharedStatusTime = (value?: string) => {
@@ -1833,7 +1834,7 @@ function App() {
           });
         if (freshStatuses.length === 0 && employeeSharedMachineStatusesRef.current.length > 0) {
           employeeStatusesEmptyReadsRef.current += 1;
-          if (employeeStatusesEmptyReadsRef.current < 2) return;
+          if (employeeStatusesEmptyReadsRef.current < employeeStatusesEmptyReadGrace) return;
         } else {
           employeeStatusesEmptyReadsRef.current = 0;
         }
