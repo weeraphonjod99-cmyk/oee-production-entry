@@ -300,6 +300,8 @@ const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
+const EMPLOYEE_MACHINE_STATUS_CACHE_KEY = "oee-production-employee-machine-status-cache-v1";
+const MACHINE_ORDER_SUMMARY_CACHE_KEY = "oee-production-machine-order-summary-cache-v1";
 const ONLINE_CLIENT_ID_KEY = "oee-production-online-client-id-v1";
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 const calculateDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
@@ -642,6 +644,39 @@ const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
       ].join(":"),
     )
     .join("|");
+
+const loadCachedList = <T,>(key: string): T[] => {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveCachedList = <T,>(key: string, items: T[]) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(items));
+  } catch {
+    // Best-effort cache only. The live system must continue even if storage is blocked.
+  }
+};
+
+const loadCachedEmployeeMachineStatuses = () =>
+  loadCachedList<EmployeeMachineStatus>(EMPLOYEE_MACHINE_STATUS_CACHE_KEY)
+    .filter(isVisibleEmployeeStatus)
+    .filter(isFreshEmployeeMachineStatus);
+
+const saveCachedEmployeeMachineStatuses = (statuses: EmployeeMachineStatus[]) =>
+  saveCachedList(EMPLOYEE_MACHINE_STATUS_CACHE_KEY, statuses.filter(isVisibleEmployeeStatus).filter(isFreshEmployeeMachineStatus));
+
+const loadCachedMachineOrderSummaries = () =>
+  loadCachedList<ProductionOrderMachineSummary>(MACHINE_ORDER_SUMMARY_CACHE_KEY).filter(isVisibleOrderSummary);
+
+const saveCachedMachineOrderSummaries = (summaries: ProductionOrderMachineSummary[]) =>
+  saveCachedList(MACHINE_ORDER_SUMMARY_CACHE_KEY, summaries.filter(isVisibleOrderSummary));
 
 const getEmployeeStatusPublishSignature = (status: EmployeeMachineStatus) =>
   [
@@ -1783,9 +1818,9 @@ function App() {
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
-  const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>([]);
+  const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>(() => loadCachedEmployeeMachineStatuses());
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
-  const [machineOrderSummaries, setMachineOrderSummaries] = useState<ProductionOrderMachineSummary[]>([]);
+  const [machineOrderSummaries, setMachineOrderSummaries] = useState<ProductionOrderMachineSummary[]>(() => loadCachedMachineOrderSummaries());
   const [machineOrderSummariesLoading, setMachineOrderSummariesLoading] = useState(false);
   const [machineOrderSummariesError, setMachineOrderSummariesError] = useState("");
   const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
@@ -1815,7 +1850,12 @@ function App() {
 
   useEffect(() => {
     employeeSharedMachineStatusesRef.current = employeeSharedMachineStatuses;
+    saveCachedEmployeeMachineStatuses(employeeSharedMachineStatuses);
   }, [employeeSharedMachineStatuses]);
+
+  useEffect(() => {
+    saveCachedMachineOrderSummaries(machineOrderSummaries);
+  }, [machineOrderSummaries]);
 
   useEffect(() => {
     let cancelled = false;
