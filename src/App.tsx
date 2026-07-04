@@ -12,7 +12,9 @@ import {
   KeyRound,
   LockKeyhole,
   LogOut,
+  MapPin,
   Pencil,
+  RefreshCw,
   Save,
   Search,
   Share2,
@@ -278,6 +280,17 @@ const SHIFT_NIGHT = "night";
 const orderedShiftOptions = [SHIFT_DAY, SHIFT_NIGHT];
 const brandLogoSrc = `${import.meta.env.BASE_URL}jr-logo.png`;
 const productionShareUrl = "https://weeraphonjod99-cmyk.github.io/oee-production-entry/";
+const factoryGeofenceEnabled = (import.meta.env.VITE_FACTORY_GEOFENCE_ENABLED ?? "false").toLowerCase() === "true";
+const parseGeofenceNumber = (value: unknown) => {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const factoryGeofenceLat = parseGeofenceNumber(import.meta.env.VITE_FACTORY_LAT);
+const factoryGeofenceLng = parseGeofenceNumber(import.meta.env.VITE_FACTORY_LNG);
+const factoryGeofenceRadiusM = parseGeofenceNumber(import.meta.env.VITE_FACTORY_RADIUS_M) ?? 100;
+const factoryGeofenceConfigured = factoryGeofenceLat !== null && factoryGeofenceLng !== null;
 const defaultMinutesPerSlot = 5;
 const maxShiftWorkMinutes = 590;
 const realtimeRemoteRefreshMs = 10000;
@@ -288,6 +301,19 @@ const remoteMachinesRefreshMs = 60000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
 const ONLINE_CLIENT_ID_KEY = "oee-production-online-client-id-v1";
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+const calculateDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+  const earthRadiusM = 6371000;
+  const deltaLat = toRadians(toLat - fromLat);
+  const deltaLng = toRadians(toLng - fromLng);
+  const lat1 = toRadians(fromLat);
+  const lat2 = toRadians(toLat);
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusM * c;
+};
 const getEmployeeDraftStorageKey = (machineId: string) => `${EMPLOYEE_DRAFT_KEY}::${machineId || "unknown"}`;
 const getOnlineClientId = () => {
   const existing = window.localStorage.getItem(ONLINE_CLIENT_ID_KEY);
@@ -1590,9 +1616,133 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
   );
 });
 
+type FactoryGeofenceAccess = {
+  accuracyM: number | null;
+  allowed: boolean;
+  checking: boolean;
+  configured: boolean;
+  distanceM: number | null;
+  enabled: boolean;
+  error: string;
+  lastCheckedAt: string;
+  refresh: () => void;
+};
+
+const geofencePassThrough: FactoryGeofenceAccess = {
+  accuracyM: null,
+  allowed: true,
+  checking: false,
+  configured: factoryGeofenceConfigured,
+  distanceM: null,
+  enabled: factoryGeofenceEnabled,
+  error: "",
+  lastCheckedAt: "",
+  refresh: () => undefined,
+};
+
+function useFactoryGeofence(active: boolean): FactoryGeofenceAccess {
+  const [access, setAccess] = useState<Omit<FactoryGeofenceAccess, "refresh">>(() => ({
+    accuracyM: null,
+    allowed: !factoryGeofenceEnabled,
+    checking: false,
+    configured: factoryGeofenceConfigured,
+    distanceM: null,
+    enabled: factoryGeofenceEnabled,
+    error: "",
+    lastCheckedAt: "",
+  }));
+
+  const checkPosition = useCallback(() => {
+    if (!active || !factoryGeofenceEnabled) return;
+
+    if (!factoryGeofenceConfigured || factoryGeofenceLat === null || factoryGeofenceLng === null) {
+      setAccess({
+        accuracyM: null,
+        allowed: false,
+        checking: false,
+        configured: false,
+        distanceM: null,
+        enabled: true,
+        error: "ยังไม่ได้ตั้งค่าพิกัดโรงงาน กรุณาใส่ VITE_FACTORY_LAT และ VITE_FACTORY_LNG",
+        lastCheckedAt: formatInputTime(new Date()),
+      });
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setAccess({
+        accuracyM: null,
+        allowed: false,
+        checking: false,
+        configured: true,
+        distanceM: null,
+        enabled: true,
+        error: "อุปกรณ์นี้ไม่รองรับการตรวจตำแหน่ง GPS",
+        lastCheckedAt: formatInputTime(new Date()),
+      });
+      return;
+    }
+
+    setAccess((current) => ({ ...current, checking: true, error: "" }));
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const distanceM = calculateDistanceMeters(
+          position.coords.latitude,
+          position.coords.longitude,
+          factoryGeofenceLat,
+          factoryGeofenceLng,
+        );
+        const allowed = distanceM <= factoryGeofenceRadiusM;
+        setAccess({
+          accuracyM: position.coords.accuracy,
+          allowed,
+          checking: false,
+          configured: true,
+          distanceM,
+          enabled: true,
+          error: allowed
+            ? ""
+            : `อยู่นอกรัศมี ${Math.round(factoryGeofenceRadiusM)} เมตรจากโซนโรงงาน ไม่อนุญาตให้ใช้งาน`,
+          lastCheckedAt: formatInputTime(new Date()),
+        });
+      },
+      (positionError) => {
+        const message =
+          positionError.code === positionError.PERMISSION_DENIED
+            ? "กรุณาอนุญาต Location/GPS เพื่อใช้งานในโซนโรงงาน"
+            : positionError.code === positionError.TIMEOUT
+              ? "ตรวจตำแหน่งไม่สำเร็จเพราะใช้เวลานานเกินไป กรุณาลองใหม่"
+              : "ตรวจตำแหน่งไม่สำเร็จ กรุณาเปิด GPS แล้วลองอีกครั้ง";
+        setAccess({
+          accuracyM: null,
+          allowed: false,
+          checking: false,
+          configured: true,
+          distanceM: null,
+          enabled: true,
+          error: message,
+          lastCheckedAt: formatInputTime(new Date()),
+        });
+      },
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 },
+    );
+  }, [active]);
+
+  useEffect(() => {
+    if (!active || !factoryGeofenceEnabled) return;
+    checkPosition();
+    const intervalId = window.setInterval(checkPosition, 60000);
+    return () => window.clearInterval(intervalId);
+  }, [active, checkPosition]);
+
+  if (!factoryGeofenceEnabled) return geofencePassThrough;
+  return { ...access, refresh: checkPosition };
+}
+
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
+  const factoryAccess = useFactoryGeofence(Boolean(session));
   const [onlineUserCount, setOnlineUserCount] = useState(1);
   const [onlineUserUpdatedAt, setOnlineUserUpdatedAt] = useState("");
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
@@ -3695,6 +3845,10 @@ function App() {
 
   if (!session) return <LoginScreen onSignedIn={setSession} />;
 
+  if (factoryAccess.enabled && !factoryAccess.allowed) {
+    return <FactoryGeofenceGate access={factoryAccess} onLogout={signOut} />;
+  }
+
   return (
     <div className="app-shell">
       <aside className="side-nav">
@@ -5042,6 +5196,65 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         </table>
       </div>
     </section>
+  );
+}
+
+function FactoryGeofenceGate({ access, onLogout }: { access: FactoryGeofenceAccess; onLogout: () => void }) {
+  const distanceText = access.distanceM === null ? "-" : `${formatNumber(Math.round(access.distanceM))} เมตร`;
+  const accuracyText = access.accuracyM === null ? "-" : `${formatNumber(Math.round(access.accuracyM))} เมตร`;
+  const statusMessage = access.checking
+    ? "กำลังตรวจตำแหน่งปัจจุบัน..."
+    : access.error || "ตำแหน่งนี้อยู่นอกพื้นที่ที่อนุญาตให้ใช้งาน";
+
+  return (
+    <main className="login-screen geofence-screen">
+      <section className="login-card geofence-card">
+        <div className="login-brand">
+          <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
+          <div>
+            <strong>OEE Entry</strong>
+            <span>Factory zone access</span>
+          </div>
+        </div>
+        <div className="login-heading">
+          <MapPin size={24} />
+          <h1>ใช้งานได้เฉพาะในโซนโรงงาน</h1>
+        </div>
+        <p className="geofence-message">{statusMessage}</p>
+        <div className="geofence-status-grid">
+          <div>
+            <span>รัศมีที่อนุญาต</span>
+            <strong>{formatNumber(Math.round(factoryGeofenceRadiusM))} เมตร</strong>
+          </div>
+          <div>
+            <span>ระยะจากโรงงาน</span>
+            <strong>{distanceText}</strong>
+          </div>
+          <div>
+            <span>ความแม่นยำ GPS</span>
+            <strong>{accuracyText}</strong>
+          </div>
+          <div>
+            <span>ตรวจล่าสุด</span>
+            <strong>{access.lastCheckedAt || "-"}</strong>
+          </div>
+        </div>
+        {!access.configured && (
+          <p className="login-error">ต้องตั้งค่า VITE_FACTORY_LAT และ VITE_FACTORY_LNG ก่อนเปิดใช้งานการล็อกพื้นที่</p>
+        )}
+        <div className="geofence-actions">
+          <button className="primary-button" disabled={access.checking} onClick={access.refresh} type="button">
+            <RefreshCw size={16} /> {access.checking ? "กำลังตรวจ..." : "ตรวจตำแหน่งอีกครั้ง"}
+          </button>
+          <button className="ghost-button" onClick={onLogout} type="button">
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
+        <p className="login-note">
+          หากอยู่ในโรงงานแล้วยังเข้าไม่ได้ ให้เปิด Location/GPS และอนุญาตตำแหน่งให้เบราว์เซอร์ก่อนตรวจอีกครั้ง
+        </p>
+      </section>
+    </main>
   );
 }
 

@@ -145,6 +145,66 @@ textarea:disabled {
   margin: 0;
 }
 
+.geofence-screen {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(23, 114, 69, 0.18), transparent 32%),
+    linear-gradient(135deg, #f5f7f4 0%, #edf5ef 100%);
+}
+
+.geofence-card {
+  max-width: 640px;
+}
+
+.geofence-message {
+  background: #fff8eb;
+  border: 1px solid #ffcf8a;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+  margin: 0;
+  padding: 14px 16px;
+}
+
+.geofence-status-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.geofence-status-grid div {
+  background: #f7faf7;
+  border: 1px solid #dce8dd;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.geofence-status-grid span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.geofence-status-grid strong {
+  color: #061b3a;
+  font-size: 18px;
+}
+
+.geofence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.geofence-actions button {
+  flex: 1 1 220px;
+  justify-content: center;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 256px minmax(0, 1fr);
