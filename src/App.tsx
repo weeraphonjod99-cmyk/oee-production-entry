@@ -2132,12 +2132,13 @@ function App() {
   useEffect(() => {
     if (tab !== "employeeEntry" || editingLog) return;
     const activeTimer = employeeActiveTimerRef.current;
-    if (!activeTimer && !employeeWorkStartedAt) return;
+    const workStartedAt = employeeWorkStartedAt || activeTimer?.originalStartedAt || activeTimer?.startedAt || "";
+    if (!activeTimer && !workStartedAt) return;
     setDraft((prev) => {
       const withActiveDowntime =
         activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(prev, activeTimer, employeeReportNow) : prev;
-      return employeeWorkStartedAt
-        ? applyShiftClockRuntime(withActiveDowntime, employeeReportNow, employeeWorkStartedAt)
+      return workStartedAt
+        ? applyShiftClockRuntime(withActiveDowntime, employeeReportNow, workStartedAt)
         : withActiveDowntime;
     });
   }, [employeeReportNow, tab, editingLog, employeeWorkStartedAt]);
@@ -2458,10 +2459,12 @@ function App() {
 
   const totalDraftDowntime = totalDowntime(draft);
   const sharedWorkStartedAt = currentMachineSharedStatus?.workStartedAt || "";
-  const visibleWorkStartedAt = isEmployeeEntry ? employeeWorkStartedAt || sharedWorkStartedAt : "";
-  const visibleWorkDate = employeeWorkStartedAt ? draft.date : currentMachineSharedStatus?.date || draft.date;
-  const visibleWorkShift = employeeWorkStartedAt ? draft.shift : currentMachineSharedStatus?.shift || draft.shift;
-  const visibleDowntimeMinutes = employeeWorkStartedAt ? totalDraftDowntime : currentMachineSharedDowntimeMinutes ?? totalDraftDowntime;
+  const activeTimerWorkStartedAt = employeeActiveTimer?.originalStartedAt || employeeActiveTimer?.startedAt || "";
+  const visibleWorkStartedAt = isEmployeeEntry ? employeeWorkStartedAt || activeTimerWorkStartedAt || sharedWorkStartedAt : "";
+  const hasLocalWorkTimer = Boolean(employeeWorkStartedAt || activeTimerWorkStartedAt);
+  const visibleWorkDate = hasLocalWorkTimer ? draft.date : currentMachineSharedStatus?.date || draft.date;
+  const visibleWorkShift = hasLocalWorkTimer ? draft.shift : currentMachineSharedStatus?.shift || draft.shift;
+  const visibleDowntimeMinutes = hasLocalWorkTimer ? totalDraftDowntime : currentMachineSharedDowntimeMinutes ?? totalDraftDowntime;
   const liveClockWorkMinutes =
     isEmployeeEntry && visibleWorkStartedAt
       ? getElapsedShiftWorkMinutes(visibleWorkDate || getTodayInputValue(), visibleWorkShift, employeeReportNow, visibleWorkStartedAt)
@@ -2481,7 +2484,7 @@ function App() {
   const employeeWorkStartedDate = useMemo(() => parseStoredDateTime(employeeWorkStartedAt), [employeeWorkStartedAt]);
   const sharedWorkStartedDate = useMemo(() => parseStoredDateTime(sharedWorkStartedAt), [sharedWorkStartedAt]);
   const visibleWorkStartedDate = useMemo(() => parseStoredDateTime(visibleWorkStartedAt), [visibleWorkStartedAt]);
-  const visibleWorkStartedUser = employeeWorkStartedAt ? session?.displayName || session?.username || "-" : currentMachineSharedStatus?.userName || "-";
+  const visibleWorkStartedUser = hasLocalWorkTimer ? session?.displayName || session?.username || "-" : currentMachineSharedStatus?.userName || "-";
   const currentMachineSharedWorkMinutes =
     currentMachineSharedStatus?.workStartedAt
       ? getElapsedShiftWorkMinutes(
