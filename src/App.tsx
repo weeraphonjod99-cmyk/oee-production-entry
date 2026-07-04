@@ -1537,7 +1537,7 @@ const orderToForm = (order: ProductionOrder): ProductionOrderForm => ({
 type EmployeeMachineCardView = {
   activityCode: string;
   activityStatus: string;
-  hasDraft: boolean;
+  isLiveActive: boolean;
   latestLog?: ProductionLog;
   localDraft?: StoredEmployeeDraft;
   logCount: number;
@@ -1563,7 +1563,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
   machineOrderSummariesLoading,
   onOpen,
 }: EmployeeMachineCardProps) {
-  const { activityCode, activityStatus, hasDraft, latestLog, localDraft, logCount, machine, orderSummary, productCount, sharedStatus, timerToneClass } = card;
+  const { activityCode, activityStatus, isLiveActive, latestLog, localDraft, logCount, machine, orderSummary, productCount, sharedStatus, timerToneClass } = card;
   const sharedLiveMinutes = sharedStatus ? getSharedStatusLiveMinutes(sharedStatus, liveNowMs ? new Date(liveNowMs) : new Date()) : null;
   const sharedLiveDowntimeMinutes = sharedStatus
     ? downtimeFields.reduce((sum, field) => {
@@ -1575,20 +1575,24 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
       }, 0)
     : 0;
   const buttonDetailLines: string[] = [];
+  const statusUpdatedAt = sharedStatus?.entryUpdatedAt || sharedStatus?.updatedAt || sharedStatus?.activeTimerBaseAt || sharedStatus?.workStartedAt || "";
+  const liveStatusTitle = activityStatus || "กำลังกรอกอยู่";
+  const hiddenLocalDraft = localDraft as StoredEmployeeDraft;
   return (
-    <button className={`machine-icon-card ${hasDraft ? timerToneClass : ""}`} onClick={() => onOpen(machine.id)} type="button">
+    <button className={`machine-icon-card ${isLiveActive ? timerToneClass : ""}`} onClick={() => onOpen(machine.id)} type="button">
       <span className="machine-card-header">
         <span className="machine-icon-symbol">
           <StampingPressIcon />
         </span>
         <strong className="machine-card-name">{machine.name}</strong>
       </span>
-      {hasDraft && activityStatus && (
+      {isLiveActive && (
         <span className={`machine-activity-badge ${timerToneClass}`}>
           {activityCode && <b>{activityCode}</b>}
-          <span>{activityStatus.replace(/^[A-Z]\s*/, "")}</span>
+          <span>{liveStatusTitle.replace(/^[A-Z]\s*/, "")}</span>
         </span>
       )}
+      {!isLiveActive && <span className="machine-live-idle">ไม่มีการกรอกสด</span>}
       <span className="machine-card-main">
         <small>
           {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
@@ -1645,17 +1649,17 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
           )}
         </span>
       )}
-      {!sharedStatus && localDraft && (
-        <span className="machine-shared-status">
+      {localDraft && false && !sharedStatus && (
+        <span className={`machine-shared-status ${timerToneClass}`}>
           <strong>{activityStatus || "ร่างกำลังกรอกอยู่"}</strong>
-          <b>{localDraft.activeTimer ? "กำลังนับเวลาในเครื่องนี้" : "มีร่างการกรอกอยู่ในเครื่องนี้"}</b>
-          <small>{localDraft.draft.productName || "-"} / {localDraft.draft.partNo || "-"}</small>
+          <b>{hiddenLocalDraft.activeTimer ? "กำลังนับเวลาในเครื่องนี้" : "มีร่างการกรอกอยู่ในเครื่องนี้"}</b>
+          <small>{hiddenLocalDraft.draft.productName || "-"} / {hiddenLocalDraft.draft.partNo || "-"}</small>
           <small>
-            Good {formatNumber(localDraft.draft.goodQty || 0)} · NG {formatNumber(localDraft.draft.ngQty || 0)} · DT{" "}
-            {formatRate(totalDowntime(localDraft.draft))} นาที
+            Good {formatNumber(hiddenLocalDraft.draft.goodQty || 0)} · NG {formatNumber(hiddenLocalDraft.draft.ngQty || 0)} · DT{" "}
+            {formatRate(totalDowntime(hiddenLocalDraft.draft))} นาที
           </small>
           <small>
-            อัปเดตล่าสุด {formatSharedStatusTime(localDraft.entryUpdatedAt || localDraft.savedAt)}
+            อัปเดตล่าสุด {formatSharedStatusTime(hiddenLocalDraft.entryUpdatedAt || hiddenLocalDraft.savedAt)}
           </small>
         </span>
       )}
@@ -2281,28 +2285,17 @@ function App() {
         const sharedStatus = employeeSharedStatusByMachineId.get(machine.id);
         const localDraft = employeeStoredDraftByMachineId.get(machine.id);
         const logSummary = machineLogSummaryByMachineId.get(machine.id);
-        const localTimerKey = localDraft?.activeTimer?.key || (localDraft?.workStartedAt ? "work" : "");
-        const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "") || localTimerKey;
-        const localStatusSignal = localDraft
-          ? {
-              activeTimerKey: localTimerKey,
-              activeTimerLabel: localTimerKey ? employeeMachineActivityLabels[localTimerKey] || "" : "",
-              workStartedAt: localDraft.workStartedAt || "",
-            }
-          : undefined;
+        const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "");
         const timerExcelCode = getEmployeeTimerExcelCode(activeTimerKey);
         return {
           activityCode: timerExcelCode,
-          hasDraft:
-            (draft.machineId === machine.id && employeeDraftActive) ||
-            employeeDraftMachineIds.has(machine.id) ||
-            employeeSharedStatusByMachineId.has(machine.id),
+          isLiveActive: Boolean(sharedStatus),
           localDraft,
           machine,
           productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
           timerToneClass: getEmployeeTimerToneClass(activeTimerKey),
-          activityStatus: getEmployeeMachineActivityLabel(sharedStatus ?? localStatusSignal),
+          activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
           latestLog: logSummary?.latestLog,
           logCount: logSummary?.logCount ?? 0,
           orderSummary: machineOrderSummaryByMachineId.get(machine.id),
@@ -2310,8 +2303,6 @@ function App() {
       }),
     [
       draft.machineId,
-      employeeDraftActive,
-      employeeDraftMachineIds,
       employeeStoredDraftByMachineId,
       employeeSharedStatusByMachineId,
       machineLogSummaryByMachineId,

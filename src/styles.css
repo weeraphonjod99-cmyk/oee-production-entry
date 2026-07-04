@@ -766,6 +766,19 @@ h3 {
   min-width: 0;
 }
 
+.machine-live-idle {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #166534;
+  display: block;
+  font-size: 13px;
+  font-weight: 1000;
+  line-height: 1.2;
+  padding: 8px 9px;
+  text-align: center;
+}
+
 @keyframes machineActivityBadgePulse {
   0%,
   100% {
@@ -789,6 +802,21 @@ h3 {
   display: grid;
   gap: 4px;
   padding: 8px 9px;
+}
+
+.machine-shared-status.timer-tone-a,
+.machine-shared-status.timer-tone-c,
+.machine-shared-status.timer-tone-d,
+.machine-shared-status.timer-tone-e,
+.machine-shared-status.timer-tone-n,
+.machine-shared-status.timer-tone-b,
+.machine-shared-status.timer-tone-f,
+.machine-shared-status.timer-tone-g,
+.machine-shared-status.timer-tone-h,
+.machine-shared-status.timer-tone-x {
+  background: var(--timer-bg, #fff7ed);
+  border-color: var(--timer-border, #f59e0b);
+  color: #0f172a;
 }
 
 .machine-shared-status b {
