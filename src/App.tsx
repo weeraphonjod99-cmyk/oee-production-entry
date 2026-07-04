@@ -2457,6 +2457,10 @@ function App() {
     duplicate
       ? `วันที่ผลิต ${targetDraft.date} กะ ${shiftLabel(targetDraft.shift)} (${shiftWindowLabel(targetDraft.date, targetDraft.shift)}) เครื่อง ${duplicate.machineName} Part No. ${duplicate.partNo} Step ${duplicate.step || "-"} มีการบันทึกแล้ว ห้ามบันทึกซ้ำ`
       : "";
+  const isDuplicateRemoteError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error || "");
+    return message.includes("รายการซ้ำ") || message.toLowerCase().includes("duplicate");
+  };
   const duplicateEntry = useMemo(
     () => findDuplicateForDraft(draft, editingLog?.id),
     [duplicateLogsByKey, draft.date, draft.machineId, draft.partNo, draft.shift, draft.step, editingLog?.id],
@@ -2474,7 +2478,6 @@ function App() {
     setStatus(duplicateEntryMessage);
     if (warnedDuplicateKey === duplicateEntryKey) return;
     setWarnedDuplicateKey(duplicateEntryKey);
-    setProblemDialog({ title: "พบรายการซ้ำ", message: duplicateEntryMessage });
   }, [duplicateEntryKey, duplicateEntryMessage, warnedDuplicateKey]);
 
   const applyProductToDraft = (product: ProductMaster, logs = allLogs, machine = currentMachine) => ({
@@ -3480,6 +3483,18 @@ function App() {
       if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
       return true;
     } catch (error) {
+      if (!shouldUpdate && remoteEnabled && isDuplicateRemoteError(error)) {
+        if (!shouldUpdate) clearEmployeeStoredDraft(log.machineId);
+        if (options.resetAfterSave !== false) resetDraft({ clearProduct: isEmployeeEntry });
+        fetchRemoteLogs()
+          .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
+          .catch(() => undefined);
+        const message =
+          "รายการนี้มีอยู่ใน Google Sheet แล้ว ระบบล้างร่างและสถานะเครื่องนี้ให้แล้ว สามารถเลือกงานใหม่หรือเริ่มลงเวลาใหม่ได้";
+        setStatus(message);
+        setProblemDialog({ title: "รายการนี้บันทึกแล้ว", message });
+        return false;
+      }
       if (remoteEnabled || options.keepDraftOnRemoteError) {
         const message =
           error instanceof Error
