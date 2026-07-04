@@ -1539,6 +1539,7 @@ type EmployeeMachineCardView = {
   activityStatus: string;
   hasDraft: boolean;
   latestLog?: ProductionLog;
+  localDraft?: StoredEmployeeDraft;
   logCount: number;
   machine: Machine;
   orderSummary?: ProductionOrderMachineSummary;
@@ -1562,7 +1563,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
   machineOrderSummariesLoading,
   onOpen,
 }: EmployeeMachineCardProps) {
-  const { activityCode, activityStatus, hasDraft, latestLog, logCount, machine, orderSummary, productCount, sharedStatus, timerToneClass } = card;
+  const { activityCode, activityStatus, hasDraft, latestLog, localDraft, logCount, machine, orderSummary, productCount, sharedStatus, timerToneClass } = card;
   const sharedLiveMinutes = sharedStatus ? getSharedStatusLiveMinutes(sharedStatus, liveNowMs ? new Date(liveNowMs) : new Date()) : null;
   const sharedLiveDowntimeMinutes = sharedStatus
     ? downtimeFields.reduce((sum, field) => {
@@ -1642,6 +1643,20 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
               </span>
             </span>
           )}
+        </span>
+      )}
+      {!sharedStatus && localDraft && (
+        <span className="machine-shared-status">
+          <strong>{activityStatus || "ร่างกำลังกรอกอยู่"}</strong>
+          <b>{localDraft.activeTimer ? "กำลังนับเวลาในเครื่องนี้" : "มีร่างการกรอกอยู่ในเครื่องนี้"}</b>
+          <small>{localDraft.draft.productName || "-"} / {localDraft.draft.partNo || "-"}</small>
+          <small>
+            Good {formatNumber(localDraft.draft.goodQty || 0)} · NG {formatNumber(localDraft.draft.ngQty || 0)} · DT{" "}
+            {formatRate(totalDowntime(localDraft.draft))} นาที
+          </small>
+          <small>
+            อัปเดตล่าสุด {formatSharedStatusTime(localDraft.entryUpdatedAt || localDraft.savedAt)}
+          </small>
         </span>
       )}
       <span className="machine-card-detail">
@@ -1818,6 +1833,7 @@ function App() {
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
+  const [employeeStoredDraftByMachineId, setEmployeeStoredDraftByMachineId] = useState<Map<string, StoredEmployeeDraft>>(() => new Map());
   const [employeeSharedMachineStatuses, setEmployeeSharedMachineStatuses] = useState<EmployeeMachineStatus[]>(() => loadCachedEmployeeMachineStatuses());
   const [employeeReportNow, setEmployeeReportNow] = useState(() => new Date());
   const [machineOrderSummaries, setMachineOrderSummaries] = useState<ProductionOrderMachineSummary[]>(() => loadCachedMachineOrderSummaries());
@@ -2262,8 +2278,17 @@ function App() {
     () =>
       machines.map((machine) => {
         const sharedStatus = employeeSharedStatusByMachineId.get(machine.id);
+        const localDraft = employeeStoredDraftByMachineId.get(machine.id);
         const logSummary = machineLogSummaryByMachineId.get(machine.id);
-        const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "");
+        const localTimerKey = localDraft?.activeTimer?.key || (localDraft?.workStartedAt ? "work" : "");
+        const activeTimerKey = sharedStatus?.activeTimerKey || (sharedStatus?.workStartedAt ? "work" : "") || localTimerKey;
+        const localStatusSignal = localDraft
+          ? {
+              activeTimerKey: localTimerKey,
+              activeTimerLabel: localTimerKey ? employeeMachineActivityLabels[localTimerKey] || "" : "",
+              workStartedAt: localDraft.workStartedAt || "",
+            }
+          : undefined;
         const timerExcelCode = getEmployeeTimerExcelCode(activeTimerKey);
         return {
           activityCode: timerExcelCode,
@@ -2271,11 +2296,12 @@ function App() {
             (draft.machineId === machine.id && employeeDraftActive) ||
             employeeDraftMachineIds.has(machine.id) ||
             employeeSharedStatusByMachineId.has(machine.id),
+          localDraft,
           machine,
           productCount: productCountByMachineId.get(machine.id) ?? 0,
           sharedStatus,
           timerToneClass: getEmployeeTimerToneClass(activeTimerKey),
-          activityStatus: getEmployeeMachineActivityLabel(sharedStatus),
+          activityStatus: getEmployeeMachineActivityLabel(sharedStatus ?? localStatusSignal),
           latestLog: logSummary?.latestLog,
           logCount: logSummary?.logCount ?? 0,
           orderSummary: machineOrderSummaryByMachineId.get(machine.id),
@@ -2285,6 +2311,7 @@ function App() {
       draft.machineId,
       employeeDraftActive,
       employeeDraftMachineIds,
+      employeeStoredDraftByMachineId,
       employeeSharedStatusByMachineId,
       machineLogSummaryByMachineId,
       machineOrderSummaryByMachineId,
@@ -2610,6 +2637,7 @@ function App() {
     Boolean(stored.workStartedAt || stored.activeTimer || (Array.isArray(stored.entryEvents) && stored.entryEvents.length > 0));
 
   const refreshEmployeeDraftMachineIds = () => {
+    const draftsByMachineId = new Map<string, StoredEmployeeDraft>();
     const ids = machines
       .filter((machine) => {
         const key = getEmployeeDraftStorageKey(machine.id);
@@ -2619,6 +2647,7 @@ function App() {
           const stored = JSON.parse(raw) as StoredEmployeeDraft;
           const hasActivity = Boolean(stored?.draft) && hasEmployeeStoredDraftActivity(stored);
           if (!hasActivity) window.localStorage.removeItem(key);
+          else draftsByMachineId.set(machine.id, stored);
           return hasActivity;
         } catch {
           window.localStorage.removeItem(key);
@@ -2627,6 +2656,7 @@ function App() {
       })
       .map((machine) => machine.id);
     setEmployeeDraftMachineIds(new Set(ids));
+    setEmployeeStoredDraftByMachineId(draftsByMachineId);
   };
 
   useEffect(() => {
