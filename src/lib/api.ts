@@ -97,6 +97,19 @@ export type OnlineUsersSummary = {
   }>;
 };
 
+export type RoleNotification = {
+  id: string;
+  createdAt: string;
+  targetRoles: string[];
+  sourceRole: string;
+  sourceUser: string;
+  machineId: string;
+  machineName: string;
+  buttonCode: string;
+  buttonLabel: string;
+  message: string;
+};
+
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
   try {
@@ -159,6 +172,51 @@ export async function fetchEmployeeMachineStatuses(): Promise<EmployeeMachineSta
     throw new Error(data.error || "โหลดสถานะเครื่องจาก Google Sheet ไม่สำเร็จ");
   }
   return Array.isArray(data.statuses) ? data.statuses : [];
+}
+
+const normalizeRoleNotification = (item: RoleNotification | (Omit<RoleNotification, "targetRoles"> & { targetRoles?: string[] | string })) => ({
+  ...item,
+  targetRoles: Array.isArray(item.targetRoles)
+    ? item.targetRoles
+    : String(item.targetRoles || "")
+        .split(",")
+        .map((role) => role.trim())
+        .filter(Boolean),
+});
+
+export async function fetchRoleNotifications(role: string, since = ""): Promise<RoleNotification[]> {
+  if (!remoteEnabled) return [];
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "roleNotifications");
+  url.searchParams.set("role", role);
+  if (since) url.searchParams.set("since", since);
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetchWithRetry(url.toString(), { cache: "no-store" }, 1);
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "Load role notifications failed");
+  }
+  return Array.isArray(data.notifications) ? data.notifications.map(normalizeRoleNotification) : [];
+}
+
+export async function createRoleNotification(
+  notification: Omit<RoleNotification, "id" | "createdAt"> & { createdAt?: string; id?: string },
+): Promise<RoleNotification | null> {
+  if (!remoteEnabled) return null;
+  const response = await fetchWithRetry(
+    APPS_SCRIPT_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "createRoleNotification", payload: notification }),
+    },
+    1,
+  );
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "Create role notification failed");
+  }
+  return data.notification ? normalizeRoleNotification(data.notification) : null;
 }
 
 export async function fetchProductionOrders(input: { machineId: string; machineName: string }): Promise<ProductionOrder[]> {

@@ -415,6 +415,65 @@ textarea:disabled {
   line-height: 1;
 }
 
+.role-notification-strip {
+  display: grid;
+  gap: 8px;
+  margin: -6px 0 14px;
+}
+
+.role-notification-card {
+  background: #ffffff;
+  border: 1px solid #d6e2dc;
+  border-left: 6px solid #8b98a7;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.role-notification-card.code-a {
+  border-left-color: #16a34a;
+}
+
+.role-notification-card.code-c {
+  border-left-color: #f59e0b;
+}
+
+.role-notification-card.code-e {
+  border-left-color: #0ea5e9;
+}
+
+.role-notification-card.code-n {
+  border-left-color: #f97316;
+}
+
+.role-notification-card div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.role-notification-card strong {
+  color: #001a41;
+  font-size: 15px;
+}
+
+.role-notification-card span,
+.role-notification-card small {
+  color: #516173;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.role-notification-card p {
+  color: #001a41;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
 .eyebrow {
   color: #667085;
   font-size: 13px;

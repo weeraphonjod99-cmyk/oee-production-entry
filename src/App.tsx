@@ -30,6 +30,7 @@ import { FormEvent, memo, useCallback, useDeferredValue, useEffect, useMemo, use
 import {
   appendRemoteLog,
   clearEmployeeMachineStatus,
+  createRoleNotification,
   fetchEmployeeMachineStatuses,
   fetchMachines,
   fetchPdSheets,
@@ -37,6 +38,7 @@ import {
   fetchProductionOrders,
   fetchProductionOrderSummaries,
   fetchRemoteLogs,
+  fetchRoleNotifications,
   heartbeatOnlineUser,
   remoteEnabled,
   reorderProductionOrder,
@@ -47,6 +49,7 @@ import {
   type PdWorkbook,
   type ProductDefaults,
   type ProductionOrderMachineSummary,
+  type RoleNotification,
 } from "./lib/api";
 import {
   canAccessTab,
@@ -299,6 +302,7 @@ const maxShiftWorkMinutes = 590;
 const realtimeRemoteRefreshMs = 10000;
 const employeeLiveStatusPublishMs = 30000;
 const employeeStatusHeartbeatMs = 60000;
+const roleNotificationsRefreshMs = 15000;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const productionOrderRefreshMs = 30000;
@@ -1864,6 +1868,7 @@ function App() {
   const [productionOrdersError, setProductionOrdersError] = useState("");
   const [productionOrderForm, setProductionOrderForm] = useState<ProductionOrderForm>(emptyProductionOrderForm);
   const [savingProductionOrder, setSavingProductionOrder] = useState(false);
+  const [roleNotifications, setRoleNotifications] = useState<RoleNotification[]>([]);
   const draftRef = useRef(draft);
   const employeeDraftEventsRef = useRef<EmployeeDraftEvent[]>([]);
   const productDefaultsCache = useRef(new Map<string, ProductDefaults>());
@@ -1879,6 +1884,7 @@ function App() {
   const employeeStatusesEmptyReadsRef = useRef(0);
   const employeeSharedMachineStatusesRef = useRef<EmployeeMachineStatus[]>([]);
   const employeeClearedMachineAtRef = useRef<Record<string, string>>({});
+  const roleNotificationLatestRef = useRef("");
 
   useEffect(() => {
     draftRef.current = draft;
@@ -1964,6 +1970,51 @@ function App() {
       window.clearInterval(timer);
       window.removeEventListener("focus", updateWhenVisible);
       document.removeEventListener("visibilitychange", updateWhenVisible);
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!remoteEnabled || !session) return;
+    let cancelled = false;
+    let refreshing = false;
+    const refreshRoleNotifications = async () => {
+      if (refreshing || document.hidden) return;
+      refreshing = true;
+      try {
+        const notifications = await fetchRoleNotifications(session.role, roleNotificationLatestRef.current);
+        if (!cancelled && notifications.length > 0) {
+          const newest = notifications.reduce((latest, item) => (String(item.createdAt) > latest ? String(item.createdAt) : latest), roleNotificationLatestRef.current);
+          roleNotificationLatestRef.current = newest;
+          setRoleNotifications((current) => {
+            const merged = new Map<string, RoleNotification>();
+            [...notifications, ...current].forEach((item) => {
+              if (item.id) merged.set(item.id, item);
+            });
+            return Array.from(merged.values())
+              .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
+              .slice(0, 5);
+          });
+        }
+      } catch {
+        // Notifications are non-blocking; keep the production entry flow fast.
+      } finally {
+        refreshing = false;
+      }
+    };
+    void refreshRoleNotifications();
+    const timer = window.setInterval(() => {
+      void refreshRoleNotifications();
+    }, roleNotificationsRefreshMs);
+    const refreshWhenVisible = () => {
+      if (!document.hidden) void refreshRoleNotifications();
+    };
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [session]);
 
@@ -3138,6 +3189,36 @@ function App() {
       .join("\n");
   };
 
+  const getEmployeeTimerNotificationRoles = (key: EmployeeTimerKey): AppRole[] => {
+    const code = getEmployeeTimerExcelCode(key);
+    const roles = new Set<AppRole>(["admin"]);
+    if (code === "C") {
+      roles.add("qc");
+      return Array.from(roles);
+    }
+    roles.add("production");
+    if (code === "D") roles.add("technician");
+    if (code === "E") roles.add("tooling_repair");
+    return Array.from(roles);
+  };
+
+  const publishRoleNotificationForTimer = (key: EmployeeTimerKey, label: string, targetDraft: EntryDraft, pressedTime: string) => {
+    if (!remoteEnabled || !session) return;
+    const code = getEmployeeTimerExcelCode(key);
+    const machineName = machines.find((machine) => machine.id === targetDraft.machineId)?.name || targetDraft.machineId;
+    const message = `${code || "-"} ${label} | ${machineName} | ${targetDraft.productName || "-"} / ${targetDraft.partNo || "-"} | ${pressedTime}`;
+    void createRoleNotification({
+      targetRoles: getEmployeeTimerNotificationRoles(key),
+      sourceRole: session.role,
+      sourceUser: session.displayName || session.username,
+      machineId: targetDraft.machineId,
+      machineName,
+      buttonCode: code,
+      buttonLabel: label,
+      message,
+    }).catch(() => undefined);
+  };
+
   const confirmEmployeeTimer = () => {
     if (!pendingEmployeeTimer) return;
     const { key, label, pressedDate, pressedTime, startedAt } = pendingEmployeeTimer;
@@ -3199,6 +3280,7 @@ function App() {
     setDraft(stored.draft);
     setEmployeeDraftUpdatedAt(stored.entryUpdatedAt || startedAt);
     publishEmployeeMachineStatus(stored);
+    publishRoleNotificationForTimer(key, label, stored.draft, pressedTime);
     setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
     if (key !== "work") setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setStatus(`บันทึกเวลา ${label} เริ่ม ${pressedTime}`);
@@ -4089,6 +4171,25 @@ function App() {
             </button>
           </div>
         </header>
+
+        {roleNotifications.length > 0 && (
+          <section className="role-notification-strip" aria-live="polite">
+            {roleNotifications.map((notification) => (
+              <article className={`role-notification-card ${getExcelCodeTone(notification.buttonCode)}`} key={notification.id}>
+                <div>
+                  <strong>
+                    {notification.buttonCode || "-"} {notification.buttonLabel}
+                  </strong>
+                  <span>{notification.machineName || notification.machineId || "-"}</span>
+                </div>
+                <p>{notification.message}</p>
+                <small>
+                  {notification.sourceUser || "-"} · {formatSharedStatusTime(notification.createdAt)}
+                </small>
+              </article>
+            ))}
+          </section>
+        )}
 
         {tab === "employeeEntry" && !employeeMachineSelected && (
           <section className="employee-machine-menu">

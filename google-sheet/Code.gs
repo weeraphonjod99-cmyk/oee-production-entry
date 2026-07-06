@@ -7,12 +7,15 @@ const DOWNTIME_CATALOG_SHEET = "downtime_catalog";
 const USER_SHEET = "app_users";
 const ONLINE_USER_SHEET = "app_online_users";
 const EMPLOYEE_STATUS_SHEET = "employee_machine_status";
+const ROLE_NOTIFICATION_SHEET = "role_notifications";
 const SUBMIT_HISTORY_SHEET = "submit_history";
 const SUBMIT_HISTORY_SHEET_ID = 1754160605;
 const ONLINE_USER_ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 const EMPLOYEE_STATUS_HEARTBEAT_MAX_AGE_MS = 16 * 60 * 60 * 1000;
 const EMPLOYEE_STATUS_CACHE_KEY = "employee_machine_statuses_v2";
 const EMPLOYEE_STATUS_CACHE_SECONDS = 3;
+const ROLE_NOTIFICATION_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+const ROLE_NOTIFICATION_MAX_ROWS = 300;
 const HIDDEN_MACHINE_IDS = {
   "1-arc-stack": true,
   "2-arc-stack": true,
@@ -348,6 +351,19 @@ const ONLINE_USER_HEADERS = [
   "userAgent",
 ];
 
+const ROLE_NOTIFICATION_HEADERS = [
+  "id",
+  "createdAt",
+  "targetRoles",
+  "sourceRole",
+  "sourceUser",
+  "machineId",
+  "machineName",
+  "buttonCode",
+  "buttonLabel",
+  "message",
+];
+
 const DOWNTIME_CATALOG_ROWS = [
   ["key", "thLabel", "enLabel", "sortOrder"],
   ["changeoverMinutes", "เปลี่ยนรุ่น", "Changeover", 10],
@@ -376,6 +392,9 @@ function doGet(e) {
     }
     if (action === "employeeMachineStatuses") {
       return jsonResponse({ ok: true, statuses: getEmployeeMachineStatuses() });
+    }
+    if (action === "roleNotifications") {
+      return jsonResponse({ ok: true, notifications: getRoleNotifications(e.parameter || {}) });
     }
     if (action === "productionOrders") {
       return jsonResponse({ ok: true, orders: getProductionOrders(e.parameter || {}) });
@@ -467,6 +486,10 @@ function doPost(e) {
     if (body.action === "clearEmployeeMachineStatus") {
       clearEmployeeMachineStatus(body.payload || {});
       return jsonResponse({ ok: true });
+    }
+    if (body.action === "createRoleNotification") {
+      const notification = createRoleNotification(body.payload || {});
+      return jsonResponse({ ok: true, notification: notification });
     }
     if (body.action === "upsertProductionOrder") {
       const order = upsertProductionOrder(body.payload || {});
@@ -586,6 +609,107 @@ function parseOnlineUserDate(value) {
   if (value instanceof Date) return value;
   const date = new Date(String(value || ""));
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeRoleList(value) {
+  const allowed = {
+    admin: true,
+    production: true,
+    qc: true,
+    tooling_repair: true,
+    technician: true,
+    planning: true,
+  };
+  const source = Array.isArray(value) ? value : String(value || "").split(",");
+  const seen = {};
+  const roles = [];
+  source.forEach(function(item) {
+    const role = String(item || "").trim();
+    if (!role || !allowed[role] || seen[role]) return;
+    seen[role] = true;
+    roles.push(role);
+  });
+  if (!seen.admin) roles.push("admin");
+  return roles;
+}
+
+function createRoleNotification(payload) {
+  const now = new Date();
+  const roles = normalizeRoleList(payload.targetRoles);
+  const notification = {
+    id: String(payload.id || Utilities.getUuid()),
+    createdAt: String(payload.createdAt || now.toISOString()),
+    targetRoles: roles.join(","),
+    sourceRole: String(payload.sourceRole || ""),
+    sourceUser: String(payload.sourceUser || ""),
+    machineId: String(payload.machineId || ""),
+    machineName: String(payload.machineName || ""),
+    buttonCode: String(payload.buttonCode || ""),
+    buttonLabel: String(payload.buttonLabel || ""),
+    message: String(payload.message || ""),
+  };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const sheet = ensureSheet(ROLE_NOTIFICATION_SHEET, ROLE_NOTIFICATION_HEADERS);
+    sheet.appendRow(ROLE_NOTIFICATION_HEADERS.map(function(header) {
+      return notification[header] || "";
+    }));
+    pruneRoleNotifications(sheet, now);
+  } finally {
+    lock.releaseLock();
+  }
+  return normalizeRoleNotification(notification);
+}
+
+function getRoleNotifications(params) {
+  const role = String(params.role || "").trim();
+  if (!role) return [];
+  const sinceDate = parseOnlineUserDate(params.since);
+  const now = new Date();
+  const sheet = ensureSheet(ROLE_NOTIFICATION_SHEET, ROLE_NOTIFICATION_HEADERS);
+  const values = sheet.getDataRange().getValues();
+  const notifications = [];
+  for (let i = values.length - 1; i >= 1; i--) {
+    const item = normalizeRoleNotification(rowToObject(ROLE_NOTIFICATION_HEADERS, values[i]));
+    const createdAt = parseOnlineUserDate(item.createdAt);
+    if (!createdAt) continue;
+    if (now.getTime() - createdAt.getTime() > ROLE_NOTIFICATION_MAX_AGE_MS) continue;
+    if (sinceDate && createdAt.getTime() <= sinceDate.getTime()) continue;
+    if (role !== "admin" && item.targetRoles.indexOf(role) < 0) continue;
+    notifications.push(item);
+    if (notifications.length >= 20) break;
+  }
+  return notifications;
+}
+
+function normalizeRoleNotification(item) {
+  const targetRoles = normalizeRoleList(item.targetRoles);
+  return {
+    id: String(item.id || ""),
+    createdAt: String(item.createdAt || ""),
+    targetRoles: targetRoles,
+    sourceRole: String(item.sourceRole || ""),
+    sourceUser: String(item.sourceUser || ""),
+    machineId: String(item.machineId || ""),
+    machineName: String(item.machineName || ""),
+    buttonCode: String(item.buttonCode || ""),
+    buttonLabel: String(item.buttonLabel || ""),
+    message: String(item.message || ""),
+  };
+}
+
+function pruneRoleNotifications(sheet, now) {
+  const values = sheet.getDataRange().getValues();
+  let keptRows = 0;
+  for (let i = values.length - 1; i >= 1; i--) {
+    const createdAt = parseOnlineUserDate(values[i][1]);
+    const expired = !createdAt || now.getTime() - createdAt.getTime() > ROLE_NOTIFICATION_MAX_AGE_MS;
+    keptRows += expired ? 0 : 1;
+    if (expired || keptRows > ROLE_NOTIFICATION_MAX_ROWS) {
+      sheet.deleteRow(i + 1);
+    }
+  }
 }
 
 function appendLog(payload) {
