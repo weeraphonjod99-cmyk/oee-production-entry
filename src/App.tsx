@@ -4636,7 +4636,7 @@ function App() {
                 <textarea value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} rows={3} />
               </label>
 
-              {isEmployeeEntry && (
+              {false && isEmployeeEntry && (
                 <section className="employee-live-report" aria-live="polite">
                   <div className="employee-live-report-heading">
                     <div>
