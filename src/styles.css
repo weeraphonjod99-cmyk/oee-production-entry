@@ -2264,6 +2264,31 @@ select:disabled {
   margin: 0;
 }
 
+.employee-reason-field {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+
+.employee-reason-field span {
+  color: #7a2e0e;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.employee-reason-field textarea {
+  background: #fffbeb;
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  color: #001b44;
+  font-size: 16px;
+  font-weight: 800;
+  min-height: 96px;
+  padding: 12px;
+  resize: vertical;
+  width: 100%;
+}
+
 .success-modal .primary-button {
   justify-content: center;
   margin-top: 8px;

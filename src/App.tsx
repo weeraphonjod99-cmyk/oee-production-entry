@@ -118,6 +118,9 @@ type PendingEmployeeTimer = {
   startedAt: string;
 };
 
+const employeeTimerRequiresReason = (key: EmployeeTimerKey) =>
+  key === "emergencyStopMinutes" || key === "plannedStopMinutes";
+
 const hiddenMachineIds = new Set([
   "1-arc-stack",
   "2-arc-stack",
@@ -1835,6 +1838,7 @@ function App() {
   const [employeeWorkStartedAt, setEmployeeWorkStartedAt] = useState("");
   const [employeeActiveTimer, setEmployeeActiveTimer] = useState<EmployeeActiveTimer | null>(null);
   const [pendingEmployeeTimer, setPendingEmployeeTimer] = useState<PendingEmployeeTimer | null>(null);
+  const [pendingEmployeeTimerReason, setPendingEmployeeTimerReason] = useState("");
   const [employeeMachineSelected, setEmployeeMachineSelected] = useState(false);
   const [employeeDraftMachineIds, setEmployeeDraftMachineIds] = useState<Set<string>>(() => new Set());
   const [employeeStoredDraftByMachineId, setEmployeeStoredDraftByMachineId] = useState<Map<string, StoredEmployeeDraft>>(() => new Map());
@@ -3028,6 +3032,7 @@ function App() {
     const pressedDate = getTodayInputValue();
     const pressedTime = getCurrentTimeInputValue();
     const startedAt = now.toISOString();
+    setPendingEmployeeTimerReason("");
     setPendingEmployeeTimer({ key, label, pressedDate, pressedTime, startedAt });
     return true;
   };
@@ -3117,6 +3122,13 @@ function App() {
   const confirmEmployeeTimer = () => {
     if (!pendingEmployeeTimer) return;
     const { key, label, pressedDate, pressedTime, startedAt } = pendingEmployeeTimer;
+    const reasonRequired = employeeTimerRequiresReason(key);
+    const typedReason = pendingEmployeeTimerReason.trim();
+    if (reasonRequired && !typedReason) {
+      setProblemDialog({ title: "กรุณากรอกเหตุผล", message: `หัวข้อ ${getEmployeeTimerExcelCode(key)} ${label} ต้องระบุเหตุผลก่อนยืนยัน` });
+      return;
+    }
+    const eventReason = reasonRequired ? `${label} - ${typedReason}` : label;
     const activeTimer = employeeActiveTimerRef.current;
     const isFirstEmployeeEntry = !employeeWorkStartedAt;
     const now = parseStoredDateTime(startedAt) ?? new Date();
@@ -3153,7 +3165,7 @@ function App() {
     recordEmployeeDraftEvent(`เริ่ม ${label}`, `${pressedDate} ${pressedTime}`, {
       at: startedAt,
       key,
-      reason: label,
+      reason: eventReason,
       startedAt,
     });
     if (!employeeWorkStartedAt) setEmployeeWorkStartedAt(startedAt);
@@ -3171,6 +3183,7 @@ function App() {
     setEmployeeDraftSavedAt(new Date(stored.savedAt).toLocaleString("th-TH"));
     if (key !== "work") setDowntimePressTimes((prev) => ({ ...prev, [key]: pressedTime }));
     setStatus(`บันทึกเวลา ${label} เริ่ม ${pressedTime}`);
+    setPendingEmployeeTimerReason("");
     setPendingEmployeeTimer(null);
     setSuccessDialog({ title: "การกรอกสำเร็จ", message: `บันทึกเวลา ${label} เวลา ${pressedTime} แล้ว` });
     setStatus(`บันทึกร่าง ${label} เวลา ${pressedTime} แล้ว ยังไม่ส่ง Google Sheet จนกว่าจะกดส่งยอดบันทึก`);
@@ -4908,11 +4921,32 @@ function App() {
             <p>
               ต้องการบันทึกเวลา {pendingEmployeeTimer.label} เวลา {pendingEmployeeTimer.pressedTime} ใช่หรือไม่
             </p>
+            {employeeTimerRequiresReason(pendingEmployeeTimer.key) && (
+              <label className="employee-reason-field">
+                <span>เหตุผล / Reason</span>
+                <textarea
+                  autoFocus
+                  value={pendingEmployeeTimerReason}
+                  onChange={(event) => setPendingEmployeeTimerReason(event.target.value)}
+                  placeholder="กรอกเหตุผลก่อนยืนยัน"
+                  rows={3}
+                />
+              </label>
+            )}
             <div className="modal-actions">
-              <button className="primary-button" type="button" autoFocus onClick={confirmEmployeeTimer}>
+              <button
+                className="primary-button"
+                type="button"
+                autoFocus={!employeeTimerRequiresReason(pendingEmployeeTimer.key)}
+                disabled={employeeTimerRequiresReason(pendingEmployeeTimer.key) && !pendingEmployeeTimerReason.trim()}
+                onClick={confirmEmployeeTimer}
+              >
                 ยืนยัน
               </button>
-              <button className="ghost-button" type="button" onClick={() => setPendingEmployeeTimer(null)}>
+              <button className="ghost-button" type="button" onClick={() => {
+                setPendingEmployeeTimerReason("");
+                setPendingEmployeeTimer(null);
+              }}>
                 ยกเลิก
               </button>
             </div>
