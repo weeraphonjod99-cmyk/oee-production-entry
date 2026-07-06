@@ -2733,9 +2733,9 @@ function App() {
 
   const openEmployeeMachineEntry = useCallback((machineId: string) => {
     const occupiedStatus = getMachineOccupiedByOtherUser(machineId);
-    if (occupiedStatus) {
-      const machineName = machines.find((machine) => machine.id === machineId)?.name ?? occupiedStatus.machineName ?? machineId;
-      const message = `${machineName} มีผู้ใช้งาน ${occupiedStatus.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(occupiedStatus) || "กำลังกรอก"}) กรุณารอให้ส่งยอดหรือออกจากเครื่องก่อน`;
+    if (occupiedStatus && false) {
+      const machineName = machines.find((machine) => machine.id === machineId)?.name ?? occupiedStatus!.machineName ?? machineId;
+      const message = `${machineName} มีผู้ใช้งาน ${occupiedStatus!.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(occupiedStatus!) || "กำลังกรอก"}) กรุณารอให้ส่งยอดหรือออกจากเครื่องก่อน`;
       window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
       setEmployeeMachineSelected(false);
       setStatus(message);
@@ -2791,10 +2791,11 @@ function App() {
 
   useEffect(() => {
     if (tab !== "employeeEntry" || !employeeMachineSelected || !currentMachineOccupiedByOtherUser) return;
+    return;
     if (employeeDraftActive) writeEmployeeStoredDraft(draft);
     window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
     setEmployeeMachineSelected(false);
-    const message = `${currentMachine.name} มีผู้ใช้งาน ${currentMachineOccupiedByOtherUser.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(currentMachineOccupiedByOtherUser) || "กำลังกรอก"}) ระบบเด้งกลับหน้าเลือกเครื่องเพื่อป้องกันการกรอกชนกัน`;
+    const message = `${currentMachine.name} มีผู้ใช้งาน ${currentMachineOccupiedByOtherUser!.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(currentMachineOccupiedByOtherUser!) || "กำลังกรอก"}) ระบบเด้งกลับหน้าเลือกเครื่องเพื่อป้องกันการกรอกชนกัน`;
     setStatus(message);
     setProblemDialog({ title: "เครื่องนี้มีผู้ใช้อื่นกำลังกรอก", message });
   }, [currentMachine.name, currentMachineOccupiedByOtherUser, draft, employeeDraftActive, employeeMachineSelected, tab]);
@@ -3006,8 +3007,6 @@ function App() {
   const switchEmployeeTimerRealtime = (key: EmployeeTimerKey, label: string) => {
     if (currentMachineOccupiedByOtherUser) {
       const message = `${currentMachine.name} มีผู้ใช้งาน ${currentMachineOccupiedByOtherUser.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(currentMachineOccupiedByOtherUser) || "กำลังกรอก"}) ไม่อนุญาตให้กดซ้อน`;
-      window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
-      setEmployeeMachineSelected(false);
       setStatus(message);
       setProblemDialog({ title: "เครื่องนี้กำลังถูกใช้งาน", message });
       return false;
