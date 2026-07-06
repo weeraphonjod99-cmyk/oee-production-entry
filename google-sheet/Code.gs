@@ -37,8 +37,6 @@ const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
 const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
 const PRODUCTION_ORDER_SPREADSHEET_ID = "1gR-a77vkgVxDu0jdSZ9RPhnGLC5OabIRHSRGBN0hZ18";
 const PRODUCTION_ORDER_MAX_ROWS = 200;
-const PRODUCTION_ORDER_SUMMARY_CACHE_KEY = "production_order_summaries_v1";
-const PRODUCTION_ORDER_SUMMARY_CACHE_SECONDS = 60;
 const PRODUCTION_ORDER_COLUMNS = {
   no: 1,
   openedDate: 2,
@@ -960,15 +958,6 @@ function isCompletedProductionOrder(order) {
 }
 
 function getProductionOrderSummaries() {
-  const cache = CacheService.getScriptCache();
-  const cached = cache.get(PRODUCTION_ORDER_SUMMARY_CACHE_KEY);
-  if (cached) {
-    try {
-      return JSON.parse(cached);
-    } catch (error) {
-      cache.remove(PRODUCTION_ORDER_SUMMARY_CACHE_KEY);
-    }
-  }
   const book = openProductionOrderWorkbook();
   const machines = getMachines();
   const summaries = machines.map(function(machine) {
@@ -1013,7 +1002,6 @@ function getProductionOrderSummaries() {
       }),
     };
   });
-  cache.put(PRODUCTION_ORDER_SUMMARY_CACHE_KEY, JSON.stringify(summaries), PRODUCTION_ORDER_SUMMARY_CACHE_SECONDS);
   return summaries;
 }
 
@@ -1068,7 +1056,6 @@ function upsertProductionOrder(payload) {
     String(payload.stock || ""),
   ];
   sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
-  CacheService.getScriptCache().remove(PRODUCTION_ORDER_SUMMARY_CACHE_KEY);
   return getProductionOrders({ machineId: machineId, machineName: sheet.getName() }).filter(function(order) {
     return Number(order.rowNumber || 0) === targetRow;
   })[0] || {

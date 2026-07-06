@@ -301,6 +301,7 @@ const employeeLiveStatusPublishMs = 30000;
 const employeeStatusHeartbeatMs = 60000;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
+const productionOrderRefreshMs = 30000;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
 const EMPLOYEE_MACHINE_STATUS_CACHE_KEY = "oee-production-employee-machine-status-cache-v1";
@@ -2416,22 +2417,27 @@ function App() {
       return;
     }
     let cancelled = false;
-    setMachineOrderSummariesLoading(true);
-    setMachineOrderSummariesError("");
-    fetchProductionOrderSummaries()
-      .then((summaries) => {
-        if (cancelled) return;
-        setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary));
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setMachineOrderSummariesError(error instanceof Error ? error.message : "โหลดสรุปออเดอร์การผลิตไม่สำเร็จ");
-      })
-      .finally(() => {
-        if (!cancelled) setMachineOrderSummariesLoading(false);
-      });
+    const loadSummaries = (showLoading: boolean) => {
+      if (showLoading) setMachineOrderSummariesLoading(true);
+      setMachineOrderSummariesError("");
+      fetchProductionOrderSummaries()
+        .then((summaries) => {
+          if (cancelled) return;
+          setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary));
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setMachineOrderSummariesError(error instanceof Error ? error.message : "โหลดสรุปออเดอร์การผลิตไม่สำเร็จ");
+        })
+        .finally(() => {
+          if (!cancelled && showLoading) setMachineOrderSummariesLoading(false);
+        });
+    };
+    loadSummaries(true);
+    const timer = window.setInterval(() => loadSummaries(false), productionOrderRefreshMs);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [employeeMachineSelected, isEmployeeEntry]);
 
@@ -2442,24 +2448,29 @@ function App() {
       return;
     }
     let cancelled = false;
-    setProductionOrdersLoading(true);
-    setProductionOrdersError("");
-    fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
-      .then((orders) => {
-        if (cancelled) return;
-        setProductionOrders(orders);
-        setProductionOrderForm(emptyProductionOrderForm);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setProductionOrders([]);
-        setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ");
-      })
-      .finally(() => {
-        if (!cancelled) setProductionOrdersLoading(false);
-      });
+    const loadOrders = (showLoading: boolean, resetForm: boolean) => {
+      if (showLoading) setProductionOrdersLoading(true);
+      setProductionOrdersError("");
+      fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
+        .then((orders) => {
+          if (cancelled) return;
+          setProductionOrders(orders);
+          if (resetForm) setProductionOrderForm(emptyProductionOrderForm);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setProductionOrders([]);
+          setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ");
+        })
+        .finally(() => {
+          if (!cancelled && showLoading) setProductionOrdersLoading(false);
+        });
+    };
+    loadOrders(true, true);
+    const timer = window.setInterval(() => loadOrders(false, false), productionOrderRefreshMs);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [currentMachine.id, currentMachine.name, employeeMachineSelected, isEmployeeEntry]);
 
@@ -2905,6 +2916,9 @@ function App() {
       const savedOrder = requestedSequence > 0 ? await reorderProductionOrder(orderPayload) : await upsertProductionOrder(orderPayload);
       const orders = await fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name });
       setProductionOrders(orders);
+      fetchProductionOrderSummaries()
+        .then((summaries) => setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary)))
+        .catch(() => undefined);
       setProductionOrderForm(emptyProductionOrderForm);
       setSuccessDialog({
         title: productionOrderForm.rowNumber ? "แก้ไขออเดอร์แล้ว" : "เพิ่มออเดอร์แล้ว",
@@ -3598,6 +3612,9 @@ function App() {
             .then((orders) => setProductionOrders(orders))
             .catch((error) => setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ"));
         }
+        fetchProductionOrderSummaries()
+          .then((summaries) => setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary)))
+          .catch(() => undefined);
       }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
