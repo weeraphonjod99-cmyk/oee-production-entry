@@ -3009,12 +3009,6 @@ function App() {
   };
 
   const switchEmployeeTimerRealtime = (key: EmployeeTimerKey, label: string) => {
-    if (currentMachineOccupiedByOtherUser) {
-      const message = `${currentMachine.name} มีผู้ใช้งาน ${currentMachineOccupiedByOtherUser.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(currentMachineOccupiedByOtherUser) || "กำลังกรอก"}) ไม่อนุญาตให้กดซ้อน`;
-      setStatus(message);
-      setProblemDialog({ title: "เครื่องนี้กำลังถูกใช้งาน", message });
-      return false;
-    }
     if (!canPressEmployeeTimerForRole(session?.role, key)) {
       const message = `Role ${employeeRoleLabel(session?.role || "production")} ไม่มีสิทธิ์กดหัวข้อ ${getEmployeeTimerExcelCode(key) || ""} ${label}`;
       setStatus(message);
