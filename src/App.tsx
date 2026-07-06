@@ -1502,7 +1502,18 @@ const productionOrderKey = (order: ProductionOrder) =>
 
 const isCompletedProductionOrder = (order: ProductionOrder) => {
   const status = normalizeText(order.status);
-  return status.includes("จบ") || status.includes("complete") || status.includes("closed") || status.includes("finished");
+  const progress = Number(String(order.progress || "").replace(/[^\d.-]/g, "")) || 0;
+  return (
+    status.includes("จบ") ||
+    status.includes("เสร็จ") ||
+    status.includes("complete") ||
+    status.includes("completed") ||
+    status.includes("closed") ||
+    status.includes("finished") ||
+    status.includes("done") ||
+    Boolean(String(order.endDate || "").trim()) ||
+    progress >= 100
+  );
 };
 
 const getProductionOrderSequence = (order: ProductionOrder) => Number(String(order.no || "").replace(/[^\d.-]/g, "")) || 0;
