@@ -1622,7 +1622,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
             <strong>มีออเดอร์รอผลิต {formatNumber(orderSummary?.pendingCount || 0)} รายการ</strong>
             {(orderSummary?.pendingOrders || []).slice(0, 2).map((order, orderIndex) => (
               <small key={`${machine.id}-order-${order.rowNumber || orderIndex}`}>
-                #{getProductionOrderSequence(order) || orderIndex + 1} {order.productName || "-"} / {order.partNo || "-"}
+                #{getProductionOrderSequence(order) || orderIndex + 1} Order {order.orderNo || "-"} / {order.productName || "-"} / {order.partNo || "-"}
               </small>
             ))}
           </>
@@ -4244,6 +4244,7 @@ function App() {
                             <span className="pending-order-rank">{sequence ? `#${sequence}` : "ยังไม่จัดลำดับ"}</span>
                             <span className="pending-order-main">
                               <strong>{order.productName || "-"}</strong>
+                              <b className="pending-order-number">Order No. {order.orderNo || "-"}</b>
                               <small>Part No. {order.partNo || "-"} • Order {order.orderNo || "-"}</small>
                             </span>
                             <span className="pending-order-meta">
@@ -4288,7 +4289,7 @@ function App() {
                       />
                       <input
                         onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, orderNo: event.target.value }))}
-                        placeholder="Order No."
+                        placeholder="เลขออเดอร์ / Order No."
                         value={productionOrderForm.orderNo}
                       />
                       <input

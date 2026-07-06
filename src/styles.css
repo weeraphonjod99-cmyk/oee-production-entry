@@ -1361,6 +1361,20 @@ select:disabled {
   font-weight: 800;
 }
 
+.pending-order-number {
+  align-self: start;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  color: #9a3412;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 1000;
+  line-height: 1.2;
+  padding: 4px 7px;
+  width: fit-content;
+}
+
 .pending-order-meta {
   grid-column: 1 / -1;
 }
