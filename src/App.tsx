@@ -33,7 +33,6 @@ import {
   createRoleNotification,
   fetchEmployeeMachineStatuses,
   fetchMachines,
-  fetchPdSheets,
   fetchProductDefaults,
   fetchProductionOrders,
   fetchProductionOrderSummaries,
@@ -80,7 +79,7 @@ import {
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
-type TabId = "employeeEntry" | "entry" | "dashboard" | "reports" | "pd" | "history" | "master" | "users";
+type TabId = "employeeEntry" | "entry" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -1823,10 +1822,6 @@ function App() {
   const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
   const [remoteLoaded, setRemoteLoaded] = useState(!remoteEnabled);
   const [saving, setSaving] = useState(false);
-  const [pdSheets, setPdSheets] = useState<PdWorkbook[]>([]);
-  const [pdLoading, setPdLoading] = useState(false);
-  const [pdError, setPdError] = useState("");
-  const [pdUpdatedAt, setPdUpdatedAt] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [historySearch, setHistorySearch] = useState("");
   const deferredProductSearch = useDeferredValue(productSearch);
@@ -2142,36 +2137,6 @@ function App() {
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("employeeEntry");
   }, [session, tab]);
-
-  const loadPdSheets = async (silent = false) => {
-    if (!remoteEnabled) {
-      setPdError("ยังไม่ได้ตั้งค่า Google Sheet API");
-      return;
-    }
-    if (!silent) setPdLoading(true);
-    try {
-      const sources = await fetchPdSheets();
-      setPdSheets(sources);
-      setPdUpdatedAt(new Date().toLocaleString("th-TH"));
-      setPdError("");
-      setStatus(`อัปเดตข้อมูล PD แล้ว (${sources.length} ไฟล์)`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "โหลดข้อมูล PD ไม่สำเร็จ";
-      setPdError(message);
-      setStatus(message);
-    } finally {
-      if (!silent) setPdLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tab !== "pd") return;
-    void loadPdSheets();
-    const timer = window.setInterval(() => {
-      void loadPdSheets(true);
-    }, 60000);
-    return () => window.clearInterval(timer);
-  }, [tab]);
 
   useEffect(() => {
     if (tab !== "employeeEntry" && tab !== "dashboard") return;
@@ -4110,9 +4075,6 @@ function App() {
               <BarChart3 size={18} /> Dashboard
             </button>
           )}
-          <button className={tab === "pd" ? "active" : ""} onClick={() => setTab("pd")} type="button">
-            <TableProperties size={18} /> PD Sheets
-          </button>
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ
           </button>
@@ -4951,16 +4913,6 @@ function App() {
             onDownloadPdf={downloadPdfReport}
             onUseLatest={useLatestReportDate}
             setFilters={setReportFilters}
-          />
-        )}
-
-        {tab === "pd" && (
-          <PdSheetsView
-            error={pdError}
-            loading={pdLoading}
-            onRefresh={() => void loadPdSheets()}
-            sources={pdSheets}
-            updatedAt={pdUpdatedAt}
           />
         )}
 

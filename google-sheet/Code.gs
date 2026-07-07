@@ -406,7 +406,7 @@ function doGet(e) {
       return jsonResponse({ ok: true, result: auditEmployeeMachineStatuses() });
     }
     if (action === "pdSheets") {
-      return jsonResponse({ ok: true, sources: getPdExternalSheets() });
+      return jsonResponse({ ok: true, sources: [], disabled: true });
     }
     if (action === KPI_REFRESH_ACTION || action === "kpi") {
       return jsonResponse({ ok: true, result: refreshKpiSheets() });
@@ -2926,7 +2926,7 @@ function refreshKpiSheets() {
   const book = getWorkbook();
   const refreshedAt = new Date().toISOString();
   ensureKpiAutoRefreshTrigger();
-  const capacityLookup = buildKpiCapacityLookup();
+  const capacityLookup = {};
   const rawLogs = getLogs(100000);
   const logs = dedupeKpiLogs(rawLogs, capacityLookup);
   const duplicateRowsRemoved = rawLogs.length - logs.length;
@@ -2946,17 +2946,6 @@ function refreshKpiSheets() {
     refreshedAt,
     true
   );
-  const pdTargets = writeKpiReportsToPdBooks(
-    logs,
-    machineRows,
-    machineStepRows,
-    machineJobStepRows,
-    dailyRows,
-    rawLogs.length,
-    duplicateRowsRemoved,
-    refreshedAt
-  );
-
   return {
     spreadsheetId: book.getId(),
     spreadsheetUrl: book.getUrl(),
@@ -2976,7 +2965,7 @@ function refreshKpiSheets() {
       KPI_DAILY_DETAIL_SHEET,
       KPI_NOTES_SHEET,
     ],
-    targets: [mainTarget].concat(pdTargets),
+    targets: [mainTarget],
   };
 }
 
@@ -3006,35 +2995,7 @@ function writeKpiReportToBook(book, logs, machineRows, machineStepRows, machineJ
 }
 
 function writeKpiReportsToPdBooks(logs, machineRows, machineStepRows, machineJobStepRows, dailyRows, rawCount, duplicateRowsRemoved, refreshedAt) {
-  return PD_EXTERNAL_SHEETS.map(function(source) {
-    try {
-      const book = openPdSpreadsheet(source);
-      const result = writeKpiReportToBook(
-        book,
-        logs,
-        machineRows,
-        machineStepRows,
-        machineJobStepRows,
-        dailyRows,
-        rawCount,
-        duplicateRowsRemoved,
-        refreshedAt,
-        false
-      );
-      result.label = source.label;
-      result.gid = source.gid || "";
-      return result;
-    } catch (error) {
-      return {
-        ok: false,
-        label: source.label,
-        spreadsheetId: source.id,
-        spreadsheetUrl: source.url,
-        gid: source.gid || "",
-        error: String(error && error.message ? error.message : error),
-      };
-    }
-  });
+  return [];
 }
 
 function ensureKpiAutoRefreshTrigger() {
@@ -3051,49 +3012,11 @@ function ensureKpiAutoRefreshTrigger() {
 }
 
 function openPdSpreadsheet(source) {
-  const nativeId = getNativePdSpreadsheetId(source);
-  return SpreadsheetApp.openById(nativeId);
+  throw new Error("PD Sheets integration is disabled.");
 }
 
 function getNativePdSpreadsheetId(source) {
-  try {
-    const file = Drive.Files.get(source.id);
-    if (file.mimeType === MimeType.GOOGLE_SHEETS || file.mimeType === "application/vnd.google-apps.spreadsheet") {
-      return source.id;
-    }
-
-    const modifiedDate = file.modifiedDate || file.modifiedTime || "";
-    const cacheKey = KPI_PD_CACHE_PREFIX + source.id;
-    const properties = PropertiesService.getScriptProperties();
-    const cached = parseJsonSafe(properties.getProperty(cacheKey));
-    if (cached && cached.id && cached.modifiedDate === modifiedDate) {
-      try {
-        SpreadsheetApp.openById(cached.id);
-        return cached.id;
-      } catch (error) {
-        // Cache copy was removed; create a fresh converted copy below.
-      }
-    }
-
-    const copy = Drive.Files.copy(
-      {
-        title: "OEE KPI cache - " + (file.title || source.label || source.id),
-        mimeType: MimeType.GOOGLE_SHEETS,
-      },
-      source.id
-    );
-    if (cached && cached.id && cached.id !== copy.id) {
-      try {
-        Drive.Files.trash(cached.id);
-      } catch (error) {
-        // Old cache cleanup is best effort only.
-      }
-    }
-    properties.setProperty(cacheKey, JSON.stringify({ id: copy.id, modifiedDate: modifiedDate }));
-    return copy.id;
-  } catch (error) {
-    return source.id;
-  }
+  return "";
 }
 
 function parseJsonSafe(value) {
@@ -3105,36 +3028,11 @@ function parseJsonSafe(value) {
 }
 
 function buildKpiCapacityLookup() {
-  const lookup = {};
-  PD_EXTERNAL_SHEETS.forEach(function(source) {
-    try {
-      const book = openPdSpreadsheet(source);
-      readPdCapacityRows(book, source).forEach(function(item) {
-        addKpiCapacityLookup(lookup, item);
-      });
-    } catch (error) {
-      // If a PD source is temporarily unavailable, KPI falls back to log speed.
-    }
-  });
-  return lookup;
+  return {};
 }
 
 function readPdCapacityRows(book, source) {
-  const rows = [];
-  book.getSheets().forEach(function(sheet) {
-    if (isKpiOutputSheet(sheet.getName())) return;
-    const lastRow = Math.min(sheet.getLastRow(), PD_KPI_MAX_ROWS_PER_SHEET);
-    const lastColumn = Math.min(sheet.getLastColumn(), PD_MAX_COLUMNS_PER_SHEET);
-    if (lastRow < 1 || lastColumn < 1) return;
-    const values = trimPdValues(sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues());
-    const layout = detectPdCapacityLayout(values);
-    if (!layout) return;
-    values.slice(layout.headerRow + 1).forEach(function(row) {
-      const item = extractPdCapacityRow(row, layout, source, sheet.getName());
-      if (item) rows.push(item);
-    });
-  });
-  return rows;
+  return [];
 }
 
 function isKpiOutputSheet(name) {
@@ -3251,7 +3149,7 @@ function addKpiCapacityLookup(lookup, item) {
       lookup[key] = {
         target8h: item.target8h,
         speedPcsPerMinute: item.speedPcsPerMinute,
-        source: "PD capacity " + item.sourceLabel + " / " + item.sheetName,
+        source: "External capacity " + item.sourceLabel + " / " + item.sheetName,
       };
     }
   });
@@ -3824,8 +3722,8 @@ function buildKpiNotesRows(refreshedAt, rawCount, usedCount, duplicateRowsRemove
   return [
     ["Method", "KPI % = Actual Output / Target Qty. Target Qty = Work Minutes x Speed pcs/min."],
     ["Actual Output", "Good Qty + NG Qty + Test Qty."],
-    ["Speed pcs/min", "Priority 1: PD capacity by Machine + Part/Product + Step. Priority 2: if machineSpeed >= 1000, divide by 480. Priority 3: machineSpeed x cavityQty."],
-    ["PD refresh", "PD Office files are converted to a temporary Google Sheets cache for read-only KPI calculation. The cache refreshes when the source file modified date changes."],
+    ["Speed pcs/min", "Priority 1: if machineSpeed >= 1000, divide by 480. Priority 2: machineSpeed x cavityQty."],
+    ["External capacity", "Disabled. KPI uses production log speed only."],
     ["Auto refresh", "KPI auto refresh trigger runs every 10 minutes after refreshKpi is called once."],
     ["Availability %", "Normal Minutes / Work Minutes."],
     ["Quality %", "Good Qty / (Good Qty + NG Qty). Test Qty is excluded from quality."],
@@ -3838,8 +3736,6 @@ function buildKpiNotesRows(refreshedAt, rawCount, usedCount, duplicateRowsRemove
     ["Duplicate rows removed", duplicateRowsRemoved],
     ["Duplicate rule", "Same date + shift/start + machine + product + part + step keeps google-sheet/latest over excel-seed."],
     ["Refreshed at", refreshedAt],
-    ["PD 1", PD_EXTERNAL_SHEETS[0].url],
-    ["PD 2", PD_EXTERNAL_SHEETS[1].url],
   ];
 }
 
@@ -4513,6 +4409,7 @@ function getNumberHeadersForSheet(name) {
 }
 
 function getPdExternalSheets() {
+  return [];
   return PD_EXTERNAL_SHEETS.map(function(source) {
     try {
       const gid = source.gid || "0";

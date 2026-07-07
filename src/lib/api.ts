@@ -338,16 +338,7 @@ export async function clearEmployeeMachineStatus(machineId: string, clearedAt?: 
 }
 
 export async function fetchPdSheets(): Promise<PdWorkbook[]> {
-  if (!remoteEnabled) return [];
-  const url = new URL(APPS_SCRIPT_URL);
-  url.searchParams.set("action", "pdSheets");
-  url.searchParams.set("_", String(Date.now()));
-  const response = await fetch(url.toString(), { cache: "no-store" });
-  const data = await parseJsonResponse(response);
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || "โหลดข้อมูล PD จาก Google Sheet ไม่สำเร็จ");
-  }
-  return Array.isArray(data.sources) ? data.sources : [];
+  return [];
 }
 
 export async function appendRemoteLog(log: ProductionLog): Promise<ProductionLog> {
