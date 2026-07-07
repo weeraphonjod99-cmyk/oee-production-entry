@@ -456,6 +456,9 @@ function doGet(e) {
     if (action === "repairOeeMinuteOutputValues") {
       return jsonResponse({ ok: true, result: repairOeeMinuteOutputValues() });
     }
+    if (action === "repairOeeMinuteOutputFormulas") {
+      return jsonResponse({ ok: true, result: repairOeeMinuteOutputValues() });
+    }
     if (action === "repairNegativeOeeMinuteValues") {
       return jsonResponse({ ok: true, result: repairNegativeOeeMinuteValues() });
     }
@@ -2359,7 +2362,7 @@ function repairOeeMinuteOutputValues() {
   const result = {
     sheets: 0,
     rows: 0,
-    cells: 0,
+    formulas: 0,
     skippedSheets: [],
   };
 
@@ -2373,44 +2376,29 @@ function repairOeeMinuteOutputValues() {
       const rowCount = Math.max(sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, 0);
       if (rowCount <= 0) return;
 
-      const sourceRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalSlot, rowCount, 9);
       const targetRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalMinutes, rowCount, 9);
-      const sourceValues = sourceRange.getValues();
-      const targetValues = targetRange.getValues();
       const targetFormulas = targetRange.getFormulas();
-      const nextValues = [];
+      const nextFormulas = [];
       let changed = false;
       let changedRows = {};
 
       for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        const nextRow = [];
-        const hasSourceMinute = sourceValues[rowIndex].some(function(value) {
-          return value !== "" && value != null && !isNaN(Number(value));
-        });
+        const rowNumber = OEE_FIRST_DATA_ROW + rowIndex;
+        const expectedFormulas = buildOeeMinuteOutputFormulas(rowNumber, layout);
+        nextFormulas.push(expectedFormulas);
 
         for (let columnIndex = 0; columnIndex < 9; columnIndex++) {
-          const sourceValue = sourceValues[rowIndex][columnIndex];
-          const expectedValue = hasSourceMinute && sourceValue !== "" && sourceValue != null && !isNaN(Number(sourceValue))
-            ? nonNegativeNumber(sourceValue)
-            : "";
-          nextRow.push(expectedValue);
-
-          const currentValue = targetValues[rowIndex][columnIndex];
           const currentFormula = targetFormulas[rowIndex][columnIndex];
-          const currentComparable = currentValue === "" || currentValue == null || isNaN(Number(currentValue))
-            ? ""
-            : nonNegativeNumber(currentValue);
-          if (currentFormula || currentComparable !== expectedValue) {
+          if (currentFormula !== expectedFormulas[columnIndex]) {
             changed = true;
             changedRows[rowIndex] = true;
-            result.cells++;
+            result.formulas++;
           }
         }
-        nextValues.push(nextRow);
       }
 
       if (changed) {
-        targetRange.setNumberFormat("0.00").setValues(nextValues);
+        targetRange.setNumberFormat("0.00").setFormulas(nextFormulas);
         result.sheets++;
         result.rows += Object.keys(changedRows).length;
       }
@@ -2519,17 +2507,10 @@ function writeOeeInputRow(sheet, layout, row, log) {
   sheet.getRange(row, layout.normalSlot).setNumberFormat("0.##").setValue(normalMinutes);
   sheet.getRange(row, layout.downtimeStart, 1, downtimeMinutes.length).setNumberFormat("0.##");
   sheet.getRange(row, layout.downtimeStart, 1, downtimeMinutes.length).setValues([downtimeMinutes]);
-  sheet.getRange(row, layout.normalMinutes, 1, 9).setNumberFormat("0.00").setValues([[
-    normalMinutes,
-    nonNegativeNumber(log.changeoverMinutes),
-    nonNegativeNumber(log.inspectionMinutes),
-    nonNegativeNumber(log.equipmentRepairMinutes),
-    nonNegativeNumber(log.moldRepairMinutes),
-    nonNegativeNumber(log.materialChangeMinutes),
-    nonNegativeNumber(log.emergencyStopMinutes),
-    nonNegativeNumber(log.meetingMinutes),
-    nonNegativeNumber(log.plannedStopMinutes),
-  ]]);
+  sheet
+    .getRange(row, layout.normalMinutes, 1, 9)
+    .setNumberFormat("0.00")
+    .setFormulas([buildOeeMinuteOutputFormulas(row, layout)]);
   sheet.getRange(row, layout.goodQty).setNumberFormat("0.##").setValue(numberValue(log.goodQty));
   sheet.getRange(row, layout.ngQty).setNumberFormat("0.##").setValue(numberValue(log.ngQty));
   sheet
@@ -2710,7 +2691,6 @@ function repairNegativeOeeMinuteValues() {
       const minuteRanges = [
         { start: layout.normalSlot, width: 1 },
         { start: layout.downtimeStart, width: 8 },
-        { start: layout.normalMinutes, width: 9 },
       ];
       let sheetChanged = false;
       let changedRows = {};
@@ -2970,6 +2950,16 @@ function buildTotalQuantityFormula(row, layout) {
     columnToLetter(layout.testQty),
     row,
   ].join("");
+}
+
+function buildOeeMinuteOutputFormulas(row, layout) {
+  const startColumn = layout.normalSlot;
+  const formulas = [];
+  for (let index = 0; index < 9; index++) {
+    const sourceCell = columnToLetter(startColumn + index) + row;
+    formulas.push('=IF(' + sourceCell + '="","",MAX(' + sourceCell + ',0))');
+  }
+  return formulas;
 }
 
 function buildTheoreticalEffectiveTimeFormula(row, layout) {
