@@ -1516,7 +1516,6 @@ const isCompletedProductionOrder = (order: ProductionOrder) => {
     status.includes("closed") ||
     status.includes("finished") ||
     status.includes("done") ||
-    Boolean(String(order.endDate || "").trim()) ||
     progress >= 100
   );
 };
