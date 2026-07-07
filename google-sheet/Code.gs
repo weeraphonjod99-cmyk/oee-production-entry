@@ -450,6 +450,9 @@ function doGet(e) {
     if (action === "migrateOeeTestColumns") {
       return jsonResponse({ ok: true, result: migrateOeeTestColumns() });
     }
+    if (action === "migrateOeeMinuteInputColumns") {
+      return jsonResponse({ ok: true, result: migrateOeeMinuteInputColumns() });
+    }
     if (action === "setupSubmitHistory") {
       const sheet = ensureSubmitHistorySheet();
       return jsonResponse({
@@ -2264,6 +2267,76 @@ function migrateOeeTestColumns() {
   return { sheets: sheets, inserted: inserted, totalFormulas: totalFormulas };
 }
 
+function migrateOeeMinuteInputColumns() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  let sheets = 0;
+  let rows = 0;
+  const skippedSheets = [];
+
+  book.getSheets().forEach(function(sheet) {
+    try {
+      if (!isOeeDataSheet(sheet, machineByName)) return;
+      ensureOeeEntryTimestampColumns(sheet);
+      ensureOeeTestColumn(sheet);
+
+      const layout = getOeeLayout(sheet);
+      const lastRow = sheet.getLastRow();
+      if (lastRow < OEE_FIRST_DATA_ROW) return;
+
+      const rowCount = lastRow - OEE_FIRST_DATA_ROW + 1;
+      const sourceMinutes = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalMinutes, rowCount, 9).getValues();
+      const currentNormalInputs = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalSlot, rowCount, 1).getValues();
+      const currentDowntimeInputs = sheet.getRange(OEE_FIRST_DATA_ROW, layout.downtimeStart, rowCount, 8).getValues();
+      const identityValues = sheet.getRange(
+        OEE_FIRST_DATA_ROW,
+        layout.productName,
+        rowCount,
+        layout.partNo - layout.productName + 1
+      ).getDisplayValues();
+
+      const nextNormalInputs = [];
+      const nextDowntimeInputs = [];
+      let changedRows = 0;
+
+      for (let index = 0; index < rowCount; index++) {
+        const productName = String(identityValues[index][0] || "").trim();
+        const partNo = String(identityValues[index][identityValues[index].length - 1] || "").trim();
+        const minuteRow = sourceMinutes[index];
+        const hasMinuteSource = minuteRow.some(function(value) {
+          return value !== "" && value != null && !isNaN(Number(value));
+        });
+
+        if (!productName || !partNo || !hasMinuteSource) {
+          nextNormalInputs.push(currentNormalInputs[index]);
+          nextDowntimeInputs.push(currentDowntimeInputs[index]);
+          continue;
+        }
+
+        nextNormalInputs.push([roundNumber(numberValue(minuteRow[0]))]);
+        nextDowntimeInputs.push(minuteRow.slice(1, 9).map(function(value) {
+          return roundNumber(numberValue(value));
+        }));
+        changedRows++;
+      }
+
+      if (changedRows > 0) {
+        sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalSlot, rowCount, 1).setNumberFormat("0.##").setValues(nextNormalInputs);
+        sheet.getRange(OEE_FIRST_DATA_ROW, layout.downtimeStart, rowCount, 8).setNumberFormat("0.##").setValues(nextDowntimeInputs);
+        sheets++;
+        rows += changedRows;
+      }
+    } catch (error) {
+      skippedSheets.push({
+        sheet: sheet && typeof sheet.getName === "function" ? sheet.getName() : "",
+        error: String(error && error.message ? error.message : error),
+      });
+    }
+  });
+
+  return { sheets: sheets, rows: rows, skippedSheets: skippedSheets };
+}
+
 function ensureRowExists(sheet, row) {
   if (row > sheet.getMaxRows()) {
     sheet.insertRowsAfter(sheet.getMaxRows(), row - sheet.getMaxRows());
@@ -2303,17 +2376,16 @@ function copyOeeTemplateRow(sheet, templateRow, targetRow) {
 }
 
 function writeOeeInputRow(sheet, layout, row, log) {
-  const minutesPerSlot = numberValue(log.minutesPerSlot) || OEE_MINUTES_PER_SLOT;
   const normalMinutes = numberValue(log.normalMinutes);
-  const downtimeSlots = [
-    minutesToSheetSlots(log.changeoverMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.inspectionMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.equipmentRepairMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.moldRepairMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.materialChangeMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.emergencyStopMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.meetingMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.plannedStopMinutes, minutesPerSlot),
+  const downtimeMinutes = [
+    minutesToSheetMinutes(log.changeoverMinutes),
+    minutesToSheetMinutes(log.inspectionMinutes),
+    minutesToSheetMinutes(log.equipmentRepairMinutes),
+    minutesToSheetMinutes(log.moldRepairMinutes),
+    minutesToSheetMinutes(log.materialChangeMinutes),
+    minutesToSheetMinutes(log.emergencyStopMinutes),
+    minutesToSheetMinutes(log.meetingMinutes),
+    minutesToSheetMinutes(log.plannedStopMinutes),
   ];
 
   sheet.getRange(row, layout.sequence).setFormula("=ROW()-ROW($A$3)");
@@ -2356,9 +2428,9 @@ function writeOeeInputRow(sheet, layout, row, log) {
     sheet.getRange(row, layout.step).setNumberFormat("@").setValue(String(log.step || "-"));
   }
 
-  sheet.getRange(row, layout.normalSlot).clearContent();
-  sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setNumberFormat("0.##");
-  sheet.getRange(row, layout.downtimeStart, 1, downtimeSlots.length).setValues([downtimeSlots]);
+  sheet.getRange(row, layout.normalSlot).setNumberFormat("0.##").setValue(normalMinutes);
+  sheet.getRange(row, layout.downtimeStart, 1, downtimeMinutes.length).setNumberFormat("0.##");
+  sheet.getRange(row, layout.downtimeStart, 1, downtimeMinutes.length).setValues([downtimeMinutes]);
   sheet.getRange(row, layout.normalMinutes, 1, 9).setNumberFormat("0.00").setValues([[
     normalMinutes,
     numberValue(log.changeoverMinutes),
@@ -2531,6 +2603,7 @@ function repairSheetTypes() {
 function auditOeeMachineSheets() {
   const entryColumns = migrateOeeEntryTimestampColumns();
   const testColumns = migrateOeeTestColumns();
+  const minuteInputColumns = migrateOeeMinuteInputColumns();
   const formulas = repairOeeFormulas();
   const types = repairSheetTypes();
   const styles = formatOeeMachineSheets();
@@ -2539,6 +2612,7 @@ function auditOeeMachineSheets() {
   return {
     entryColumns: entryColumns,
     testColumns: testColumns,
+    minuteInputColumns: minuteInputColumns,
     formulas: formulas,
     types: types,
     styles: styles,
@@ -2706,8 +2780,8 @@ function buildDuplicateOeeLogKey(log) {
   ].join("::");
 }
 
-function minutesToSheetSlots(value, minutesPerSlot) {
-  return roundNumber(numberValue(value) / (numberValue(minutesPerSlot) || OEE_MINUTES_PER_SLOT));
+function minutesToSheetMinutes(value) {
+  return roundNumber(numberValue(value));
 }
 
 function numberValue(value) {
@@ -3807,16 +3881,16 @@ function getLegacyOeeLogs() {
       if (!date) return;
 
       const step = layout.hasStep ? String(row[layout.step - 1] || "-").trim() || "-" : "-";
-      const normalSlots = numberValue(row[layout.normalSlot - 1]);
+      const recordedNormalInputMinutes = numberValue(row[layout.normalSlot - 1]);
       const recordedNormalMinutes = numberValue(row[layout.normalMinutes - 1]);
       const downtimeMinutes = [];
       for (let column = layout.downtimeStart; column < layout.downtimeStart + 8; column++) {
         const minuteColumn = layout.normalMinutes + (column - layout.downtimeStart) + 1;
         const recordedMinutes = numberValue(row[minuteColumn - 1]);
-        const slotMinutes = roundNumber(numberValue(row[column - 1]) * OEE_MINUTES_PER_SLOT);
-        downtimeMinutes.push(recordedMinutes > 0 ? recordedMinutes : slotMinutes);
+        const inputMinutes = numberValue(row[column - 1]);
+        downtimeMinutes.push(recordedMinutes > 0 ? recordedMinutes : inputMinutes);
       }
-      const normalMinutes = recordedNormalMinutes > 0 ? recordedNormalMinutes : roundNumber(normalSlots * OEE_MINUTES_PER_SLOT);
+      const normalMinutes = recordedNormalMinutes > 0 ? recordedNormalMinutes : recordedNormalInputMinutes;
       const workMinutes = roundNumber(normalMinutes + sumValues(downtimeMinutes));
       const sourceRow = index + OEE_FIRST_DATA_ROW;
 
@@ -3837,7 +3911,7 @@ function getLegacyOeeLogs() {
         partNo: partNo,
         step: step,
         workMinutes: workMinutes,
-        timeSlots: roundNumber(workMinutes / OEE_MINUTES_PER_SLOT),
+        timeSlots: roundNumber(workMinutes),
         minutesPerSlot: OEE_MINUTES_PER_SLOT,
         machineSpeed: numberValue(row[layout.theoreticalImpulse - 1]),
         cavityQty: numberValue(row[layout.cavityQty - 1]),
@@ -4270,16 +4344,15 @@ function getCncMachineSheetHeaders() {
 }
 
 function buildCncMachineSheetRow(log, rowNumber) {
-  const minutesPerSlot = numberValue(log.minutesPerSlot) || OEE_MINUTES_PER_SLOT;
-  const downtimeSlots = [
-    minutesToSheetSlots(log.changeoverMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.inspectionMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.equipmentRepairMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.moldRepairMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.materialChangeMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.emergencyStopMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.meetingMinutes, minutesPerSlot),
-    minutesToSheetSlots(log.plannedStopMinutes, minutesPerSlot),
+  const downtimeMinutes = [
+    minutesToSheetMinutes(log.changeoverMinutes),
+    minutesToSheetMinutes(log.inspectionMinutes),
+    minutesToSheetMinutes(log.equipmentRepairMinutes),
+    minutesToSheetMinutes(log.moldRepairMinutes),
+    minutesToSheetMinutes(log.materialChangeMinutes),
+    minutesToSheetMinutes(log.emergencyStopMinutes),
+    minutesToSheetMinutes(log.meetingMinutes),
+    minutesToSheetMinutes(log.plannedStopMinutes),
   ];
   const totalFormula = "=AC" + rowNumber + "+AD" + rowNumber + "+AE" + rowNumber;
   return [
@@ -4293,9 +4366,9 @@ function buildCncMachineSheetRow(log, rowNumber) {
     toOriginalShift(log.shift),
     String(log.productName || ""),
     String(log.partNo || ""),
-    "",
+    numberValue(log.normalMinutes),
   ]
-    .concat(downtimeSlots)
+    .concat(downtimeMinutes)
     .concat([
       numberValue(log.normalMinutes),
       numberValue(log.changeoverMinutes),
