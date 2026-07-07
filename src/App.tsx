@@ -382,7 +382,7 @@ const getEmployeeTimerToneClass = (key?: string) => {
 };
 
 const employeeTimerRolePermissions: Partial<Record<AppRole, EmployeeTimerKey[]>> = {
-  qc: ["work", "inspectionMinutes", "moldRepairMinutes"],
+  qc: ["inspectionMinutes", "moldRepairMinutes"],
   tooling_repair: ["inspectionMinutes"],
   technician: ["work"],
   planning: [],
@@ -2174,11 +2174,9 @@ function App() {
     const workStartedAt = employeeWorkStartedAt || activeTimer?.originalStartedAt || activeTimer?.startedAt || "";
     if (!activeTimer && !workStartedAt) return;
     setDraft((prev) => {
-      const withActiveDowntime =
-        activeTimer && activeTimer.key !== "work" ? applyEmployeeTimerElapsed(prev, activeTimer, employeeReportNow) : prev;
       return workStartedAt
-        ? applyShiftClockRuntime(withActiveDowntime, employeeReportNow, workStartedAt)
-        : withActiveDowntime;
+        ? applyShiftClockRuntime(prev, employeeReportNow, workStartedAt)
+        : prev;
     });
   }, [employeeReportNow, tab, editingLog, employeeWorkStartedAt]);
 
@@ -2492,13 +2490,24 @@ function App() {
   const hasLocalWorkTimer = Boolean(employeeWorkStartedAt || activeTimerWorkStartedAt);
   const visibleWorkDate = hasLocalWorkTimer ? draft.date : currentMachineSharedStatus?.date || draft.date;
   const visibleWorkShift = hasLocalWorkTimer ? draft.shift : currentMachineSharedStatus?.shift || draft.shift;
-  const visibleDowntimeMinutes = hasLocalWorkTimer ? totalDraftDowntime : currentMachineSharedDowntimeMinutes ?? totalDraftDowntime;
+  const localActiveDowntimeMinutes =
+    isEmployeeEntry && employeeActiveTimer && employeeActiveTimer.key !== "work"
+      ? getElapsedShiftWorkMinutes(
+          draft.date || getTodayInputValue(),
+          draft.shift,
+          employeeReportNow,
+          employeeActiveTimer.originalStartedAt || employeeActiveTimer.startedAt,
+        )
+      : 0;
+  const visibleDowntimeMinutes = hasLocalWorkTimer
+    ? totalDraftDowntime + localActiveDowntimeMinutes
+    : currentMachineSharedDowntimeMinutes ?? totalDraftDowntime;
   const liveClockWorkMinutes =
     isEmployeeEntry && visibleWorkStartedAt
       ? getElapsedShiftWorkMinutes(visibleWorkDate || getTodayInputValue(), visibleWorkShift, employeeReportNow, visibleWorkStartedAt)
       : draft.workMinutes;
   const visibleWorkMinutes = isEmployeeEntry ? liveClockWorkMinutes : draft.workMinutes;
-  const computedNormalMinutes = Math.max(liveClockWorkMinutes - visibleDowntimeMinutes, 0);
+  const liveNormalMinutes = Math.max(liveClockWorkMinutes - visibleDowntimeMinutes, 0);
   const employeeEntryStartedAt = useMemo(
     () =>
       employeeDraftStartedAt
@@ -4580,11 +4589,11 @@ function App() {
                 </label>
                 <div>
                   <span>Downtime</span>
-                  <strong>{formatNumber(totalDraftDowntime)} นาที</strong>
+                  <strong>{formatRate(visibleDowntimeMinutes)} นาที</strong>
                 </div>
                 <div>
                   <span>เวลาตามจริง (เวลาโลก)</span>
-                  <strong>{formatNumber(computedNormalMinutes)} นาที</strong>
+                  <strong>{formatRate(liveClockWorkMinutes)} นาที</strong>
                   {isEmployeeEntry && visibleWorkStartedDate && (
                     <small className="runtime-live-start">
                       เริ่มผลิต {formatThailandDateTime(visibleWorkStartedDate)} · ผู้กด {visibleWorkStartedUser} · นับสด{" "}
@@ -4788,7 +4797,7 @@ function App() {
                       <span>เวลาผลิต</span>
                       <b>{formatNumber(visibleWorkMinutes)} นาที</b>
                       <small>
-                        Downtime {formatNumber(visibleDowntimeMinutes)} / Normal {formatNumber(computedNormalMinutes)}
+                        Downtime {formatRate(visibleDowntimeMinutes)} / Normal {formatRate(liveNormalMinutes)}
                       </small>
                     </div>
                   </div>
