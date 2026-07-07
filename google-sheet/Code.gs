@@ -453,6 +453,9 @@ function doGet(e) {
     if (action === "migrateOeeMinuteInputColumns") {
       return jsonResponse({ ok: true, result: migrateOeeMinuteInputColumns() });
     }
+    if (action === "repairOeeMinuteOutputValues") {
+      return jsonResponse({ ok: true, result: repairOeeMinuteOutputValues() });
+    }
     if (action === "repairNegativeOeeMinuteValues") {
       return jsonResponse({ ok: true, result: repairNegativeOeeMinuteValues() });
     }
@@ -2316,11 +2319,21 @@ function migrateOeeMinuteInputColumns() {
           continue;
         }
 
-        nextNormalInputs.push([nonNegativeNumber(minuteRow[0])]);
-        nextDowntimeInputs.push(minuteRow.slice(1, 9).map(function(value) {
-          return nonNegativeNumber(value);
-        }));
-        changedRows++;
+        const currentMinuteInputs = [currentNormalInputs[index][0]].concat(currentDowntimeInputs[index]);
+        const hasCurrentInput = currentMinuteInputs.some(function(value) {
+          return value !== "" && value != null && !isNaN(Number(value));
+        });
+
+        if (hasCurrentInput) {
+          nextNormalInputs.push(currentNormalInputs[index]);
+          nextDowntimeInputs.push(currentDowntimeInputs[index]);
+        } else {
+          nextNormalInputs.push([nonNegativeNumber(minuteRow[0])]);
+          nextDowntimeInputs.push(minuteRow.slice(1, 9).map(function(value) {
+            return nonNegativeNumber(value);
+          }));
+          changedRows++;
+        }
       }
 
       if (changedRows > 0) {
@@ -2338,6 +2351,78 @@ function migrateOeeMinuteInputColumns() {
   });
 
   return { sheets: sheets, rows: rows, skippedSheets: skippedSheets };
+}
+
+function repairOeeMinuteOutputValues() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  const result = {
+    sheets: 0,
+    rows: 0,
+    cells: 0,
+    skippedSheets: [],
+  };
+
+  book.getSheets().forEach(function(sheet) {
+    try {
+      if (!isOeeDataSheet(sheet, machineByName)) return;
+      ensureOeeEntryTimestampColumns(sheet);
+      ensureOeeTestColumn(sheet);
+
+      const layout = getOeeLayout(sheet);
+      const rowCount = Math.max(sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, 0);
+      if (rowCount <= 0) return;
+
+      const sourceRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalSlot, rowCount, 9);
+      const targetRange = sheet.getRange(OEE_FIRST_DATA_ROW, layout.normalMinutes, rowCount, 9);
+      const sourceValues = sourceRange.getValues();
+      const targetValues = targetRange.getValues();
+      const targetFormulas = targetRange.getFormulas();
+      const nextValues = [];
+      let changed = false;
+      let changedRows = {};
+
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        const nextRow = [];
+        const hasSourceMinute = sourceValues[rowIndex].some(function(value) {
+          return value !== "" && value != null && !isNaN(Number(value));
+        });
+
+        for (let columnIndex = 0; columnIndex < 9; columnIndex++) {
+          const sourceValue = sourceValues[rowIndex][columnIndex];
+          const expectedValue = hasSourceMinute && sourceValue !== "" && sourceValue != null && !isNaN(Number(sourceValue))
+            ? nonNegativeNumber(sourceValue)
+            : "";
+          nextRow.push(expectedValue);
+
+          const currentValue = targetValues[rowIndex][columnIndex];
+          const currentFormula = targetFormulas[rowIndex][columnIndex];
+          const currentComparable = currentValue === "" || currentValue == null || isNaN(Number(currentValue))
+            ? ""
+            : nonNegativeNumber(currentValue);
+          if (currentFormula || currentComparable !== expectedValue) {
+            changed = true;
+            changedRows[rowIndex] = true;
+            result.cells++;
+          }
+        }
+        nextValues.push(nextRow);
+      }
+
+      if (changed) {
+        targetRange.setNumberFormat("0.00").setValues(nextValues);
+        result.sheets++;
+        result.rows += Object.keys(changedRows).length;
+      }
+    } catch (error) {
+      result.skippedSheets.push({
+        sheet: sheet && typeof sheet.getName === "function" ? sheet.getName() : "",
+        error: String(error && error.message ? error.message : error),
+      });
+    }
+  });
+
+  return result;
 }
 
 function ensureRowExists(sheet, row) {
@@ -2673,6 +2758,7 @@ function auditOeeMachineSheets() {
   const testColumns = migrateOeeTestColumns();
   const minuteInputColumns = migrateOeeMinuteInputColumns();
   const negativeMinutes = repairNegativeOeeMinuteValues();
+  const minuteOutputValues = repairOeeMinuteOutputValues();
   const formulas = repairOeeFormulas();
   const types = repairSheetTypes();
   const styles = formatOeeMachineSheets();
@@ -2683,6 +2769,7 @@ function auditOeeMachineSheets() {
     testColumns: testColumns,
     minuteInputColumns: minuteInputColumns,
     negativeMinutes: negativeMinutes,
+    minuteOutputValues: minuteOutputValues,
     formulas: formulas,
     types: types,
     styles: styles,
