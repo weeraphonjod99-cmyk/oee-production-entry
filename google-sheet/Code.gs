@@ -453,6 +453,9 @@ function doGet(e) {
     if (action === "migrateOeeMinuteInputColumns") {
       return jsonResponse({ ok: true, result: migrateOeeMinuteInputColumns() });
     }
+    if (action === "repairNegativeOeeMinuteValues") {
+      return jsonResponse({ ok: true, result: repairNegativeOeeMinuteValues() });
+    }
     if (action === "setupSubmitHistory") {
       const sheet = ensureSubmitHistorySheet();
       return jsonResponse({
@@ -882,25 +885,25 @@ function upsertEmployeeMachineStatus(payload) {
     step: String(payload.step || "-"),
     materialOfProduction: String(payload.materialOfProduction || ""),
     userName: String(payload.userName || ""),
-    goodQty: Number(payload.goodQty || 0),
-    ngQty: Number(payload.ngQty || 0),
-    testQty: Number(payload.testQty || 0),
-    workMinutes: Number(payload.workMinutes || 0),
-    timeSlots: Number(payload.timeSlots || 0),
-    minutesPerSlot: Number(payload.minutesPerSlot || 0),
-    machineSpeed: Number(payload.machineSpeed || 0),
-    cavityQty: Number(payload.cavityQty || 0),
-    downtimeMinutes: Number(payload.downtimeMinutes || 0),
-    normalMinutes: Number(payload.normalMinutes || 0),
-    changeoverMinutes: Number(payload.changeoverMinutes || 0),
-    inspectionMinutes: Number(payload.inspectionMinutes || 0),
-    equipmentRepairMinutes: Number(payload.equipmentRepairMinutes || 0),
-    moldRepairMinutes: Number(payload.moldRepairMinutes || 0),
-    materialChangeMinutes: Number(payload.materialChangeMinutes || 0),
-    emergencyStopMinutes: Number(payload.emergencyStopMinutes || 0),
-    meetingMinutes: Number(payload.meetingMinutes || 0),
-    plannedStopMinutes: Number(payload.plannedStopMinutes || 0),
-    newModelMinutes: Number(payload.newModelMinutes || 0),
+    goodQty: nonNegativeNumber(payload.goodQty),
+    ngQty: nonNegativeNumber(payload.ngQty),
+    testQty: nonNegativeNumber(payload.testQty),
+    workMinutes: nonNegativeNumber(payload.workMinutes),
+    timeSlots: nonNegativeNumber(payload.timeSlots),
+    minutesPerSlot: nonNegativeNumber(payload.minutesPerSlot),
+    machineSpeed: nonNegativeNumber(payload.machineSpeed),
+    cavityQty: nonNegativeNumber(payload.cavityQty),
+    downtimeMinutes: nonNegativeNumber(payload.downtimeMinutes),
+    normalMinutes: nonNegativeNumber(payload.normalMinutes),
+    changeoverMinutes: nonNegativeNumber(payload.changeoverMinutes),
+    inspectionMinutes: nonNegativeNumber(payload.inspectionMinutes),
+    equipmentRepairMinutes: nonNegativeNumber(payload.equipmentRepairMinutes),
+    moldRepairMinutes: nonNegativeNumber(payload.moldRepairMinutes),
+    materialChangeMinutes: nonNegativeNumber(payload.materialChangeMinutes),
+    emergencyStopMinutes: nonNegativeNumber(payload.emergencyStopMinutes),
+    meetingMinutes: nonNegativeNumber(payload.meetingMinutes),
+    plannedStopMinutes: nonNegativeNumber(payload.plannedStopMinutes),
+    newModelMinutes: nonNegativeNumber(payload.newModelMinutes),
     note: String(payload.note || ""),
     activeTimerKey: String(payload.activeTimerKey || ""),
     activeTimerLabel: String(payload.activeTimerLabel || ""),
@@ -1352,7 +1355,7 @@ function appendSubmitHistory(log, action, formattedRow) {
 }
 
 function buildSubmitHistoryValue(header, log, action, formattedRow, now) {
-  const totalQty = numberValue(log.goodQty) + numberValue(log.ngQty) + numberValue(log.testQty);
+  const totalQty = nonNegativeNumber(log.goodQty) + nonNegativeNumber(log.ngQty) + nonNegativeNumber(log.testQty);
   const formatted = formattedRow || {};
   const values = {
     historyId: Utilities.getUuid(),
@@ -1371,20 +1374,20 @@ function buildSubmitHistoryValue(header, log, action, formattedRow, now) {
     partNo: String(log.partNo || ""),
     step: String(log.step || "-"),
     materialOfProduction: String(log.materialOfProduction || ""),
-    goodQty: numberValue(log.goodQty),
-    ngQty: numberValue(log.ngQty),
-    testQty: numberValue(log.testQty),
+    goodQty: nonNegativeNumber(log.goodQty),
+    ngQty: nonNegativeNumber(log.ngQty),
+    testQty: nonNegativeNumber(log.testQty),
     totalQty: totalQty,
-    workMinutes: numberValue(log.workMinutes),
-    normalMinutes: numberValue(log.normalMinutes),
+    workMinutes: nonNegativeNumber(log.workMinutes),
+    normalMinutes: nonNegativeNumber(log.normalMinutes),
     downtimeMinutes: getSubmitHistoryDowntimeMinutes(log),
-    machineSpeed: numberValue(log.machineSpeed),
-    cavityQty: numberValue(log.cavityQty),
+    machineSpeed: nonNegativeNumber(log.machineSpeed),
+    cavityQty: nonNegativeNumber(log.cavityQty),
     recordDate: formatRecordDate(log.recordDate) || todayBangkok(now),
     recordTime: formatRecordTime(log.recordTime) || timeBangkok(now),
     logId: String(log.id || ""),
     formattedSheet: String(formatted.sheetName || ""),
-    formattedRow: numberValue(formatted.row),
+    formattedRow: nonNegativeNumber(formatted.row),
     buttonDetails: String(log.buttonDetails || ""),
     note: String(log.note || ""),
     createdAt: String(log.createdAt || now.toISOString()),
@@ -1394,15 +1397,15 @@ function buildSubmitHistoryValue(header, log, action, formattedRow, now) {
 
 function getSubmitHistoryDowntimeMinutes(log) {
   return (
-    numberValue(log.changeoverMinutes) +
-    numberValue(log.inspectionMinutes) +
-    numberValue(log.equipmentRepairMinutes) +
-    numberValue(log.moldRepairMinutes) +
-    numberValue(log.materialChangeMinutes) +
-    numberValue(log.emergencyStopMinutes) +
-    Math.max(numberValue(log.meetingMinutes) - OEE_SHIFT_BREAK_MINUTES, 0) +
-    numberValue(log.plannedStopMinutes) +
-    numberValue(log.newModelMinutes)
+    nonNegativeNumber(log.changeoverMinutes) +
+    nonNegativeNumber(log.inspectionMinutes) +
+    nonNegativeNumber(log.equipmentRepairMinutes) +
+    nonNegativeNumber(log.moldRepairMinutes) +
+    nonNegativeNumber(log.materialChangeMinutes) +
+    nonNegativeNumber(log.emergencyStopMinutes) +
+    Math.max(nonNegativeNumber(log.meetingMinutes) - OEE_SHIFT_BREAK_MINUTES, 0) +
+    nonNegativeNumber(log.plannedStopMinutes) +
+    nonNegativeNumber(log.newModelMinutes)
   );
 }
 
@@ -1492,7 +1495,7 @@ function writeSerializedLogRow(sheet, row, log) {
 
 function serializeTypedValue(header, value, numberHeaders) {
   if (numberHeaders.indexOf(header) >= 0) {
-    return numberValue(value);
+    return nonNegativeNumber(value);
   }
   if (header === "shift") {
     return String(toOriginalShift(value) || "");
@@ -2313,9 +2316,9 @@ function migrateOeeMinuteInputColumns() {
           continue;
         }
 
-        nextNormalInputs.push([roundNumber(numberValue(minuteRow[0]))]);
+        nextNormalInputs.push([nonNegativeNumber(minuteRow[0])]);
         nextDowntimeInputs.push(minuteRow.slice(1, 9).map(function(value) {
-          return roundNumber(numberValue(value));
+          return nonNegativeNumber(value);
         }));
         changedRows++;
       }
@@ -2376,7 +2379,7 @@ function copyOeeTemplateRow(sheet, templateRow, targetRow) {
 }
 
 function writeOeeInputRow(sheet, layout, row, log) {
-  const normalMinutes = numberValue(log.normalMinutes);
+  const normalMinutes = nonNegativeNumber(log.normalMinutes);
   const downtimeMinutes = [
     minutesToSheetMinutes(log.changeoverMinutes),
     minutesToSheetMinutes(log.inspectionMinutes),
@@ -2433,14 +2436,14 @@ function writeOeeInputRow(sheet, layout, row, log) {
   sheet.getRange(row, layout.downtimeStart, 1, downtimeMinutes.length).setValues([downtimeMinutes]);
   sheet.getRange(row, layout.normalMinutes, 1, 9).setNumberFormat("0.00").setValues([[
     normalMinutes,
-    numberValue(log.changeoverMinutes),
-    numberValue(log.inspectionMinutes),
-    numberValue(log.equipmentRepairMinutes),
-    numberValue(log.moldRepairMinutes),
-    numberValue(log.materialChangeMinutes),
-    numberValue(log.emergencyStopMinutes),
-    numberValue(log.meetingMinutes),
-    numberValue(log.plannedStopMinutes),
+    nonNegativeNumber(log.changeoverMinutes),
+    nonNegativeNumber(log.inspectionMinutes),
+    nonNegativeNumber(log.equipmentRepairMinutes),
+    nonNegativeNumber(log.moldRepairMinutes),
+    nonNegativeNumber(log.materialChangeMinutes),
+    nonNegativeNumber(log.emergencyStopMinutes),
+    nonNegativeNumber(log.meetingMinutes),
+    nonNegativeNumber(log.plannedStopMinutes),
   ]]);
   sheet.getRange(row, layout.goodQty).setNumberFormat("0.##").setValue(numberValue(log.goodQty));
   sheet.getRange(row, layout.ngQty).setNumberFormat("0.##").setValue(numberValue(log.ngQty));
@@ -2600,10 +2603,76 @@ function repairSheetTypes() {
   return { sheets: typedSheets, rows: typedRows };
 }
 
+function repairNegativeOeeMinuteValues() {
+  const book = getWorkbook();
+  const machineByName = getMachineMap();
+  const result = {
+    sheets: 0,
+    rows: 0,
+    cells: 0,
+    skipped: [],
+  };
+
+  book.getSheets().forEach(function(sheet) {
+    try {
+      if (!isOeeDataSheet(sheet, machineByName)) return;
+      ensureOeeEntryTimestampColumns(sheet);
+      ensureOeeTestColumn(sheet);
+      const layout = getOeeLayout(sheet);
+      const rowCount = Math.max(sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1, 0);
+      if (rowCount <= 0) return;
+
+      const minuteRanges = [
+        { start: layout.normalSlot, width: 1 },
+        { start: layout.downtimeStart, width: 8 },
+        { start: layout.normalMinutes, width: 9 },
+      ];
+      let sheetChanged = false;
+      let changedRows = {};
+
+      minuteRanges.forEach(function(item) {
+        if (!item.start || item.start < 1 || item.width < 1) return;
+        const range = sheet.getRange(OEE_FIRST_DATA_ROW, item.start, rowCount, item.width);
+        const values = range.getValues();
+        let changed = false;
+        for (let rowIndex = 0; rowIndex < values.length; rowIndex++) {
+          for (let columnIndex = 0; columnIndex < values[rowIndex].length; columnIndex++) {
+            const value = values[rowIndex][columnIndex];
+            if (value === "" || value == null || isNaN(Number(value))) continue;
+            if (Number(value) < 0) {
+              values[rowIndex][columnIndex] = 0;
+              changed = true;
+              sheetChanged = true;
+              changedRows[rowIndex] = true;
+              result.cells++;
+            }
+          }
+        }
+        if (changed) {
+          range.setValues(values);
+        }
+      });
+
+      if (sheetChanged) {
+        result.sheets++;
+        result.rows += Object.keys(changedRows).length;
+      }
+    } catch (error) {
+      result.skipped.push({
+        sheet: sheet && typeof sheet.getName === "function" ? sheet.getName() : "",
+        error: String(error && error.message ? error.message : error),
+      });
+    }
+  });
+
+  return result;
+}
+
 function auditOeeMachineSheets() {
   const entryColumns = migrateOeeEntryTimestampColumns();
   const testColumns = migrateOeeTestColumns();
   const minuteInputColumns = migrateOeeMinuteInputColumns();
+  const negativeMinutes = repairNegativeOeeMinuteValues();
   const formulas = repairOeeFormulas();
   const types = repairSheetTypes();
   const styles = formatOeeMachineSheets();
@@ -2613,6 +2682,7 @@ function auditOeeMachineSheets() {
     entryColumns: entryColumns,
     testColumns: testColumns,
     minuteInputColumns: minuteInputColumns,
+    negativeMinutes: negativeMinutes,
     formulas: formulas,
     types: types,
     styles: styles,
@@ -2781,12 +2851,16 @@ function buildDuplicateOeeLogKey(log) {
 }
 
 function minutesToSheetMinutes(value) {
-  return roundNumber(numberValue(value));
+  return nonNegativeNumber(value);
 }
 
 function numberValue(value) {
   const number = Number(value || 0);
   return isFinite(number) ? number : 0;
+}
+
+function nonNegativeNumber(value) {
+  return Math.max(roundNumber(value), 0);
 }
 
 function sumValues(values) {
@@ -2822,13 +2896,13 @@ function buildTotalProductionTimeFormula(row, layout) {
   const normalColumn = layout.normalMinutes;
   const downtimeColumn = layout.normalMinutes + 1;
   const cells = [
-    columnToLetter(normalColumn) + row,
-    columnToLetter(downtimeColumn) + row,
-    columnToLetter(downtimeColumn + 1) + row,
-    columnToLetter(downtimeColumn + 2) + row,
-    columnToLetter(downtimeColumn + 3) + row,
-    columnToLetter(downtimeColumn + 4) + row,
-    columnToLetter(downtimeColumn + 5) + row,
+    "MAX(" + columnToLetter(normalColumn) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn + 1) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn + 2) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn + 3) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn + 4) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn + 5) + row + ",0)",
     "MAX(" + columnToLetter(downtimeColumn + 6) + row + "-" + OEE_SHIFT_BREAK_MINUTES + ",0)",
     columnToLetter(downtimeColumn + 7) + row,
   ];
@@ -2838,7 +2912,7 @@ function buildTotalProductionTimeFormula(row, layout) {
 function buildEquipmentUtilizationRateFormula(row, layout) {
   return "=IFERROR(" +
     columnToLetter(layout.theoreticalEffectiveTime) + row +
-    "/" + columnToLetter(layout.normalMinutes) + row +
+    "/MAX(" + columnToLetter(layout.normalMinutes) + row + ",0)" +
     ",0)";
 }
 
@@ -2851,7 +2925,7 @@ function buildPassRateFormula(row, layout) {
 
 function buildTimeUtilizationRateFormula(row, layout) {
   return "=IFERROR(" +
-    columnToLetter(layout.normalMinutes) + row +
+    "MAX(" + columnToLetter(layout.normalMinutes) + row + ",0)" +
     "/" + columnToLetter(layout.totalProductionTime) + row +
     ",0)";
 }
@@ -3777,13 +3851,13 @@ function getLegacyOeeLogs() {
       if (!date) return;
 
       const step = layout.hasStep ? String(row[layout.step - 1] || "-").trim() || "-" : "-";
-      const recordedNormalInputMinutes = numberValue(row[layout.normalSlot - 1]);
-      const recordedNormalMinutes = numberValue(row[layout.normalMinutes - 1]);
+      const recordedNormalInputMinutes = nonNegativeNumber(row[layout.normalSlot - 1]);
+      const recordedNormalMinutes = nonNegativeNumber(row[layout.normalMinutes - 1]);
       const downtimeMinutes = [];
       for (let column = layout.downtimeStart; column < layout.downtimeStart + 8; column++) {
         const minuteColumn = layout.normalMinutes + (column - layout.downtimeStart) + 1;
-        const recordedMinutes = numberValue(row[minuteColumn - 1]);
-        const inputMinutes = numberValue(row[column - 1]);
+        const recordedMinutes = nonNegativeNumber(row[minuteColumn - 1]);
+        const inputMinutes = nonNegativeNumber(row[column - 1]);
         downtimeMinutes.push(recordedMinutes > 0 ? recordedMinutes : inputMinutes);
       }
       const normalMinutes = recordedNormalMinutes > 0 ? recordedNormalMinutes : recordedNormalInputMinutes;
@@ -4262,27 +4336,27 @@ function buildCncMachineSheetRow(log, rowNumber) {
     toOriginalShift(log.shift),
     String(log.productName || ""),
     String(log.partNo || ""),
-    numberValue(log.normalMinutes),
+    nonNegativeNumber(log.normalMinutes),
   ]
     .concat(downtimeMinutes)
     .concat([
-      numberValue(log.normalMinutes),
-      numberValue(log.changeoverMinutes),
-      numberValue(log.inspectionMinutes),
-      numberValue(log.equipmentRepairMinutes),
-      numberValue(log.moldRepairMinutes),
-      numberValue(log.materialChangeMinutes),
-      numberValue(log.emergencyStopMinutes),
-      numberValue(log.meetingMinutes),
-      numberValue(log.plannedStopMinutes),
+      nonNegativeNumber(log.normalMinutes),
+      nonNegativeNumber(log.changeoverMinutes),
+      nonNegativeNumber(log.inspectionMinutes),
+      nonNegativeNumber(log.equipmentRepairMinutes),
+      nonNegativeNumber(log.moldRepairMinutes),
+      nonNegativeNumber(log.materialChangeMinutes),
+      nonNegativeNumber(log.emergencyStopMinutes),
+      nonNegativeNumber(log.meetingMinutes),
+      nonNegativeNumber(log.plannedStopMinutes),
       numberValue(log.goodQty),
       numberValue(log.ngQty),
       numberValue(log.testQty) > 0 ? numberValue(log.testQty) : "",
       totalFormula,
-      numberValue(log.machineSpeed),
-      numberValue(log.cavityQty),
+      nonNegativeNumber(log.machineSpeed),
+      nonNegativeNumber(log.cavityQty),
       "=IFERROR(AF" + rowNumber + "/AG" + rowNumber + ",\"\")",
-      numberValue(log.workMinutes),
+      nonNegativeNumber(log.workMinutes),
       "=IFERROR(AI" + rowNumber + "/AJ" + rowNumber + ",\"\")",
       "=IFERROR(AC" + rowNumber + "/AF" + rowNumber + ",\"\")",
       "=IFERROR(T" + rowNumber + "/AJ" + rowNumber + ",\"\")",
