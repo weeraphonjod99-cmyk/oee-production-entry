@@ -30,15 +30,24 @@ const normalizeShiftCode = (value: unknown) => {
   return text;
 };
 
-const shiftBreakMinutes = (shift?: string) => (normalizeShiftCode(shift) === "night" ? 110 : 110);
+const shiftBreakMinutes = (shift?: string) => (normalizeShiftCode(shift) === "night" ? 130 : 130);
 
-export function effectiveDowntimeValue(log: Pick<ProductionLog, DowntimeKey> & Partial<Pick<ProductionLog, "shift">>, key: DowntimeKey) {
+const hasManualMeetingEntry = (log: Partial<Pick<ProductionLog, "buttonDetails">>) => {
+  const details = String(log.buttonDetails || "");
+  return details.includes("H ") || details.includes("ประชุม/5S") || details.includes("Meeting");
+};
+
+export function effectiveDowntimeValue(
+  log: Pick<ProductionLog, DowntimeKey> & Partial<Pick<ProductionLog, "buttonDetails" | "shift">>,
+  key: DowntimeKey,
+) {
   const value = Number(log[key] || 0);
   if (key !== "meetingMinutes") return value;
+  if (hasManualMeetingEntry(log)) return value;
   return Math.max(value - shiftBreakMinutes(log.shift), 0);
 }
 
-export function totalDowntime(log: Pick<ProductionLog, DowntimeKey> & Partial<Pick<ProductionLog, "shift">>) {
+export function totalDowntime(log: Pick<ProductionLog, DowntimeKey> & Partial<Pick<ProductionLog, "buttonDetails" | "shift">>) {
   return downtimeFields.reduce((sum, field) => sum + effectiveDowntimeValue(log, field.key), 0);
 }
 

@@ -420,9 +420,10 @@ const minutesToSlots = (minutes: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? roundNumber(minutes / minutesPerSlot) : 0;
 
 const slotsToMinutes = (slots: number, minutesPerSlot: number) => roundNumber(slots * minutesPerSlot);
-const applyAutomaticBreakMinutes = <T extends { meetingMinutes: number; shift: string }>(draft: T): T => ({
+const removeAutomaticBreakMinutes = <T extends { meetingMinutes: number; shift: string }>(draft: T): T => ({
   ...draft,
-  meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(draft.shift)),
+  meetingMinutes:
+    Number(draft.meetingMinutes || 0) === getShiftBreakMinutes(draft.shift) ? 0 : Number(draft.meetingMinutes || 0),
 });
 
 function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft {
@@ -452,7 +453,7 @@ function createEmptyDraft(machine: Machine, product: ProductMaster): EntryDraft 
     moldRepairMinutes: 0,
     materialChangeMinutes: 0,
     emergencyStopMinutes: 0,
-    meetingMinutes: getShiftBreakMinutes(currentShift.shift),
+    meetingMinutes: 0,
     plannedStopMinutes: 0,
     newModelMinutes: 0,
     goodQty: 0,
@@ -766,10 +767,7 @@ const applyEmployeeTimerElapsed = (targetDraft: EntryDraft, timer: EmployeeActiv
 
   const elapsed = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now, timer.startedAt);
   if (elapsed <= 0) return targetDraft;
-  const nextMinutes =
-    timer.key === "meetingMinutes"
-      ? Math.max(Number(targetDraft[timer.key] || 0) + elapsed, getShiftBreakMinutes(targetDraft.shift))
-      : Number(targetDraft[timer.key] || 0) + elapsed;
+  const nextMinutes = Number(targetDraft[timer.key] || 0) + elapsed;
   return {
     ...targetDraft,
     [timer.key]: roundNumber(nextMinutes),
@@ -779,7 +777,7 @@ const applyEmployeeTimerElapsed = (targetDraft: EntryDraft, timer: EmployeeActiv
 const applyShiftClockRuntime = (targetDraft: EntryDraft, now = new Date(), workStartedAt?: string) => {
   const minutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
   const workMinutes = getElapsedShiftWorkMinutes(targetDraft.date || getTodayInputValue(), targetDraft.shift, now, workStartedAt);
-  return applyAutomaticBreakMinutes({
+  return removeAutomaticBreakMinutes({
     ...targetDraft,
     minutesPerSlot,
     shiftStartAt: shiftStartAt(targetDraft.date || getTodayInputValue(), targetDraft.shift),
@@ -1433,7 +1431,10 @@ const draftFromLog = (log: ProductionLog): EntryDraft => ({
   moldRepairMinutes: Number(log.moldRepairMinutes || 0),
   materialChangeMinutes: Number(log.materialChangeMinutes || 0),
   emergencyStopMinutes: Number(log.emergencyStopMinutes || 0),
-  meetingMinutes: Math.max(Number(log.meetingMinutes || 0), getShiftBreakMinutes(log.shift)),
+  meetingMinutes: removeAutomaticBreakMinutes({
+    meetingMinutes: Number(log.meetingMinutes || 0),
+    shift: log.shift,
+  }).meetingMinutes,
   plannedStopMinutes: Number(log.plannedStopMinutes || 0),
   newModelMinutes: Number(log.newModelMinutes || 0),
   goodQty: Number(log.goodQty || 0),
@@ -2191,7 +2192,10 @@ function App() {
       return {
         ...prev,
         date: currentShift.date,
-        meetingMinutes: Math.max(Number(prev.meetingMinutes || 0), getShiftBreakMinutes(currentShift.shift)),
+        meetingMinutes: removeAutomaticBreakMinutes({
+          meetingMinutes: Number(prev.meetingMinutes || 0),
+          shift: currentShift.shift,
+        }).meetingMinutes,
         shift: currentShift.shift,
         shiftEndAt: shiftEndAt(currentShift.date, currentShift.shift),
         shiftStartAt: shiftStartAt(currentShift.date, currentShift.shift),
@@ -2212,14 +2216,6 @@ function App() {
         : withActiveDowntime;
     });
   }, [employeeReportNow, tab, editingLog, employeeWorkStartedAt]);
-
-  useEffect(() => {
-    setDraft((prev) => {
-      const breakMinutes = getShiftBreakMinutes(prev.shift);
-      if (Number(prev.meetingMinutes || 0) >= breakMinutes) return prev;
-      return { ...prev, meetingMinutes: breakMinutes };
-    });
-  }, [draft.shift]);
 
   const machineNameById = useMemo(() => new Map(machines.map((machine) => [machine.id, machine.name])), [machines]);
   const canonicalProducts = useMemo(
@@ -2753,7 +2749,7 @@ function App() {
         Boolean(storedLastSeenAt) && Date.now() - storedLastSeenAt!.getTime() <= employeeStoredDraftResumeMaxAgeMs;
       const restoredActiveTimer = canResumeLiveDraft ? stored.activeTimer ?? null : null;
       const restoredWorkStartedAt = canResumeLiveDraft ? stored.workStartedAt || "" : "";
-      const storedBaseDraft = applyAutomaticBreakMinutes({
+      const storedBaseDraft = removeAutomaticBreakMinutes({
         ...stored.draft,
         date: savedDate,
         minutesPerSlot,
@@ -3030,9 +3026,7 @@ function App() {
     setDraft((prev) => ({
       ...prev,
       [key]:
-        key === "meetingMinutes"
-          ? Math.max(slotsToMinutes(slots, prev.minutesPerSlot), getShiftBreakMinutes(prev.shift))
-          : slotsToMinutes(slots, prev.minutesPerSlot),
+        slotsToMinutes(slots, prev.minutesPerSlot),
     }));
   };
 
@@ -3502,7 +3496,7 @@ function App() {
     const minutesPerSlot = clockDraft.minutesPerSlot || defaultMinutesPerSlot;
     const workMinutes = clampWorkMinutes(clockDraft.workMinutes);
     const timeSlots = slotsFromMinutes(workMinutes, minutesPerSlot);
-    const nextDraft = applyAutomaticBreakMinutes({
+    const nextDraft = removeAutomaticBreakMinutes({
       ...clockDraft,
       date: savedDate,
       minutesPerSlot,
@@ -3647,7 +3641,10 @@ function App() {
     const savedMinutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
     const savedWorkMinutes = clampWorkMinutes(targetDraft.workMinutes);
     const savedTimeSlots = slotsFromMinutes(savedWorkMinutes, savedMinutesPerSlot);
-    const savedMeetingMinutes = Math.max(Number(targetDraft.meetingMinutes || 0), getShiftBreakMinutes(targetDraft.shift));
+    const savedMeetingMinutes = removeAutomaticBreakMinutes({
+      meetingMinutes: Number(targetDraft.meetingMinutes || 0),
+      shift: targetDraft.shift,
+    }).meetingMinutes;
     const submittedAt = options.submittedAt ?? new Date();
     const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
     const entryEventsForDetails = options.entryEvents ?? employeeDraftEventsRef.current;
@@ -4293,7 +4290,10 @@ function App() {
                           clearEmployeeActiveTimer();
                           setDraft({
                             ...draft,
-                            meetingMinutes: Math.max(Number(draft.meetingMinutes || 0), getShiftBreakMinutes(shift)),
+                            meetingMinutes: removeAutomaticBreakMinutes({
+                              meetingMinutes: Number(draft.meetingMinutes || 0),
+                              shift,
+                            }).meetingMinutes,
                             shift,
                             shiftEndAt: shiftEndAt(draft.date, shift),
                             shiftStartAt: shiftStartAt(draft.date, shift),
