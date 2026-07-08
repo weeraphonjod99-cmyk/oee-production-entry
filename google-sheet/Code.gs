@@ -1509,7 +1509,7 @@ function getProductionCapacityData(params) {
 
 function normalizeProductionCapacityGroupParam(value) {
   const group = normalizeKpiText(value).toUpperCase();
-  if (!group || group === "ALL" || group === "ทั้งหมด") return "";
+  if (!group || group === "ALL" || group === "OTHER" || group === "ทั้งหมด") return "";
   return group;
 }
 
@@ -1517,7 +1517,7 @@ function buildProductionCapacityGroups(sheets) {
   const groupMap = {};
   sheets.forEach(function(sheet) {
     const group = getProductionCapacityGroup(sheet.getName());
-    if (group) groupMap[group] = true;
+    if (group && group !== "OTHER") groupMap[group] = true;
   });
   return Object.keys(groupMap).sort(function(a, b) {
     return productionCapacityGroupSort(a) - productionCapacityGroupSort(b) || a.localeCompare(b);

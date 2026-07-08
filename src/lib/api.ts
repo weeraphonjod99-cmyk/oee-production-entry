@@ -161,12 +161,23 @@ async function parseJsonResponse(response: Response) {
 }
 
 const requestTimeoutMs = 12000;
+const productionCapacityTimeoutMs = 45000;
 
 const sleep = (ms: number) => new Promise((resolve) => globalThis.setTimeout(resolve, ms));
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}) {
+function normalizeFetchError(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return new Error("โหลดข้อมูลนานเกินไป กรุณากดอัปเดตข้อมูลอีกครั้ง");
+  }
+  if (error instanceof Error && /aborted/i.test(error.message || "")) {
+    return new Error("โหลดข้อมูลนานเกินไป กรุณากดอัปเดตข้อมูลอีกครั้ง");
+  }
+  return error;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = requestTimeoutMs) {
   const controller = new AbortController();
-  const timeout = globalThis.setTimeout(() => controller.abort(), requestTimeoutMs);
+  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } finally {
@@ -174,13 +185,13 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   }
 }
 
-async function fetchWithRetry(input: RequestInfo | URL, init: RequestInit = {}, attempts = 2) {
+async function fetchWithRetry(input: RequestInfo | URL, init: RequestInit = {}, attempts = 2, timeoutMs = requestTimeoutMs) {
   let lastError: unknown;
   for (let attempt = 0; attempt <= attempts; attempt++) {
     try {
-      return await fetchWithTimeout(input, init);
+      return await fetchWithTimeout(input, init, timeoutMs);
     } catch (error) {
-      lastError = error;
+      lastError = normalizeFetchError(error);
       if (attempt >= attempts) break;
       await sleep(500 * (attempt + 1));
     }
@@ -384,11 +395,12 @@ export async function fetchPdSheets(): Promise<PdWorkbook[]> {
 
 export async function fetchProductionCapacity(group = ""): Promise<ProductionCapacityData | null> {
   if (!remoteEnabled) return null;
+  const normalizedGroup = group.toUpperCase() === "OTHER" ? "" : group;
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set("action", "productionCapacity");
-  if (group && group !== "ทั้งหมด") url.searchParams.set("group", group);
+  if (normalizedGroup && normalizedGroup !== "ทั้งหมด") url.searchParams.set("group", normalizedGroup);
   url.searchParams.set("_", String(Date.now()));
-  const response = await fetchWithRetry(url.toString(), { cache: "no-store" }, 1);
+  const response = await fetchWithRetry(url.toString(), { cache: "no-store" }, 1, productionCapacityTimeoutMs);
   const data = await parseJsonResponse(response);
   if (!response.ok || data.ok === false) {
     throw new Error(data.error || "โหลดข้อมูลกำลังผลิตจาก Google Sheet ไม่สำเร็จ");
