@@ -3155,11 +3155,18 @@ select:disabled {
 }
 
 .production-capacity-toolbar {
-  grid-template-columns: minmax(180px, 0.45fr) minmax(220px, 0.65fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(160px, 0.45fr) minmax(200px, 0.6fr) minmax(280px, 1fr) minmax(120px, 0.25fr) minmax(280px, 1fr);
 }
 
 .capacity-search-field .input-with-icon {
   background: #fff;
+}
+
+.capacity-percent-field input {
+  color: #064e3b;
+  font-size: 20px;
+  font-weight: 1000;
+  text-align: center;
 }
 
 .production-capacity-summary strong {

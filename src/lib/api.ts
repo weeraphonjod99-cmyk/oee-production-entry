@@ -42,9 +42,13 @@ export type ProductionCapacityRecord = {
   step: string;
   cycleMinutes?: number;
   kpi85PerMinute?: number;
+  kpi100PerMinute?: number;
   target8h?: number;
+  target8h100?: number;
   target10_5h?: number;
+  target10_5h100?: number;
   target12_5h?: number;
+  target12_5h100?: number;
   machineType?: string;
   machineNo?: string;
 };

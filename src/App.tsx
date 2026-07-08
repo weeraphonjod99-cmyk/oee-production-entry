@@ -49,6 +49,7 @@ import {
   type PdWorkbook,
   type ProductDefaults,
   type ProductionCapacityData,
+  type ProductionCapacityRecord,
   type ProductionOrderMachineSummary,
   type RoleNotification,
 } from "./lib/api";
@@ -1838,6 +1839,7 @@ function App() {
   const [productionCapacityMachine, setProductionCapacityMachine] = useState("");
   const [productionCapacityPart, setProductionCapacityPart] = useState("");
   const [productionCapacitySearch, setProductionCapacitySearch] = useState("");
+  const [productionCapacityPercent, setProductionCapacityPercent] = useState(85);
   const [machines, setMachines] = useState<Machine[]>(fallbackMachines);
   const [seedProducts, setSeedProducts] = useState<ProductMaster[]>([]);
   const [seedLogs, setSeedLogs] = useState<ProductionLog[]>([]);
@@ -4959,6 +4961,7 @@ function App() {
             selectedGroup={productionCapacityGroup}
             selectedMachine={productionCapacityMachine}
             selectedPart={productionCapacityPart}
+            selectedPercent={productionCapacityPercent}
             setSearch={setProductionCapacitySearch}
             setSelectedGroup={(value) => {
               setProductionCapacityGroup(!value || value.toUpperCase() === "OTHER" || value === "ทั้งหมด" ? "80T" : value);
@@ -4970,6 +4973,7 @@ function App() {
               setProductionCapacityPart("");
             }}
             setSelectedPart={setProductionCapacityPart}
+            setSelectedPercent={setProductionCapacityPercent}
           />
         )}
 
@@ -6971,6 +6975,36 @@ function MachineCapacityDashboard({ logs, machines }: { logs: ProductionLog[]; m
 
 const PRODUCTION_CAPACITY_GROUP_OPTIONS = ["80T", "110T", "150T", "200T", "260T", "300T", "500T", "CNC", "BENDING", "RW", "SW", "RIVETING", "TAPPING"];
 
+const MIN_CAPACITY_PERCENT = 85;
+const MAX_CAPACITY_PERCENT = 100;
+
+function clampCapacityPercent(value: number) {
+  if (!Number.isFinite(value)) return MIN_CAPACITY_PERCENT;
+  return Math.min(MAX_CAPACITY_PERCENT, Math.max(MIN_CAPACITY_PERCENT, Math.round(value)));
+}
+
+function capacityTargetForPercent(target100: number | undefined, target85: number | undefined, percent: number) {
+  const base100 = Number(target100 || 0) > 0 ? Number(target100 || 0) : Number(target85 || 0) > 0 ? Number(target85 || 0) / 0.85 : 0;
+  return base100 > 0 ? base100 * (percent / 100) : 0;
+}
+
+function capacityTarget8h(record: ProductionCapacityRecord, percent: number) {
+  return capacityTargetForPercent(record.target8h100, record.target8h, percent);
+}
+
+function capacityTarget10_5h(record: ProductionCapacityRecord, percent: number) {
+  return capacityTargetForPercent(record.target10_5h100, record.target10_5h, percent);
+}
+
+function capacityTarget12_5h(record: ProductionCapacityRecord, percent: number) {
+  return capacityTargetForPercent(record.target12_5h100, record.target12_5h, percent);
+}
+
+function capacityKpiPerMinute(record: ProductionCapacityRecord, percent: number) {
+  const target8h = capacityTarget8h(record, percent);
+  return target8h > 0 ? target8h / 480 : 0;
+}
+
 function ProductionCapacityView({
   data,
   error,
@@ -6980,10 +7014,12 @@ function ProductionCapacityView({
   selectedGroup,
   selectedMachine,
   selectedPart,
+  selectedPercent,
   setSearch,
   setSelectedGroup,
   setSelectedMachine,
   setSelectedPart,
+  setSelectedPercent,
 }: {
   data: ProductionCapacityData | null;
   error: string;
@@ -6993,10 +7029,12 @@ function ProductionCapacityView({
   selectedGroup: string;
   selectedMachine: string;
   selectedPart: string;
+  selectedPercent: number;
   setSearch: (value: string) => void;
   setSelectedGroup: (value: string) => void;
   setSelectedMachine: (value: string) => void;
   setSelectedPart: (value: string) => void;
+  setSelectedPercent: (value: number) => void;
 }) {
   const groups = useMemo(() => {
     const items = data?.groups?.length ? data.groups : [];
@@ -7055,12 +7093,12 @@ function ProductionCapacityView({
   }, [machineRecords, normalizedSearch, partValue]);
 
   const summary = useMemo(() => {
-    const totalTarget8h = records.reduce((sum, record) => sum + Number(record.target8h || 0), 0);
-    const kpiRows = records.filter((record) => Number(record.kpi85PerMinute || 0) > 0);
-    const avgKpi = kpiRows.length > 0 ? kpiRows.reduce((sum, record) => sum + Number(record.kpi85PerMinute || 0), 0) / kpiRows.length : 0;
+    const totalTarget8h = records.reduce((sum, record) => sum + capacityTarget8h(record, selectedPercent), 0);
+    const kpiValues = records.map((record) => capacityKpiPerMinute(record, selectedPercent)).filter((value) => value > 0);
+    const avgKpi = kpiValues.length > 0 ? kpiValues.reduce((sum, value) => sum + value, 0) / kpiValues.length : 0;
     const partCount = new Set(records.map((record) => `${record.partNo}|${record.step}`)).size;
     return { avgKpi, partCount, totalTarget8h };
-  }, [records]);
+  }, [records, selectedPercent]);
 
   return (
     <section className="capacity-layout">
@@ -7115,6 +7153,18 @@ function ProductionCapacityView({
             ))}
           </select>
         </label>
+        <label className="capacity-percent-field">
+          KPI %
+          <input
+            max={MAX_CAPACITY_PERCENT}
+            min={MIN_CAPACITY_PERCENT}
+            onBlur={(event) => setSelectedPercent(clampCapacityPercent(Number(event.target.value)))}
+            onChange={(event) => setSelectedPercent(clampCapacityPercent(Number(event.target.value)))}
+            step={1}
+            type="number"
+            value={selectedPercent}
+          />
+        </label>
         <label className="capacity-search-field">
           ค้นหา
           <div className="input-with-icon">
@@ -7145,7 +7195,7 @@ function ProductionCapacityView({
           <strong>{formatNumber(summary.partCount)}</strong>
         </div>
         <div>
-          <span>KPI 85% เฉลี่ย</span>
+          <span>KPI {selectedPercent}% เฉลี่ย</span>
           <strong>{formatRate(summary.avgKpi)}</strong>
         </div>
         <div>
@@ -7158,23 +7208,28 @@ function ProductionCapacityView({
         {machines.length === 0 ? (
           <div className="empty-state">ไม่พบข้อมูลกำลังผลิตของกลุ่มที่เลือก</div>
         ) : (
-          machines.map((machine) => (
-            <button
-              className={`production-capacity-card ${machine.machineName === machineValue ? "active" : ""}`}
-              key={machine.sheetName}
-              onClick={() => {
-                setSelectedMachine(machine.machineName === machineValue ? "" : machine.machineName);
-                setSelectedPart("");
-              }}
-              type="button"
-            >
-              <span>{machine.group}</span>
-              <strong>{machine.machineName}</strong>
-              <small>{machine.sheetName}</small>
-              <b>{formatNumber(machine.rowCount)} รายการ</b>
-              <em>KPI {formatRate(machine.avgKpi85PerMinute)} · Target 8H {formatNumber(machine.avgTarget8h)}</em>
-            </button>
-          ))
+          machines.map((machine) => {
+            const machineKpis = machine.records.map((record) => capacityKpiPerMinute(record, selectedPercent)).filter((value) => value > 0);
+            const machineAvgKpi = machineKpis.length ? machineKpis.reduce((sum, value) => sum + value, 0) / machineKpis.length : 0;
+            const machineTarget8h = machine.records.reduce((sum, record) => sum + capacityTarget8h(record, selectedPercent), 0);
+            return (
+              <button
+                className={`production-capacity-card ${machine.machineName === machineValue ? "active" : ""}`}
+                key={machine.sheetName}
+                onClick={() => {
+                  setSelectedMachine(machine.machineName === machineValue ? "" : machine.machineName);
+                  setSelectedPart("");
+                }}
+                type="button"
+              >
+                <span>{machine.group}</span>
+                <strong>{machine.machineName}</strong>
+                <small>{machine.sheetName}</small>
+                <b>{formatNumber(machine.rowCount)} รายการ</b>
+                <em>KPI {selectedPercent}% {formatRate(machineAvgKpi)} · Target 8H {formatNumber(machineTarget8h)}</em>
+              </button>
+            );
+          })
         )}
       </div>
 
@@ -7193,7 +7248,7 @@ function ProductionCapacityView({
                 <th>เครื่อง</th>
                 <th>รุ่น / Part No.</th>
                 <th>Step</th>
-                <th>KPI 85%/นาที</th>
+                <th>KPI {selectedPercent}%/นาที</th>
                 <th>Target 8H</th>
                 <th>Target 10.5H</th>
                 <th>Target 12.5H</th>
@@ -7219,10 +7274,10 @@ function ProductionCapacityView({
                       <small>{record.partNo || "-"}</small>
                     </td>
                     <td>{record.step || "-"}</td>
-                    <td>{formatRate(record.kpi85PerMinute || 0)}</td>
-                    <td>{formatNumber(record.target8h || 0)}</td>
-                    <td>{formatNumber(record.target10_5h || 0)}</td>
-                    <td>{formatNumber(record.target12_5h || 0)}</td>
+                    <td>{formatRate(capacityKpiPerMinute(record, selectedPercent))}</td>
+                    <td>{formatNumber(capacityTarget8h(record, selectedPercent))}</td>
+                    <td>{formatNumber(capacityTarget10_5h(record, selectedPercent))}</td>
+                    <td>{formatNumber(capacityTarget12_5h(record, selectedPercent))}</td>
                     <td>
                       <strong>{record.machineNo || "-"}</strong>
                       <small>{record.machineType || ""}</small>

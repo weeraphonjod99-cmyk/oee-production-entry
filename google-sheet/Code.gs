@@ -1623,7 +1623,9 @@ function detectProductionCapacityLayout(values) {
         machineIndex: machineIndex,
         target8h100Index: 14,
         target8h85Index: 16,
+        target10_5h100Index: 17,
         target10_5h85Index: 19,
+        target12_5h100Index: 20,
         target12_5h85Index: 22,
         machineTypeIndex: 23,
         machineNoIndex: 24,
@@ -1646,7 +1648,9 @@ function detectProductionCapacityLayout(values) {
         machineIndex: -1,
         target8h100Index: 14,
         target8h85Index: 16,
+        target10_5h100Index: 17,
         target10_5h85Index: 19,
+        target12_5h100Index: 20,
         target12_5h85Index: 22,
         machineTypeIndex: 23,
         machineNoIndex: 24,
@@ -1665,10 +1669,16 @@ function extractProductionCapacityRecord(row, layout, sheetName, rowNumber) {
   const target8h100 = productionCapacityNumber(row[layout.target8h100Index]);
   const target8h85 = productionCapacityNumber(row[layout.target8h85Index]);
   const targetFallback = productionCapacityNumber(row[layout.targetIndex]);
+  const target10_5h100 = productionCapacityNumber(row[layout.target10_5h100Index]);
   const target10_5h85 = productionCapacityNumber(row[layout.target10_5h85Index]);
+  const target12_5h100 = productionCapacityNumber(row[layout.target12_5h100Index]);
   const target12_5h85 = productionCapacityNumber(row[layout.target12_5h85Index]);
   const target8h = firstProductionCapacityNumber([target8h85, targetFallback, target8h100]);
+  const target8h100Resolved = firstProductionCapacityNumber([target8h100, target8h > 0 ? target8h / 0.85 : 0]);
+  const target10_5h100Resolved = firstProductionCapacityNumber([target10_5h100, target10_5h85 > 0 ? target10_5h85 / 0.85 : 0]);
+  const target12_5h100Resolved = firstProductionCapacityNumber([target12_5h100, target12_5h85 > 0 ? target12_5h85 / 0.85 : 0]);
   const kpi85PerMinute = target8h > 0 ? target8h / 480 : 0;
+  const kpi100PerMinute = target8h100Resolved > 0 ? target8h100Resolved / 480 : 0;
 
   return {
     rowNumber: rowNumber,
@@ -1680,9 +1690,13 @@ function extractProductionCapacityRecord(row, layout, sheetName, rowNumber) {
     step: normalizeKpiText(row[layout.stepIndex], "-"),
     cycleMinutes: productionCapacityNumber(row[layout.cycleIndex]),
     kpi85PerMinute: kpi85PerMinute,
+    kpi100PerMinute: kpi100PerMinute,
     target8h: target8h,
+    target8h100: target8h100Resolved,
     target10_5h: target10_5h85,
+    target10_5h100: target10_5h100Resolved,
     target12_5h: target12_5h85,
+    target12_5h100: target12_5h100Resolved,
     machineType: normalizeKpiText(row[layout.machineTypeIndex]),
     machineNo: normalizeKpiText(row[layout.machineNoIndex]),
   };
