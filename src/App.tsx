@@ -1984,7 +1984,8 @@ function App() {
     }
     setProductionCapacityLoading(true);
     try {
-      const data = await fetchProductionCapacity(productionCapacityGroup);
+      const capacityGroup = !productionCapacityGroup || productionCapacityGroup.toUpperCase() === "OTHER" || productionCapacityGroup === "ทั้งหมด" ? "80T" : productionCapacityGroup;
+      const data = await fetchProductionCapacity(capacityGroup);
       setProductionCapacity(data);
       setProductionCapacityError("");
     } catch (error) {
@@ -4958,7 +4959,7 @@ function App() {
             selectedMachine={productionCapacityMachine}
             setSearch={setProductionCapacitySearch}
             setSelectedGroup={(value) => {
-              setProductionCapacityGroup(value);
+              setProductionCapacityGroup(!value || value.toUpperCase() === "OTHER" || value === "ทั้งหมด" ? "80T" : value);
               setProductionCapacityMachine("");
             }}
             setSelectedMachine={setProductionCapacityMachine}
@@ -6961,6 +6962,8 @@ function MachineCapacityDashboard({ logs, machines }: { logs: ProductionLog[]; m
   );
 }
 
+const PRODUCTION_CAPACITY_GROUP_OPTIONS = ["80T", "110T", "150T", "200T", "260T", "300T", "500T", "CNC", "BENDING", "RW", "SW", "RIVETING", "TAPPING"];
+
 function ProductionCapacityView({
   data,
   error,
@@ -6986,14 +6989,17 @@ function ProductionCapacityView({
 }) {
   const groups = useMemo(() => {
     const items = data?.groups?.length ? data.groups : [];
-    return ["ทั้งหมด", ...items.filter((group) => group !== "ทั้งหมด")];
+    const groupSet = new Set([...PRODUCTION_CAPACITY_GROUP_OPTIONS, ...items]);
+    groupSet.delete("ทั้งหมด");
+    groupSet.delete("OTHER");
+    return Array.from(groupSet).sort((a, b) => PRODUCTION_CAPACITY_GROUP_OPTIONS.indexOf(a) - PRODUCTION_CAPACITY_GROUP_OPTIONS.indexOf(b));
   }, [data]);
 
-  const groupValue = selectedGroup && groups.includes(selectedGroup) ? selectedGroup : "ทั้งหมด";
+  const groupValue = selectedGroup && groups.includes(selectedGroup) ? selectedGroup : "80T";
   const machines = useMemo(() => {
     const source = data?.machines ?? [];
     return source
-      .filter((machine) => groupValue === "ทั้งหมด" || machine.group === groupValue)
+      .filter((machine) => machine.group === groupValue)
       .sort((a, b) => a.machineName.localeCompare(b.machineName));
   }, [data, groupValue]);
 
