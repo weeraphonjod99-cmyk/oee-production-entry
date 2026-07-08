@@ -34,6 +34,7 @@ import {
   fetchEmployeeMachineStatuses,
   fetchMachines,
   fetchProductDefaults,
+  fetchProductionCapacity,
   fetchProductionOrders,
   fetchProductionOrderSummaries,
   fetchRemoteLogs,
@@ -47,6 +48,7 @@ import {
   type EmployeeMachineStatus,
   type PdWorkbook,
   type ProductDefaults,
+  type ProductionCapacityData,
   type ProductionOrderMachineSummary,
   type RoleNotification,
 } from "./lib/api";
@@ -79,7 +81,7 @@ import {
 import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
-type TabId = "employeeEntry" | "entry" | "dashboard" | "reports" | "history" | "master" | "users";
+type TabId = "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -1829,6 +1831,12 @@ function App() {
   const [dashboardFilters, setDashboardFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [productionCapacity, setProductionCapacity] = useState<ProductionCapacityData | null>(null);
+  const [productionCapacityLoading, setProductionCapacityLoading] = useState(false);
+  const [productionCapacityError, setProductionCapacityError] = useState("");
+  const [productionCapacityGroup, setProductionCapacityGroup] = useState("80T");
+  const [productionCapacityMachine, setProductionCapacityMachine] = useState("");
+  const [productionCapacitySearch, setProductionCapacitySearch] = useState("");
   const [machines, setMachines] = useState<Machine[]>(fallbackMachines);
   const [seedProducts, setSeedProducts] = useState<ProductMaster[]>([]);
   const [seedLogs, setSeedLogs] = useState<ProductionLog[]>([]);
@@ -1967,6 +1975,29 @@ function App() {
       document.removeEventListener("visibilitychange", updateWhenVisible);
     };
   }, [session]);
+
+  const loadProductionCapacity = useCallback(async () => {
+    if (!remoteEnabled) {
+      setProductionCapacity(null);
+      setProductionCapacityError("ยังไม่ได้เชื่อมต่อ Google Sheet");
+      return;
+    }
+    setProductionCapacityLoading(true);
+    try {
+      const data = await fetchProductionCapacity(productionCapacityGroup);
+      setProductionCapacity(data);
+      setProductionCapacityError("");
+    } catch (error) {
+      setProductionCapacityError(error instanceof Error ? error.message : "โหลดข้อมูลกำลังผลิตไม่สำเร็จ");
+    } finally {
+      setProductionCapacityLoading(false);
+    }
+  }, [productionCapacityGroup]);
+
+  useEffect(() => {
+    if (tab !== "capacity") return;
+    void loadProductionCapacity();
+  }, [loadProductionCapacity, tab]);
 
   useEffect(() => {
     if (!remoteEnabled || !session) return;
@@ -4079,6 +4110,11 @@ function App() {
             </span>
             กรอกยอดสำหรับพนักงาน
           </button>
+          {canAccessTab(session, "capacity") && (
+            <button className={tab === "capacity" ? "active" : ""} onClick={() => setTab("capacity")} type="button">
+              <TableProperties size={18} /> ดูกำลังผลิต
+            </button>
+          )}
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
               <BarChart3 size={18} /> Dashboard
@@ -4909,6 +4945,24 @@ function App() {
             <MachineRanking logs={dashboardLogs} machines={machines} />
             <Trend logs={dashboardLogs} />
           </section>
+        )}
+
+        {tab === "capacity" && (
+          <ProductionCapacityView
+            data={productionCapacity}
+            error={productionCapacityError}
+            loading={productionCapacityLoading}
+            onRefresh={loadProductionCapacity}
+            search={productionCapacitySearch}
+            selectedGroup={productionCapacityGroup}
+            selectedMachine={productionCapacityMachine}
+            setSearch={setProductionCapacitySearch}
+            setSelectedGroup={(value) => {
+              setProductionCapacityGroup(value);
+              setProductionCapacityMachine("");
+            }}
+            setSelectedMachine={setProductionCapacityMachine}
+          />
         )}
 
         {tab === "reports" && (
@@ -6904,6 +6958,228 @@ function MachineCapacityDashboard({ logs, machines }: { logs: ProductionLog[]; m
         </table>
       </div>
     </div>
+  );
+}
+
+function ProductionCapacityView({
+  data,
+  error,
+  loading,
+  onRefresh,
+  search,
+  selectedGroup,
+  selectedMachine,
+  setSearch,
+  setSelectedGroup,
+  setSelectedMachine,
+}: {
+  data: ProductionCapacityData | null;
+  error: string;
+  loading: boolean;
+  onRefresh: () => void;
+  search: string;
+  selectedGroup: string;
+  selectedMachine: string;
+  setSearch: (value: string) => void;
+  setSelectedGroup: (value: string) => void;
+  setSelectedMachine: (value: string) => void;
+}) {
+  const groups = useMemo(() => {
+    const items = data?.groups?.length ? data.groups : [];
+    return ["ทั้งหมด", ...items.filter((group) => group !== "ทั้งหมด")];
+  }, [data]);
+
+  const groupValue = selectedGroup && groups.includes(selectedGroup) ? selectedGroup : "ทั้งหมด";
+  const machines = useMemo(() => {
+    const source = data?.machines ?? [];
+    return source
+      .filter((machine) => groupValue === "ทั้งหมด" || machine.group === groupValue)
+      .sort((a, b) => a.machineName.localeCompare(b.machineName));
+  }, [data, groupValue]);
+
+  const machineValue = selectedMachine && machines.some((machine) => machine.machineName === selectedMachine) ? selectedMachine : "";
+  const normalizedSearch = search.trim().toLowerCase();
+  const records = useMemo(() => {
+    return machines
+      .filter((machine) => !machineValue || machine.machineName === machineValue)
+      .flatMap((machine) => machine.records)
+      .filter((record) => {
+        if (!normalizedSearch) return true;
+        return [record.machineName, record.productName, record.partNo, record.step, record.machineNo, record.machineType]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
+      })
+      .sort((a, b) => a.machineName.localeCompare(b.machineName) || a.productName.localeCompare(b.productName) || a.partNo.localeCompare(b.partNo));
+  }, [machineValue, machines, normalizedSearch]);
+
+  const summary = useMemo(() => {
+    const totalTarget8h = records.reduce((sum, record) => sum + Number(record.target8h || 0), 0);
+    const kpiRows = records.filter((record) => Number(record.kpi85PerMinute || 0) > 0);
+    const avgKpi = kpiRows.length > 0 ? kpiRows.reduce((sum, record) => sum + Number(record.kpi85PerMinute || 0), 0) / kpiRows.length : 0;
+    const partCount = new Set(records.map((record) => `${record.partNo}|${record.step}`)).size;
+    return { avgKpi, partCount, totalTarget8h };
+  }, [records]);
+
+  return (
+    <section className="capacity-layout">
+      <div className="analysis-panel production-capacity-hero">
+        <div>
+          <p className="eyebrow">Production capacity</p>
+          <h2>ดูกำลังผลิตตามเครื่องจักร</h2>
+          <p>อ้างอิงจาก Google Sheet กำลังผลิต แยกตาม sheet ของแต่ละเครื่อง</p>
+        </div>
+        <button className="ghost-button" disabled={loading} onClick={onRefresh} type="button">
+          <RefreshCw size={17} /> {loading ? "กำลังโหลด" : "อัปเดตข้อมูล"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="inline-alert danger">
+          <AlertTriangle size={17} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="filters-bar production-capacity-toolbar">
+        <label>
+          กลุ่มเครื่อง
+          <select value={groupValue} onChange={(event) => setSelectedGroup(event.target.value)}>
+            {groups.map((group) => (
+              <option key={group} value={group}>
+                {group}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          เครื่อง
+          <select value={machineValue} onChange={(event) => setSelectedMachine(event.target.value)}>
+            <option value="">ทั้งหมด</option>
+            {machines.map((machine) => (
+              <option key={machine.machineName} value={machine.machineName}>
+                {machine.machineName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="capacity-search-field">
+          ค้นหา
+          <div className="input-with-icon">
+            <Search size={16} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Part No. / รุ่น / Step"
+              type="search"
+            />
+          </div>
+        </label>
+      </div>
+
+      <div className="daily-performance-summary production-capacity-summary">
+        <div>
+          <span>แหล่งข้อมูล</span>
+          <strong>{data?.sourceName || "-"}</strong>
+        </div>
+        <div>
+          <span>เครื่อง / Records</span>
+          <strong>
+            {formatNumber(machines.length)} / {formatNumber(records.length)}
+          </strong>
+        </div>
+        <div>
+          <span>Part + Step</span>
+          <strong>{formatNumber(summary.partCount)}</strong>
+        </div>
+        <div>
+          <span>KPI 85% เฉลี่ย</span>
+          <strong>{formatRate(summary.avgKpi)}</strong>
+        </div>
+        <div>
+          <span>Target 8H รวม</span>
+          <strong>{formatNumber(summary.totalTarget8h)}</strong>
+        </div>
+      </div>
+
+      <div className="production-capacity-machine-grid">
+        {machines.length === 0 ? (
+          <div className="empty-state">ไม่พบข้อมูลกำลังผลิตของกลุ่มที่เลือก</div>
+        ) : (
+          machines.map((machine) => (
+            <button
+              className={`production-capacity-card ${machine.machineName === machineValue ? "active" : ""}`}
+              key={machine.sheetName}
+              onClick={() => setSelectedMachine(machine.machineName === machineValue ? "" : machine.machineName)}
+              type="button"
+            >
+              <span>{machine.group}</span>
+              <strong>{machine.machineName}</strong>
+              <small>{machine.sheetName}</small>
+              <b>{formatNumber(machine.rowCount)} รายการ</b>
+              <em>KPI {formatRate(machine.avgKpi85PerMinute)} · Target 8H {formatNumber(machine.avgTarget8h)}</em>
+            </button>
+          ))
+        )}
+      </div>
+
+      <div className="analysis-panel production-capacity-table-panel">
+        <div className="report-table-heading compact-heading">
+          <div>
+            <h2>รายการกำลังผลิต</h2>
+            <p>{data?.fetchedAt ? `อัปเดตล่าสุด ${formatSharedStatusTime(data.fetchedAt)}` : "ยังไม่มีข้อมูล"}</p>
+          </div>
+          <span>{formatNumber(records.length)} รายการ</span>
+        </div>
+        <div className="data-table-wrap production-capacity-table">
+          <table>
+            <thead>
+              <tr>
+                <th>เครื่อง</th>
+                <th>รุ่น / Part No.</th>
+                <th>Step</th>
+                <th>KPI 85%/นาที</th>
+                <th>Target 8H</th>
+                <th>Target 10.5H</th>
+                <th>Target 12.5H</th>
+                <th>M/C</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.length === 0 ? (
+                <tr>
+                  <td className="empty-cell" colSpan={8}>
+                    ไม่มีข้อมูลตามตัวกรองนี้
+                  </td>
+                </tr>
+              ) : (
+                records.map((record) => (
+                  <tr key={`${record.sheetName}-${record.rowNumber}-${record.partNo}-${record.step}`}>
+                    <td>
+                      <strong>{record.machineName}</strong>
+                      <small>{record.group}</small>
+                    </td>
+                    <td>
+                      <strong>{record.productName || "-"}</strong>
+                      <small>{record.partNo || "-"}</small>
+                    </td>
+                    <td>{record.step || "-"}</td>
+                    <td>{formatRate(record.kpi85PerMinute || 0)}</td>
+                    <td>{formatNumber(record.target8h || 0)}</td>
+                    <td>{formatNumber(record.target10_5h || 0)}</td>
+                    <td>{formatNumber(record.target12_5h || 0)}</td>
+                    <td>
+                      <strong>{record.machineNo || "-"}</strong>
+                      <small>{record.machineType || ""}</small>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   );
 }
 

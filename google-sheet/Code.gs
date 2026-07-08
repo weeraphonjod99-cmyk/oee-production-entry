@@ -107,6 +107,13 @@ const PD_EXTERNAL_SHEETS = [
 const PD_MAX_ROWS_PER_SHEET = 300;
 const PD_KPI_MAX_ROWS_PER_SHEET = 2000;
 const PD_MAX_COLUMNS_PER_SHEET = 40;
+const PRODUCTION_CAPACITY_SPREADSHEET_ID = "1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq";
+const PRODUCTION_CAPACITY_GID = "1541790103";
+const PRODUCTION_CAPACITY_URL = "https://docs.google.com/spreadsheets/d/1eXby1xmCjhp_C8H_r7OC8JmnLu00WRYq/edit?gid=1541790103#gid=1541790103";
+const PRODUCTION_CAPACITY_CACHE_KEY = "production_capacity_v1";
+const PRODUCTION_CAPACITY_CACHE_SECONDS = 60;
+const PRODUCTION_CAPACITY_MAX_ROWS_PER_SHEET = 700;
+const PRODUCTION_CAPACITY_MAX_COLUMNS_PER_SHEET = 32;
 
 const MACHINES_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/machines.csv";
 const PRODUCT_MASTER_CSV_URL = "https://raw.githubusercontent.com/weeraphonjod99-cmyk/oee-production-entry/main/google-sheet/product_master.csv";
@@ -401,6 +408,9 @@ function doGet(e) {
     }
     if (action === "productionOrderSummaries") {
       return jsonResponse({ ok: true, summaries: getProductionOrderSummaries() });
+    }
+    if (action === "productionCapacity") {
+      return jsonResponse({ ok: true, capacity: getProductionCapacityData(e.parameter || {}) });
     }
     if (action === "auditEmployeeMachineStatuses") {
       return jsonResponse({ ok: true, result: auditEmployeeMachineStatuses() });
@@ -1440,6 +1450,279 @@ function getSheetById(book, sheetId) {
     if (sheets[index].getSheetId() === wantedId) return sheets[index];
   }
   return null;
+}
+
+function getProductionCapacityData(params) {
+  const force = params && String(params.force || "") === "1";
+  const selectedGroup = normalizeProductionCapacityGroupParam(params && params.group);
+  const cache = CacheService.getScriptCache();
+  const cacheKey = PRODUCTION_CAPACITY_CACHE_KEY + "_" + (selectedGroup || "all");
+  if (!force) {
+    const cached = cache.get(cacheKey);
+    const parsed = parseJsonSafe(cached);
+    if (parsed) return parsed;
+  }
+
+  const book = SpreadsheetApp.openById(PRODUCTION_CAPACITY_SPREADSHEET_ID);
+  const selectedSheet = getSheetById(book, PRODUCTION_CAPACITY_GID);
+  const visibleSheets = book.getSheets().filter(function(sheet) {
+    return !shouldSkipProductionCapacitySheet(sheet);
+  });
+  const sheets = selectedSheet
+    ? [selectedSheet].concat(visibleSheets.filter(function(sheet) {
+        return sheet.getSheetId() !== selectedSheet.getSheetId();
+      }))
+    : visibleSheets;
+  const groups = buildProductionCapacityGroups(visibleSheets);
+  const filteredSheets = selectedGroup
+    ? sheets.filter(function(sheet) {
+        return getProductionCapacityGroup(sheet.getName()) === selectedGroup;
+      })
+    : sheets;
+
+  const machines = [];
+  filteredSheets.forEach(function(sheet) {
+    const machine = readProductionCapacityMachine(sheet);
+    if (machine && machine.records.length > 0) machines.push(machine);
+  });
+
+  const result = {
+    spreadsheetId: PRODUCTION_CAPACITY_SPREADSHEET_ID,
+    spreadsheetUrl: PRODUCTION_CAPACITY_URL,
+    sourceName: book.getName(),
+    gid: PRODUCTION_CAPACITY_GID,
+    fetchedAt: new Date().toISOString(),
+    selectedGroup: selectedGroup,
+    groups: groups,
+    machines: machines,
+    totalRows: machines.reduce(function(sum, machine) {
+      return sum + machine.rowCount;
+    }, 0),
+  };
+  try {
+    cache.put(cacheKey, JSON.stringify(result), PRODUCTION_CAPACITY_CACHE_SECONDS);
+  } catch (cacheError) {
+    // Capacity payload can exceed Apps Script cache limits; keep serving live data.
+  }
+  return result;
+}
+
+function normalizeProductionCapacityGroupParam(value) {
+  const group = normalizeKpiText(value).toUpperCase();
+  if (!group || group === "ALL" || group === "ทั้งหมด") return "";
+  return group;
+}
+
+function buildProductionCapacityGroups(sheets) {
+  const groupMap = {};
+  sheets.forEach(function(sheet) {
+    const group = getProductionCapacityGroup(sheet.getName());
+    if (group) groupMap[group] = true;
+  });
+  return Object.keys(groupMap).sort(function(a, b) {
+    return productionCapacityGroupSort(a) - productionCapacityGroupSort(b) || a.localeCompare(b);
+  });
+}
+
+function shouldSkipProductionCapacitySheet(sheet) {
+  const rawName = sheet.getName();
+  const name = normalizeKpiKey(rawName);
+  if (typeof sheet.isSheetHidden === "function" && sheet.isSheetHidden()) return true;
+  if (!name) return true;
+  if (name.indexOf("APP_USERS") >= 0 || name.indexOf("SUBMIT_HISTORY") >= 0) return true;
+  if (name.indexOf("PRODUCTION_LOG") >= 0 || name.indexOf("EMPLOYEE") >= 0) return true;
+  if (name.indexOf("ORDER") >= 0 || name.indexOf("MASTER") >= 0 || name.indexOf("MACHINE") === 0) return true;
+  if (name.indexOf("DASHBOARD") >= 0 || name.indexOf("NOTE") >= 0 || name.indexOf("KPI") === 0) return true;
+  return false;
+}
+
+function readProductionCapacityMachine(sheet) {
+  const lastRow = Math.min(sheet.getLastRow(), PRODUCTION_CAPACITY_MAX_ROWS_PER_SHEET);
+  const lastColumn = Math.min(sheet.getLastColumn(), PRODUCTION_CAPACITY_MAX_COLUMNS_PER_SHEET);
+  if (lastRow < 2 || lastColumn < 3) return null;
+
+  const values = sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
+  const layout = detectProductionCapacityLayout(values);
+  if (!layout) return null;
+
+  const records = [];
+  for (let rowIndex = layout.headerRow + 1; rowIndex < values.length; rowIndex++) {
+    const record = extractProductionCapacityRecord(values[rowIndex], layout, sheet.getName(), rowIndex + 1);
+    if (record) records.push(record);
+  }
+  if (records.length === 0) return null;
+
+  const partMap = {};
+  let targetTotal = 0;
+  let targetCount = 0;
+  let targetMax = 0;
+  let kpiTotal = 0;
+  let kpiCount = 0;
+  records.forEach(function(record) {
+    const partKey = normalizeKpiKey(record.partNo || record.productName);
+    if (partKey) partMap[partKey] = true;
+    if (record.target8h > 0) {
+      targetTotal += record.target8h;
+      targetCount += 1;
+      targetMax = Math.max(targetMax, record.target8h);
+    }
+    if (record.kpi85PerMinute > 0) {
+      kpiTotal += record.kpi85PerMinute;
+      kpiCount += 1;
+    }
+  });
+
+  const machineName = inferProductionCapacityMachineName(sheet.getName(), records[0]);
+  const group = getProductionCapacityGroup(machineName);
+  records.forEach(function(record) {
+    record.machineName = machineName;
+    record.group = group;
+  });
+
+  return {
+    sheetName: sheet.getName(),
+    machineName: machineName,
+    group: group,
+    rowCount: records.length,
+    partCount: Object.keys(partMap).length,
+    avgKpi85PerMinute: kpiCount > 0 ? kpiTotal / kpiCount : 0,
+    avgTarget8h: targetCount > 0 ? targetTotal / targetCount : 0,
+    maxTarget8h: targetMax,
+    totalTarget8h: targetTotal,
+    records: records,
+  };
+}
+
+function detectProductionCapacityLayout(values) {
+  let best = null;
+  values.forEach(function(row, rowIndex) {
+    const headers = row.map(function(cell) {
+      return normalizeKpiKey(cell);
+    });
+    const partNoIndex = findPdHeaderIndex(headers, ["PARTNO", "PARTNUMBER", "PN"]);
+    const partNameIndex = findPdHeaderIndex(headers, ["PARTNAME", "PRODUCTNAME", "PRODUCT", "ITEMNAME"]);
+    const stepIndex = findPdHeaderIndex(headers, ["STEP"]);
+    const machineIndex = findPdHeaderIndex(headers, ["MCNO", "M/CNO", "MACHINE", "M/C"]);
+    const targetIndex = findPdTargetIndex(headers);
+    const cycleIndex = findPdHeaderIndex(headers, ["10MIN/PCS", "MIN/PCS", "CYCLE", "CYCLETIME"]);
+    const score =
+      (partNoIndex >= 0 ? 3 : 0) +
+      (partNameIndex >= 0 ? 3 : 0) +
+      (stepIndex >= 0 ? 1 : 0) +
+      (targetIndex >= 0 ? 2 : 0) +
+      (machineIndex >= 0 ? 1 : 0);
+    if (!best || score > best.score) {
+      best = {
+        headerRow: rowIndex,
+        score: score,
+        partNameIndex: partNameIndex >= 0 ? partNameIndex : 1,
+        partNoIndex: partNoIndex >= 0 ? partNoIndex : 2,
+        stepIndex: stepIndex >= 0 ? stepIndex : 3,
+        cycleIndex: cycleIndex >= 0 ? cycleIndex : 4,
+        targetIndex: targetIndex >= 0 ? targetIndex : 25,
+        machineIndex: machineIndex,
+        target8h100Index: 14,
+        target8h85Index: 16,
+        target10_5h85Index: 19,
+        target12_5h85Index: 22,
+        machineTypeIndex: 23,
+        machineNoIndex: 24,
+      };
+    }
+  });
+  if (best && best.score >= 4) return best;
+
+  const fixedScore = values.some(function(row) {
+    return normalizeKpiKey(row[1]).indexOf("PART") >= 0 && normalizeKpiKey(row[2]).indexOf("PART") >= 0;
+  });
+  return fixedScore
+    ? {
+        headerRow: 0,
+        partNameIndex: 1,
+        partNoIndex: 2,
+        stepIndex: 3,
+        cycleIndex: 4,
+        targetIndex: 25,
+        machineIndex: -1,
+        target8h100Index: 14,
+        target8h85Index: 16,
+        target10_5h85Index: 19,
+        target12_5h85Index: 22,
+        machineTypeIndex: 23,
+        machineNoIndex: 24,
+      }
+    : null;
+}
+
+function extractProductionCapacityRecord(row, layout, sheetName, rowNumber) {
+  const productName = normalizeKpiText(row[layout.partNameIndex]);
+  const partNo = normalizeKpiText(row[layout.partNoIndex]);
+  if (!productName && !partNo) return null;
+  const productKey = normalizeKpiKey(productName);
+  const partKey = normalizeKpiKey(partNo);
+  if (productKey.indexOf("PARTNAME") >= 0 || partKey.indexOf("PARTNO") >= 0) return null;
+
+  const target8h100 = productionCapacityNumber(row[layout.target8h100Index]);
+  const target8h85 = productionCapacityNumber(row[layout.target8h85Index]);
+  const targetFallback = productionCapacityNumber(row[layout.targetIndex]);
+  const target10_5h85 = productionCapacityNumber(row[layout.target10_5h85Index]);
+  const target12_5h85 = productionCapacityNumber(row[layout.target12_5h85Index]);
+  const target8h = firstProductionCapacityNumber([target8h85, targetFallback, target8h100]);
+  const kpi85PerMinute = target8h > 0 ? target8h / 480 : 0;
+
+  return {
+    rowNumber: rowNumber,
+    sheetName: sheetName,
+    machineName: normalizeKpiText(row[layout.machineIndex], sheetName),
+    group: getProductionCapacityGroup(sheetName),
+    productName: productName,
+    partNo: partNo,
+    step: normalizeKpiText(row[layout.stepIndex], "-"),
+    cycleMinutes: productionCapacityNumber(row[layout.cycleIndex]),
+    kpi85PerMinute: kpi85PerMinute,
+    target8h: target8h,
+    target10_5h: target10_5h85,
+    target12_5h: target12_5h85,
+    machineType: normalizeKpiText(row[layout.machineTypeIndex]),
+    machineNo: normalizeKpiText(row[layout.machineNoIndex]),
+  };
+}
+
+function productionCapacityNumber(value) {
+  const cleaned = String(value == null ? "" : value).replace(/,/g, "").trim();
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function firstProductionCapacityNumber(values) {
+  for (let index = 0; index < values.length; index++) {
+    if (values[index] > 0) return values[index];
+  }
+  return 0;
+}
+
+function inferProductionCapacityMachineName(sheetName, record) {
+  const machineNo = normalizeKpiText(record && record.machineNo);
+  if (machineNo) return machineNo;
+  return normalizeKpiText(sheetName, "Machine");
+}
+
+function getProductionCapacityGroup(machineName) {
+  const text = normalizeKpiText(machineName).toUpperCase();
+  const tonMatch = text.match(/(\d+)\s*T/);
+  if (tonMatch) return tonMatch[1] + "T";
+  if (text.indexOf("CNC") >= 0) return "CNC";
+  if (text.indexOf("BENDING") >= 0) return "BENDING";
+  if (text.indexOf("RW") >= 0) return "RW";
+  if (text.indexOf("SW") >= 0) return "SW";
+  if (text.indexOf("RIVETING") >= 0) return "RIVETING";
+  if (text.indexOf("TAPPING") >= 0) return "TAPPING";
+  return "OTHER";
+}
+
+function productionCapacityGroupSort(group) {
+  const order = { "80T": 10, "110T": 20, "150T": 30, "200T": 40, "260T": 50, "300T": 60, "500T": 70, CNC: 80, BENDING: 90, RW: 100, SW: 110, RIVETING: 120, TAPPING: 130, OTHER: 999 };
+  return order[group] || 500;
 }
 
 function ensureSubmitHistoryHeaders(sheet) {

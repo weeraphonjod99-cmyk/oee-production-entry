@@ -32,6 +32,47 @@ export type PdWorkbook = {
   sheets: PdWorksheet[];
 };
 
+export type ProductionCapacityRecord = {
+  rowNumber: number;
+  sheetName: string;
+  machineName: string;
+  group: string;
+  productName: string;
+  partNo: string;
+  step: string;
+  cycleMinutes?: number;
+  kpi85PerMinute?: number;
+  target8h?: number;
+  target10_5h?: number;
+  target12_5h?: number;
+  machineType?: string;
+  machineNo?: string;
+};
+
+export type ProductionCapacityMachine = {
+  sheetName: string;
+  machineName: string;
+  group: string;
+  rowCount: number;
+  partCount: number;
+  avgKpi85PerMinute: number;
+  avgTarget8h: number;
+  maxTarget8h: number;
+  totalTarget8h: number;
+  records: ProductionCapacityRecord[];
+};
+
+export type ProductionCapacityData = {
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  sourceName: string;
+  gid: string;
+  fetchedAt: string;
+  groups: string[];
+  machines: ProductionCapacityMachine[];
+  totalRows: number;
+};
+
 export type EmployeeMachineStatus = {
   machineId: string;
   machineName: string;
@@ -339,6 +380,20 @@ export async function clearEmployeeMachineStatus(machineId: string, clearedAt?: 
 
 export async function fetchPdSheets(): Promise<PdWorkbook[]> {
   return [];
+}
+
+export async function fetchProductionCapacity(group = ""): Promise<ProductionCapacityData | null> {
+  if (!remoteEnabled) return null;
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "productionCapacity");
+  if (group && group !== "ทั้งหมด") url.searchParams.set("group", group);
+  url.searchParams.set("_", String(Date.now()));
+  const response = await fetchWithRetry(url.toString(), { cache: "no-store" }, 1);
+  const data = await parseJsonResponse(response);
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || "โหลดข้อมูลกำลังผลิตจาก Google Sheet ไม่สำเร็จ");
+  }
+  return data.capacity ?? null;
 }
 
 export async function appendRemoteLog(log: ProductionLog): Promise<ProductionLog> {

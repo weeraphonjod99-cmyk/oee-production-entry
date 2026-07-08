@@ -363,6 +363,6 @@ export async function changePassword(username: string, password: string) {
 
 export function canAccessTab(session: AppSession, tab: string) {
   if (session.role === "admin") return true;
-  if (session.role === "planning") return tab === "employeeEntry" || tab === "dashboard" || tab === "reports" || tab === "history" || tab === "master";
-  return tab === "employeeEntry" || tab === "entry" || tab === "history";
+  if (session.role === "planning") return tab === "employeeEntry" || tab === "capacity" || tab === "dashboard" || tab === "reports" || tab === "history" || tab === "master";
+  return tab === "employeeEntry" || tab === "capacity" || tab === "entry" || tab === "history";
 }
