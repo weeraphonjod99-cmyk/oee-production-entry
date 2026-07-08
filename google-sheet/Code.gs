@@ -129,6 +129,8 @@ const OEE_SUBMIT_TIME_HEADER = "เวลาส่งยอด\nSubmit Time";
 const OEE_BUTTON_DETAILS_HEADER = "รายละเอียดการกดปุ่ม\nButton Details";
 const OEE_TEST_HEADER = "งาน\nทดสอบ\n/Test";
 
+const OEE_ORDER_NO_HEADER = "เลขที่ออเดอร์\nOrder No.";
+
 const LOG_HEADERS = [
   "id",
   "recordDate",
@@ -146,6 +148,7 @@ const LOG_HEADERS = [
   "partNo",
   "step",
   "materialOfProduction",
+  "productionOrderNo",
   "workMinutes",
   "timeSlots",
   "minutesPerSlot",
@@ -253,6 +256,7 @@ const SUBMIT_HISTORY_HEADERS = [
   "partNo",
   "step",
   "materialOfProduction",
+  "productionOrderNo",
   "goodQty",
   "ngQty",
   "testQty",
@@ -1390,6 +1394,7 @@ function buildSubmitHistoryValue(header, log, action, formattedRow, now) {
     partNo: String(log.partNo || ""),
     step: String(log.step || "-"),
     materialOfProduction: String(log.materialOfProduction || ""),
+    productionOrderNo: String(log.productionOrderNo || ""),
     goodQty: nonNegativeNumber(log.goodQty),
     ngQty: nonNegativeNumber(log.ngQty),
     testQty: nonNegativeNumber(log.testQty),
@@ -2322,7 +2327,8 @@ function getOeeLayout(sheet) {
   const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
   const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
   const hasEntryDetails = hasEntryTimestamp && isOeeEntryDetailsHeader(headers[3], headers[4], headers[5]);
-  const offset = hasEntryTimestamp ? (hasEntryDetails ? 5 : 2) : 0;
+  const hasEntryOrderNo = hasEntryDetails && isOeeOrderNoHeader(headers[6]);
+  const offset = hasEntryTimestamp ? (hasEntryDetails ? (hasEntryOrderNo ? 6 : 5) : 2) : 0;
   const hasStep = String(headers[5 + offset] || "").toLowerCase().indexOf("step") >= 0;
   const detected = detectOeeOutputColumns(headers);
   const layout = hasStep
@@ -2336,6 +2342,7 @@ function getOeeLayout(sheet) {
       entryUser: hasEntryDetails ? 4 : 0,
       submittedAt: hasEntryDetails ? 5 : 0,
       buttonDetails: hasEntryDetails ? 6 : 0,
+      productionOrderNo: hasEntryOrderNo ? 7 : 0,
       date: 2 + offset,
       shift: 3 + offset,
       productName: 4 + offset,
@@ -2361,6 +2368,7 @@ function getOeeLayout(sheet) {
       entryUser: hasEntryDetails ? 4 : 0,
       submittedAt: hasEntryDetails ? 5 : 0,
       buttonDetails: hasEntryDetails ? 6 : 0,
+      productionOrderNo: hasEntryOrderNo ? 7 : 0,
       date: 2 + offset,
       shift: 3 + offset,
       productName: 4 + offset,
@@ -2443,6 +2451,11 @@ function isOeeEntryDetailsHeader(entryUserHeader, submitTimeHeader, buttonDetail
   );
 }
 
+function isOeeOrderNoHeader(orderNoHeader) {
+  const text = normalizeHeaderText(orderNoHeader);
+  return text.indexOf("order no") >= 0 || text.indexOf("เลขที่ออเดอร์") >= 0;
+}
+
 function isOeeDataSheet(sheet, machineByName) {
   if (sheet && typeof sheet.getType === "function" && sheet.getType() !== SpreadsheetApp.SheetType.GRID) return false;
   if (!sheet || sheet.getLastRow() < OEE_HEADER_ROW) return false;
@@ -2463,15 +2476,18 @@ function ensureOeeEntryTimestampColumns(sheet) {
   const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
   const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
   const hasEntryDetails = hasEntryTimestamp && isOeeEntryDetailsHeader(headers[3], headers[4], headers[5]);
-  if (hasEntryTimestamp && hasEntryDetails) return false;
+  const hasEntryOrderNo = hasEntryDetails && isOeeOrderNoHeader(headers[6]);
+  if (hasEntryTimestamp && hasEntryDetails && hasEntryOrderNo) return false;
 
-  const insertAfter = hasEntryTimestamp ? 3 : 1;
-  const insertCount = hasEntryTimestamp ? 3 : 5;
+  const insertAfter = !hasEntryTimestamp ? 1 : (hasEntryDetails ? 6 : 3);
+  const insertCount = !hasEntryTimestamp ? 6 : (hasEntryDetails ? 1 : 4);
   sheet.insertColumnsAfter(insertAfter, insertCount);
-  const headerColumn = hasEntryTimestamp ? 4 : 2;
-  const headerValues = hasEntryTimestamp
-    ? [[OEE_ENTRY_USER_HEADER, OEE_SUBMIT_TIME_HEADER, OEE_BUTTON_DETAILS_HEADER]]
-    : [[OEE_ENTRY_DATE_HEADER, OEE_ENTRY_TIME_HEADER, OEE_ENTRY_USER_HEADER, OEE_SUBMIT_TIME_HEADER, OEE_BUTTON_DETAILS_HEADER]];
+  const headerColumn = !hasEntryTimestamp ? 2 : (hasEntryDetails ? 7 : 4);
+  const headerValues = !hasEntryTimestamp
+    ? [[OEE_ENTRY_DATE_HEADER, OEE_ENTRY_TIME_HEADER, OEE_ENTRY_USER_HEADER, OEE_SUBMIT_TIME_HEADER, OEE_BUTTON_DETAILS_HEADER, OEE_ORDER_NO_HEADER]]
+    : (hasEntryDetails
+      ? [[OEE_ORDER_NO_HEADER]]
+      : [[OEE_ENTRY_USER_HEADER, OEE_SUBMIT_TIME_HEADER, OEE_BUTTON_DETAILS_HEADER, OEE_ORDER_NO_HEADER]]);
   const headerRange = sheet.getRange(OEE_HEADER_ROW, headerColumn, 1, insertCount);
   const styleSource = sheet.getRange(OEE_HEADER_ROW, headerColumn + insertCount, 1, 1);
   styleSource.copyTo(headerRange, { contentsOnly: false });
@@ -2488,9 +2504,10 @@ function ensureOeeEntryTimestampColumns(sheet) {
   sheet.setColumnWidth(4, 140);
   sheet.setColumnWidth(5, 145);
   sheet.setColumnWidth(6, 360);
+  sheet.setColumnWidth(7, 150);
   if (sheet.getLastRow() >= OEE_FIRST_DATA_ROW) {
     const rowCount = sheet.getLastRow() - OEE_FIRST_DATA_ROW + 1;
-    sheet.getRange(OEE_FIRST_DATA_ROW, 2, rowCount, 5).setNumberFormat("@").setWrap(true);
+    sheet.getRange(OEE_FIRST_DATA_ROW, 2, rowCount, 6).setNumberFormat("@").setWrap(true);
   }
   return true;
 }
@@ -2792,6 +2809,12 @@ function writeOeeInputRow(sheet, layout, row, log) {
       .setNumberFormat("@")
       .setWrap(true)
       .setValue(String(log.buttonDetails || ""));
+  }
+  if (layout.productionOrderNo) {
+    sheet
+      .getRange(row, layout.productionOrderNo)
+      .setNumberFormat("@")
+      .setValue(String(log.productionOrderNo || ""));
   }
   sheet.getRange(row, layout.date).setNumberFormat("@").setValue(formatRecordDate(log.date) || todayBangkok(new Date()));
   sheet.getRange(row, layout.shift).setNumberFormat("@").setValue(String(toOriginalShift(log.shift) || ""));
@@ -4630,7 +4653,8 @@ function writeCncMachineSheet(sheet, machine, logs) {
   sheet.getRange(1, 35, 1, 1).setBackground("#ff0000").setFontWeight("bold");
   sheet.getRange(OEE_FIRST_DATA_ROW, 2, Math.max(logs.length, 1), 5).setNumberFormat("@").setWrap(true);
   sheet.getRange(OEE_FIRST_DATA_ROW, 7, Math.max(logs.length, 1), 4).setNumberFormat("@");
-  sheet.getRange(OEE_FIRST_DATA_ROW, 11, Math.max(logs.length, 1), totalColumns - 10).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, 11, Math.max(logs.length, 1), totalColumns - 11).setNumberFormat("0.##");
+  sheet.getRange(OEE_FIRST_DATA_ROW, totalColumns, Math.max(logs.length, 1), 1).setNumberFormat("@");
   sheet.getRange(OEE_FIRST_DATA_ROW, 37, Math.max(logs.length, 1), 4).setNumberFormat("0.00%");
   sheet.autoResizeColumns(1, totalColumns);
   sheet.setColumnWidths(1, 1, 55);
@@ -4684,6 +4708,7 @@ function getCncMachineSheetHeaders() {
     "模具维修次数Quantity of repair mold",
     "模具MTTR(分钟)",
     "模具MTBF（分钟）",
+    OEE_ORDER_NO_HEADER,
   ];
 }
 
@@ -4738,6 +4763,7 @@ function buildCncMachineSheetRow(log, rowNumber) {
       "=IF(O" + rowNumber + ">0,1,0)",
       "=IF(AO" + rowNumber + ">0,X" + rowNumber + "/AO" + rowNumber + ",\"\")",
       "=IF(AO" + rowNumber + ">0,T" + rowNumber + "/AO" + rowNumber + ",\"\")",
+      String(log.productionOrderNo || ""),
     ]);
 }
 
