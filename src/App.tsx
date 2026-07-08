@@ -3755,6 +3755,32 @@ function App() {
       return true;
     } catch (error) {
       if (!shouldUpdate && remoteEnabled && isDuplicateRemoteError(error)) {
+        const existingDuplicate = findDuplicateForDraft(targetDraft);
+        if (existingDuplicate?.id) {
+          try {
+            const repairedLog = {
+              ...log,
+              id: existingDuplicate.id,
+              createdAt: existingDuplicate.createdAt || log.createdAt,
+            };
+            const saved = await updateRemoteLog(repairedLog);
+            const next = upsertLocalLog(saved);
+            setLocalLogs(next);
+            fetchRemoteLogs()
+              .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
+              .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
+            if (!shouldUpdate) clearEmployeeStoredDraft(saved.machineId);
+            if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
+            const successMessage = options.autoSubmit
+              ? `ส่งยอดอัตโนมัติและอัปเดตรายการเดิมแล้ว: ${saved.machineName} วันที่ ${saved.date}`
+              : `อัปเดตรายการเดิมใน Google Sheet แล้ว: ${saved.machineName} วันที่ ${saved.date}`;
+            setStatus(successMessage);
+            setSuccessDialog({ title: "บันทึกเสร็จแล้ว", message: successMessage });
+            return true;
+          } catch {
+            // Keep the draft below so the operator can retry after checking Google Sheet.
+          }
+        }
         fetchRemoteLogs()
           .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
           .catch(() => undefined);
