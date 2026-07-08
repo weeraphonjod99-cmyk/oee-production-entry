@@ -1836,6 +1836,7 @@ function App() {
   const [productionCapacityError, setProductionCapacityError] = useState("");
   const [productionCapacityGroup, setProductionCapacityGroup] = useState("80T");
   const [productionCapacityMachine, setProductionCapacityMachine] = useState("");
+  const [productionCapacityPart, setProductionCapacityPart] = useState("");
   const [productionCapacitySearch, setProductionCapacitySearch] = useState("");
   const [machines, setMachines] = useState<Machine[]>(fallbackMachines);
   const [seedProducts, setSeedProducts] = useState<ProductMaster[]>([]);
@@ -4957,12 +4958,18 @@ function App() {
             search={productionCapacitySearch}
             selectedGroup={productionCapacityGroup}
             selectedMachine={productionCapacityMachine}
+            selectedPart={productionCapacityPart}
             setSearch={setProductionCapacitySearch}
             setSelectedGroup={(value) => {
               setProductionCapacityGroup(!value || value.toUpperCase() === "OTHER" || value === "ทั้งหมด" ? "80T" : value);
               setProductionCapacityMachine("");
+              setProductionCapacityPart("");
             }}
-            setSelectedMachine={setProductionCapacityMachine}
+            setSelectedMachine={(value) => {
+              setProductionCapacityMachine(value);
+              setProductionCapacityPart("");
+            }}
+            setSelectedPart={setProductionCapacityPart}
           />
         )}
 
@@ -6972,9 +6979,11 @@ function ProductionCapacityView({
   search,
   selectedGroup,
   selectedMachine,
+  selectedPart,
   setSearch,
   setSelectedGroup,
   setSelectedMachine,
+  setSelectedPart,
 }: {
   data: ProductionCapacityData | null;
   error: string;
@@ -6983,9 +6992,11 @@ function ProductionCapacityView({
   search: string;
   selectedGroup: string;
   selectedMachine: string;
+  selectedPart: string;
   setSearch: (value: string) => void;
   setSelectedGroup: (value: string) => void;
   setSelectedMachine: (value: string) => void;
+  setSelectedPart: (value: string) => void;
 }) {
   const groups = useMemo(() => {
     const items = data?.groups?.length ? data.groups : [];
@@ -7004,11 +7015,35 @@ function ProductionCapacityView({
   }, [data, groupValue]);
 
   const machineValue = selectedMachine && machines.some((machine) => machine.machineName === selectedMachine) ? selectedMachine : "";
+  const machineRecords = useMemo(() => {
+    return machines.filter((machine) => !machineValue || machine.machineName === machineValue).flatMap((machine) => machine.records);
+  }, [machineValue, machines]);
+
+  const partOptions = useMemo(() => {
+    const optionMap = new Map<string, { label: string; value: string }>();
+    machineRecords.forEach((record) => {
+      const partNo = String(record.partNo || "").trim();
+      const productName = String(record.productName || "").trim();
+      const step = String(record.step || "-").trim() || "-";
+      const key = `${partNo}|${productName}|${step}`;
+      if (!partNo && !productName) return;
+      if (!optionMap.has(key)) {
+        const label = `${productName || "-"} / ${partNo || "-"} / Step ${step}`;
+        optionMap.set(key, { label, value: key });
+      }
+    });
+    return Array.from(optionMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [machineRecords]);
+
+  const partValue = selectedPart && partOptions.some((option) => option.value === selectedPart) ? selectedPart : "";
   const normalizedSearch = search.trim().toLowerCase();
   const records = useMemo(() => {
-    return machines
-      .filter((machine) => !machineValue || machine.machineName === machineValue)
-      .flatMap((machine) => machine.records)
+    return machineRecords
+      .filter((record) => {
+        if (!partValue) return true;
+        const key = `${String(record.partNo || "").trim()}|${String(record.productName || "").trim()}|${String(record.step || "-").trim() || "-"}`;
+        return key === partValue;
+      })
       .filter((record) => {
         if (!normalizedSearch) return true;
         return [record.machineName, record.productName, record.partNo, record.step, record.machineNo, record.machineType]
@@ -7017,7 +7052,7 @@ function ProductionCapacityView({
           .includes(normalizedSearch);
       })
       .sort((a, b) => a.machineName.localeCompare(b.machineName) || a.productName.localeCompare(b.productName) || a.partNo.localeCompare(b.partNo));
-  }, [machineValue, machines, normalizedSearch]);
+  }, [machineRecords, normalizedSearch, partValue]);
 
   const summary = useMemo(() => {
     const totalTarget8h = records.reduce((sum, record) => sum + Number(record.target8h || 0), 0);
@@ -7069,6 +7104,17 @@ function ProductionCapacityView({
             ))}
           </select>
         </label>
+        <label>
+          ชิ้นงาน / Part No.
+          <select value={partValue} onChange={(event) => setSelectedPart(event.target.value)}>
+            <option value="">ทั้งหมด</option>
+            {partOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="capacity-search-field">
           ค้นหา
           <div className="input-with-icon">
@@ -7116,7 +7162,10 @@ function ProductionCapacityView({
             <button
               className={`production-capacity-card ${machine.machineName === machineValue ? "active" : ""}`}
               key={machine.sheetName}
-              onClick={() => setSelectedMachine(machine.machineName === machineValue ? "" : machine.machineName)}
+              onClick={() => {
+                setSelectedMachine(machine.machineName === machineValue ? "" : machine.machineName);
+                setSelectedPart("");
+              }}
               type="button"
             >
               <span>{machine.group}</span>
