@@ -2711,6 +2711,51 @@ function App() {
   const hasEmployeeStoredDraftActivity = (stored: StoredEmployeeDraft) =>
     Boolean(stored.workStartedAt || stored.activeTimer || (Array.isArray(stored.entryEvents) && stored.entryEvents.length > 0));
 
+  const readEmployeeStoredDraft = (machineId: string) => {
+    const raw = window.localStorage.getItem(getEmployeeDraftStorageKey(machineId));
+    if (!raw) return null;
+    try {
+      const stored = JSON.parse(raw) as StoredEmployeeDraft;
+      if (!stored?.draft || !hasEmployeeStoredDraftActivity(stored)) return null;
+      return stored;
+    } catch {
+      window.localStorage.removeItem(getEmployeeDraftStorageKey(machineId));
+      return null;
+    }
+  };
+
+  const getEmployeeSubmitSnapshot = (stored?: StoredEmployeeDraft | null) => {
+    const currentDraft = draftRef.current;
+    const isCurrentMachine = Boolean(employeeMachineSelected && stored?.draft?.machineId === currentDraft.machineId);
+    if (!stored) {
+      return {
+        activeTimer: employeeActiveTimerRef.current,
+        draft: currentDraft,
+        entryEvents: employeeDraftEventsRef.current,
+        entryUser: session?.displayName || session?.username || "",
+        workStartedAt: employeeWorkStartedAt,
+      };
+    }
+
+    if (!isCurrentMachine) {
+      return {
+        activeTimer: stored.activeTimer ?? null,
+        draft: stored.draft,
+        entryEvents: Array.isArray(stored.entryEvents) ? stored.entryEvents : [],
+        entryUser: (Array.isArray(stored.entryEvents) ? stored.entryEvents.find((event) => event.user)?.user : "") || session?.displayName || session?.username || "",
+        workStartedAt: stored.workStartedAt || "",
+      };
+    }
+
+    return {
+      activeTimer: employeeActiveTimerRef.current ?? stored.activeTimer ?? null,
+      draft: { ...stored.draft, ...currentDraft },
+      entryEvents: employeeDraftEventsRef.current.length > 0 ? employeeDraftEventsRef.current : Array.isArray(stored.entryEvents) ? stored.entryEvents : [],
+      entryUser: session?.displayName || session?.username || "",
+      workStartedAt: employeeWorkStartedAt || stored.workStartedAt || "",
+    };
+  };
+
   const refreshEmployeeDraftMachineIds = () => {
     const draftsByMachineId = new Map<string, StoredEmployeeDraft>();
     const ids = machines
@@ -3710,8 +3755,6 @@ function App() {
       return true;
     } catch (error) {
       if (!shouldUpdate && remoteEnabled && isDuplicateRemoteError(error)) {
-        if (!shouldUpdate) clearEmployeeStoredDraft(log.machineId);
-        if (options.resetAfterSave !== false) resetDraft({ clearProduct: isEmployeeEntry });
         fetchRemoteLogs()
           .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
           .catch(() => undefined);
@@ -3810,23 +3853,24 @@ function App() {
         const finalAt = new Date(stored.shiftEndAt);
         if (Date.now() < finalAt.getTime()) continue;
         autoSubmittingEmployeeDraft.current = true;
+        const snapshot = getEmployeeSubmitSnapshot(stored);
         const finalized = finalizeEmployeeDraftForSubmit(
-          stored.draft,
-          stored.activeTimer ?? null,
+          snapshot.draft,
+          snapshot.activeTimer ?? null,
           finalAt,
           "ตัดกะอัตโนมัติ / ส่งยอดบันทึก",
-          stored.workStartedAt || "",
+          snapshot.workStartedAt || "",
         );
         await submitProductionDraft(finalized.draft, {
-          activeTimer: stored.activeTimer ?? null,
+          activeTimer: snapshot.activeTimer ?? null,
           autoSubmit: true,
-          entryEvents: Array.isArray(stored.entryEvents) ? stored.entryEvents : [],
-          entryUser: (Array.isArray(stored.entryEvents) ? stored.entryEvents.find((event) => event.user)?.user : "") || session?.displayName || session?.username || "",
-          resetAfterSave: stored.draft.machineId === draft.machineId,
+          entryEvents: snapshot.entryEvents,
+          entryUser: snapshot.entryUser,
+          keepDraftOnRemoteError: true,
+          resetAfterSave: snapshot.draft.machineId === draftRef.current.machineId,
           submittedAt: finalAt,
         });
       } catch {
-        window.localStorage.removeItem(draftKey);
         refreshEmployeeDraftMachineIds();
       } finally {
         autoSubmittingEmployeeDraft.current = false;
@@ -3836,22 +3880,32 @@ function App() {
 
   const autoSubmitCurrentEmployeeDraft = async () => {
     if (!isEmployeeEntry || editingLog || autoSubmittingEmployeeDraft.current) return;
-    const activeTimer = employeeActiveTimerRef.current;
-    if (!employeeDraftActive && !activeTimer && !employeeWorkStartedAt) return;
-    const productionDate = draft.date || getTodayInputValue();
-    const finalAt = parseStoredDateTime(shiftEndAt(productionDate, draft.shift));
+    const stored = readEmployeeStoredDraft(draftRef.current.machineId);
+    const snapshot = getEmployeeSubmitSnapshot(stored);
+    const activeTimer = snapshot.activeTimer;
+    if (!employeeDraftActive && !activeTimer && !snapshot.workStartedAt) return;
+    const productionDate = snapshot.draft.date || getTodayInputValue();
+    const finalAt = parseStoredDateTime(shiftEndAt(productionDate, snapshot.draft.shift));
     if (!finalAt || Date.now() < finalAt.getTime()) return;
 
-    const autoKey = `${productionDate}|${normalizeShiftCode(draft.shift)}|${draft.machineId}|${draft.partNo}|${draft.step}|${finalAt.toISOString()}`;
+    const autoKey = `${productionDate}|${normalizeShiftCode(snapshot.draft.shift)}|${snapshot.draft.machineId}|${snapshot.draft.partNo}|${snapshot.draft.step}|${finalAt.toISOString()}`;
     if (employeeAutoSubmitKeyRef.current === autoKey) return;
     employeeAutoSubmitKeyRef.current = autoKey;
     autoSubmittingEmployeeDraft.current = true;
     try {
-      const finalized = finalizeEmployeeDraftForSubmit(draft, activeTimer, finalAt, "ตัดกะอัตโนมัติ / ส่งยอดบันทึก");
+      const finalized = finalizeEmployeeDraftForSubmit(snapshot.draft, activeTimer, finalAt, "ตัดกะอัตโนมัติ / ส่งยอดบันทึก", snapshot.workStartedAt);
       setDraft(finalized.draft);
       setEmployeeDraftUpdatedAt(finalAt.toISOString());
       recordEmployeeDraftEvent("ตัดกะอัตโนมัติ / ส่งยอดบันทึก", `${finalized.endDate} ${finalized.endTime}`);
-      const saved = await submitProductionDraft(finalized.draft, { activeTimer, autoSubmit: true, resetAfterSave: true, submittedAt: finalAt });
+      const saved = await submitProductionDraft(finalized.draft, {
+        activeTimer,
+        autoSubmit: true,
+        entryEvents: employeeDraftEventsRef.current.length > 0 ? employeeDraftEventsRef.current : snapshot.entryEvents,
+        entryUser: snapshot.entryUser,
+        keepDraftOnRemoteError: true,
+        resetAfterSave: true,
+        submittedAt: finalAt,
+      });
       if (saved) {
         clearEmployeeActiveTimer();
       } else {
