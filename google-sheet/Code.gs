@@ -651,7 +651,6 @@ function normalizeRoleList(value) {
     seen[role] = true;
     roles.push(role);
   });
-  if (!seen.admin) roles.push("admin");
   return roles;
 }
 
@@ -687,6 +686,7 @@ function createRoleNotification(payload) {
 function getRoleNotifications(params) {
   const role = String(params.role || "").trim();
   if (!role) return [];
+  if (role === "admin") return [];
   const sinceDate = parseOnlineUserDate(params.since);
   const now = new Date();
   const sheet = ensureSheet(ROLE_NOTIFICATION_SHEET, ROLE_NOTIFICATION_HEADERS);

@@ -3193,7 +3193,7 @@ function App() {
 
   const getEmployeeTimerNotificationRoles = (key: EmployeeTimerKey): AppRole[] => {
     const code = getEmployeeTimerExcelCode(key);
-    const roles = new Set<AppRole>(["admin"]);
+    const roles = new Set<AppRole>();
     if (code === "C") {
       roles.add("qc");
       return Array.from(roles);
