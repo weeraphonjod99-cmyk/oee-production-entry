@@ -7316,26 +7316,32 @@ function ProductionCapacityView({
     const optionMap = new Map<string, { label: string; value: string }>();
     machineRecords.forEach((record) => {
       const partNo = String(record.partNo || "").trim();
-      const productName = String(record.productName || "").trim();
-      const step = String(record.step || "-").trim() || "-";
-      const key = `${partNo}|${productName}|${step}`;
-      if (!partNo && !productName) return;
-      if (!optionMap.has(key)) {
-        const label = `${productName || "-"} / ${partNo || "-"} / Step ${step}`;
-        optionMap.set(key, { label, value: key });
+      if (!partNo) return;
+      if (!optionMap.has(partNo)) {
+        optionMap.set(partNo, { label: partNo, value: partNo });
       }
     });
     return Array.from(optionMap.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [machineRecords]);
 
   const partValue = selectedPart && partOptions.some((option) => option.value === selectedPart) ? selectedPart : "";
+  const selectedPartDetails = useMemo(() => {
+    if (!partValue) return null;
+    const matched = machineRecords.filter((record) => String(record.partNo || "").trim() === partValue);
+    const productNames = Array.from(
+      new Set(matched.map((record) => String(record.productName || "").trim()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b));
+    const steps = Array.from(new Set(matched.map((record) => String(record.step || "-").trim() || "-"))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    return { count: matched.length, productNames, steps };
+  }, [machineRecords, partValue]);
   const normalizedSearch = search.trim().toLowerCase();
   const records = useMemo(() => {
     return machineRecords
       .filter((record) => {
         if (!partValue) return true;
-        const key = `${String(record.partNo || "").trim()}|${String(record.productName || "").trim()}|${String(record.step || "-").trim() || "-"}`;
-        return key === partValue;
+        return String(record.partNo || "").trim() === partValue;
       })
       .filter((record) => {
         if (!normalizedSearch) return true;
@@ -7408,6 +7414,15 @@ function ProductionCapacityView({
             ))}
           </select>
         </label>
+        {selectedPartDetails && (
+          <div className="capacity-part-details">
+            <span>Part No. ที่เลือก</span>
+            <strong>{selectedPartDetails.productNames.join(", ") || "-"}</strong>
+            <small>
+              Part No. {partValue} · Step {selectedPartDetails.steps.join(", ") || "-"} · {formatNumber(selectedPartDetails.count)} รายการ
+            </small>
+          </div>
+        )}
         <label className="capacity-percent-field">
           KPI %
           <input
@@ -7427,7 +7442,7 @@ function ProductionCapacityView({
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Part No. / รุ่น / Step"
+              placeholder="ค้นหา Part No. / ชื่อชิ้นงาน / Step"
               type="search"
             />
           </div>

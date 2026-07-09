@@ -3155,11 +3155,41 @@ select:disabled {
 }
 
 .production-capacity-toolbar {
-  grid-template-columns: minmax(160px, 0.45fr) minmax(200px, 0.6fr) minmax(280px, 1fr) minmax(120px, 0.25fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(150px, 0.42fr) minmax(190px, 0.55fr) minmax(210px, 0.6fr) minmax(260px, 0.82fr) minmax(110px, 0.25fr) minmax(260px, 1fr);
 }
 
 .capacity-search-field .input-with-icon {
   background: #fff;
+}
+
+.capacity-part-details {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  padding: 10px 12px;
+}
+
+.capacity-part-details span {
+  color: #166534;
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.capacity-part-details strong {
+  color: #061635;
+  font-size: 16px;
+  font-weight: 1000;
+  line-height: 1.25;
+}
+
+.capacity-part-details small {
+  color: #53627b;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .capacity-percent-field input {
