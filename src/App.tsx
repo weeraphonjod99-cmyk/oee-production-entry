@@ -123,6 +123,22 @@ type PendingEmployeeTimer = {
   startedAt: string;
 };
 
+type DashboardCapacityContext = {
+  exact: Map<string, ProductionCapacityRecord>;
+  machinePartStep: Map<string, ProductionCapacityRecord>;
+  machinePart: Map<string, ProductionCapacityRecord>;
+  percent: number;
+};
+
+type DashboardSummary = ReturnType<typeof summarize> & {
+  capacityMatchedLogs: number;
+  kpi: number;
+  oee: number;
+  targetQty: number;
+};
+
+type OeeSummaryInput = ReturnType<typeof summarize> & Partial<Pick<DashboardSummary, "capacityMatchedLogs" | "kpi" | "oee" | "targetQty">>;
+
 const employeeTimerRequiresReason = (key: EmployeeTimerKey) =>
   key === "emergencyStopMinutes" || key === "plannedStopMinutes";
 
@@ -1404,6 +1420,85 @@ const getSpeedPcsPerMinute = (log: ProductionLog) => {
 
 const getLogTargetQty = (log: ProductionLog) => roundNumber(getLogWorkMinutes(log) * getSpeedPcsPerMinute(log));
 
+const normalizeCapacityLookupText = (value: unknown) =>
+  normalizeText(value)
+    .replace(/\s+/g, " ")
+    .replace(/[‐‑‒–—]/g, "-");
+
+const capacityKey = (...parts: unknown[]) => parts.map(normalizeCapacityLookupText).join("::");
+
+function buildDashboardCapacityContext(data: ProductionCapacityData | null, percent: number): DashboardCapacityContext | null {
+  if (!data || !data.machines.length) return null;
+  const exact = new Map<string, ProductionCapacityRecord>();
+  const machinePartStep = new Map<string, ProductionCapacityRecord>();
+  const machinePart = new Map<string, ProductionCapacityRecord>();
+
+  data.machines.forEach((machine) => {
+    machine.records.forEach((record) => {
+      const machineName = record.machineName || machine.machineName || record.sheetName;
+      const step = record.step || "-";
+      const recordWithMachine = { ...record, machineName };
+      const exactKey = capacityKey(machineName, record.productName, record.partNo, step);
+      const partStepKey = capacityKey(machineName, record.partNo, step);
+      const partKey = capacityKey(machineName, record.partNo);
+      if (!exact.has(exactKey)) exact.set(exactKey, recordWithMachine);
+      if (!machinePartStep.has(partStepKey)) machinePartStep.set(partStepKey, recordWithMachine);
+      if (!machinePart.has(partKey)) machinePart.set(partKey, recordWithMachine);
+    });
+  });
+
+  return {
+    exact,
+    machinePart,
+    machinePartStep,
+    percent: clampCapacityPercent(percent),
+  };
+}
+
+function findCapacityRecordForLog(log: ProductionLog, context: DashboardCapacityContext | null) {
+  if (!context) return null;
+  const step = log.step || "-";
+  return (
+    context.exact.get(capacityKey(log.machineName, log.productName, log.partNo, step)) ??
+    context.machinePartStep.get(capacityKey(log.machineName, log.partNo, step)) ??
+    context.machinePart.get(capacityKey(log.machineName, log.partNo)) ??
+    null
+  );
+}
+
+function getCapacityTargetQtyForLog(log: ProductionLog, context: DashboardCapacityContext | null) {
+  const record = findCapacityRecordForLog(log, context);
+  if (!record) return { matched: false, targetQty: getLogTargetQty(log) };
+  const perMinute = capacityKpiPerMinute(record, context?.percent ?? MIN_CAPACITY_PERCENT);
+  const workMinutes = getLogWorkMinutes(log);
+  return {
+    matched: perMinute > 0,
+    targetQty: perMinute > 0 ? roundNumber(perMinute * workMinutes) : getLogTargetQty(log),
+  };
+}
+
+function summarizeDashboardOee(logs: ProductionLog[], context: DashboardCapacityContext | null): DashboardSummary {
+  const base = summarize(logs);
+  const target = logs.reduce(
+    (acc, log) => {
+      const result = getCapacityTargetQtyForLog(log, context);
+      acc.targetQty += result.targetQty;
+      if (result.matched) acc.matched += 1;
+      return acc;
+    },
+    { matched: 0, targetQty: 0 },
+  );
+  const kpi = target.targetQty > 0 ? base.total / target.targetQty : 1;
+  const oee = base.availability * base.quality * kpi;
+  return {
+    ...base,
+    capacityMatchedLogs: target.matched,
+    kpi,
+    oee,
+    targetQty: target.targetQty,
+  };
+}
+
 const draftFromLog = (log: ProductionLog): EntryDraft => ({
   recordDate: getDraftRecordDate(log),
   recordTime: getDraftRecordTime(log),
@@ -1832,6 +1927,7 @@ function App() {
   const [dashboardFilters, setDashboardFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [dashboardProductionCapacity, setDashboardProductionCapacity] = useState<ProductionCapacityData | null>(null);
   const [productionCapacity, setProductionCapacity] = useState<ProductionCapacityData | null>(null);
   const [productionCapacityLoading, setProductionCapacityLoading] = useState(false);
   const [productionCapacityError, setProductionCapacityError] = useState("");
@@ -2002,6 +2098,47 @@ function App() {
     if (tab !== "capacity") return;
     void loadProductionCapacity();
   }, [loadProductionCapacity, tab]);
+
+  const loadDashboardProductionCapacity = useCallback(async () => {
+    if (!remoteEnabled) {
+      setDashboardProductionCapacity(null);
+      return;
+    }
+    try {
+      const data = await fetchProductionCapacity("");
+      setDashboardProductionCapacity(data);
+    } catch (error) {
+      console.warn("Dashboard production capacity refresh failed", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab !== "dashboard") return;
+    let cancelled = false;
+    let refreshing = false;
+    const refreshCapacity = async () => {
+      if (cancelled || refreshing || document.hidden) return;
+      refreshing = true;
+      try {
+        await loadDashboardProductionCapacity();
+      } finally {
+        refreshing = false;
+      }
+    };
+    void refreshCapacity();
+    const timer = window.setInterval(refreshCapacity, 120000);
+    const refreshWhenVisible = () => {
+      if (!document.hidden) void refreshCapacity();
+    };
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [loadDashboardProductionCapacity, tab]);
 
   useEffect(() => {
     if (!remoteEnabled || !session) return;
@@ -2408,7 +2545,14 @@ function App() {
       .slice(0, 120);
   }, [historyLogs, deferredHistorySearch]);
 
-  const summary = useMemo(() => (tab === "dashboard" ? summarize(dashboardLogs) : summarize([])), [dashboardLogs, tab]);
+  const dashboardCapacityContext = useMemo(
+    () => buildDashboardCapacityContext(dashboardProductionCapacity, productionCapacityPercent),
+    [dashboardProductionCapacity, productionCapacityPercent],
+  );
+  const summary = useMemo(
+    () => (tab === "dashboard" ? summarizeDashboardOee(dashboardLogs, dashboardCapacityContext) : summarizeDashboardOee([], null)),
+    [dashboardCapacityContext, dashboardLogs, tab],
+  );
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
   const currentDashboardShift = useMemo(() => getCurrentProductionShift(employeeReportNow), [employeeReportNow]);
   const currentDashboardShiftLogs = useMemo(
@@ -5017,14 +5161,15 @@ function App() {
               />
             )}
             <CurrentShiftMachineOeeTable
+              capacityContext={dashboardCapacityContext}
               logs={currentDashboardShiftLogs}
               machines={machines}
               productionDate={currentDashboardShift.date}
               shift={currentDashboardShift.shift}
             />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
-            <DailyMachinePerformanceChart logs={dashboardLogs} machines={machines} />
-            <MachineCapacityDashboard logs={dashboardLogs} machines={machines} />
+            <DailyMachinePerformanceChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
+            <MachineCapacityDashboard capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
             <Trend logs={dashboardLogs} />
@@ -6497,9 +6642,9 @@ function OeeSummaryChart({
   summary,
 }: {
   downtimeItems?: ReturnType<typeof groupDowntime>;
-  summary: ReturnType<typeof summarize>;
+  summary: OeeSummaryInput;
 }) {
-  const oee = summary.availability * summary.quality;
+  const oee = summary.oee ?? summary.availability * summary.quality;
   const factors = [
     { label: "Availability", value: summary.availability, minutes: summary.run, color: "#22c55e", radius: 58 },
     { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#0ea5e9", radius: 44 },
@@ -6710,7 +6855,11 @@ type DailyPerformanceRow = {
   workMinutes: number;
 };
 
-function buildCurrentShiftMachineOeeRows(logs: ProductionLog[], machines: Machine[]): CurrentShiftMachineOeeRow[] {
+function buildCurrentShiftMachineOeeRows(
+  logs: ProductionLog[],
+  machines: Machine[],
+  capacityContext: DashboardCapacityContext | null,
+): CurrentShiftMachineOeeRow[] {
   const machineLookup = new Map(machines.map((machine, index) => [machine.id, { index, name: machine.name }]));
   const grouped = logs.reduce((map, log) => {
     const items = map.get(log.machineId) ?? [];
@@ -6722,12 +6871,12 @@ function buildCurrentShiftMachineOeeRows(logs: ProductionLog[], machines: Machin
   return [...grouped.entries()]
     .map(([machineId, machineLogs]) => {
       const machineInfo = machineLookup.get(machineId);
-      const machineSummary = summarize(machineLogs);
+      const machineSummary = summarizeDashboardOee(machineLogs, capacityContext);
       return {
         count: machineLogs.length,
         machineId,
         machineName: machineInfo?.name || machineLogs[0]?.machineName || machineId,
-        oee: machineSummary.availability * machineSummary.quality,
+        oee: machineSummary.oee,
         output: machineSummary.total,
       };
     })
@@ -6739,20 +6888,22 @@ function buildCurrentShiftMachineOeeRows(logs: ProductionLog[], machines: Machin
 }
 
 function CurrentShiftMachineOeeTable({
+  capacityContext,
   logs,
   machines,
   productionDate,
   shift,
 }: {
+  capacityContext: DashboardCapacityContext | null;
   logs: ProductionLog[];
   machines: Machine[];
   productionDate: string;
   shift: string;
 }) {
-  const rows = useMemo(() => buildCurrentShiftMachineOeeRows(logs, machines), [logs, machines]);
+  const rows = useMemo(() => buildCurrentShiftMachineOeeRows(logs, machines, capacityContext), [capacityContext, logs, machines]);
   const totalOutput = rows.reduce((sum, row) => sum + row.output, 0);
-  const shiftSummary = summarize(logs);
-  const shiftOee = shiftSummary.availability * shiftSummary.quality;
+  const shiftSummary = summarizeDashboardOee(logs, capacityContext);
+  const shiftOee = shiftSummary.oee;
 
   return (
     <div className="data-table-wrap report-table current-shift-oee-table">
@@ -6803,7 +6954,11 @@ function CurrentShiftMachineOeeTable({
   );
 }
 
-function buildDailyPerformanceRows(logs: ProductionLog[], machines: Machine[]): DailyPerformanceRow[] {
+function buildDailyPerformanceRows(
+  logs: ProductionLog[],
+  machines: Machine[],
+  capacityContext: DashboardCapacityContext | null,
+): DailyPerformanceRow[] {
   const machineNameLookup = new Map(machines.map((machine) => [machine.id, machine.name]));
   const rows = logs.reduce((map, log) => {
     const current =
@@ -6824,7 +6979,7 @@ function buildDailyPerformanceRows(logs: ProductionLog[], machines: Machine[]): 
     current.machineIds.add(log.machineId);
     current.machineNames.add(machineName);
     current.normalMinutes += Number(log.normalMinutes || 0);
-    current.targetQty += getLogTargetQty(log);
+    current.targetQty += getCapacityTargetQtyForLog(log, capacityContext).targetQty;
     current.workMinutes += getLogWorkMinutes(log);
     map.set(log.date, current);
     return map;
@@ -6854,8 +7009,16 @@ function formatDailyMachineNames(row: DailyPerformanceRow): string {
   return `${row.machineNames.slice(0, 2).join(", ")} +${formatNumber(row.machineNames.length - 2)}`;
 }
 
-function DailyMachinePerformanceChart({ logs, machines }: { logs: ProductionLog[]; machines: Machine[] }) {
-  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines).slice(-14), [logs, machines]);
+function DailyMachinePerformanceChart({
+  capacityContext,
+  logs,
+  machines,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  logs: ProductionLog[];
+  machines: Machine[];
+}) {
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
   const latest = rows.at(-1);
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
 
@@ -6937,7 +7100,11 @@ function DailyMachinePerformanceChart({ logs, machines }: { logs: ProductionLog[
   );
 }
 
-function buildMachineCapacityRows(logs: ProductionLog[], machines: Machine[]): MachineCapacityRow[] {
+function buildMachineCapacityRows(
+  logs: ProductionLog[],
+  machines: Machine[],
+  capacityContext: DashboardCapacityContext | null,
+): MachineCapacityRow[] {
   const rows = logs.reduce((map, log) => {
     const machine = machines.find((item) => item.id === log.machineId) ?? { id: log.machineId, name: log.machineName || log.machineId };
     const current =
@@ -6955,7 +7122,7 @@ function buildMachineCapacityRows(logs: ProductionLog[], machines: Machine[]): M
         workMinutes: 0,
       };
     const workMinutes = getLogWorkMinutes(log);
-    const targetQty = getLogTargetQty(log);
+    const targetQty = getCapacityTargetQtyForLog(log, capacityContext).targetQty;
     current.actualOutput += totalOutput(log);
     current.count += 1;
     current.downtime += totalDowntime(log);
@@ -6984,8 +7151,16 @@ function buildMachineCapacityRows(logs: ProductionLog[], machines: Machine[]): M
     );
 }
 
-function MachineCapacityDashboard({ logs, machines }: { logs: ProductionLog[]; machines: Machine[] }) {
-  const rows = useMemo(() => buildMachineCapacityRows(logs, machines), [logs, machines]);
+function MachineCapacityDashboard({
+  capacityContext,
+  logs,
+  machines,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  logs: ProductionLog[];
+  machines: Machine[];
+}) {
+  const rows = useMemo(() => buildMachineCapacityRows(logs, machines, capacityContext), [capacityContext, logs, machines]);
   return (
     <div className="analysis-panel capacity-panel">
       <div className="report-table-heading compact-heading">
