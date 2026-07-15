@@ -1424,7 +1424,7 @@ function getSubmitHistoryDowntimeMinutes(log) {
     nonNegativeNumber(log.moldRepairMinutes) +
     nonNegativeNumber(log.materialChangeMinutes) +
     nonNegativeNumber(log.emergencyStopMinutes) +
-    Math.max(nonNegativeNumber(log.meetingMinutes) - OEE_SHIFT_BREAK_MINUTES, 0) +
+    nonNegativeNumber(log.meetingMinutes) +
     nonNegativeNumber(log.plannedStopMinutes) +
     nonNegativeNumber(log.newModelMinutes)
   );
@@ -3300,8 +3300,8 @@ function buildTotalProductionTimeFormula(row, layout) {
     "MAX(" + columnToLetter(downtimeColumn + 3) + row + ",0)",
     "MAX(" + columnToLetter(downtimeColumn + 4) + row + ",0)",
     "MAX(" + columnToLetter(downtimeColumn + 5) + row + ",0)",
-    "MAX(" + columnToLetter(downtimeColumn + 6) + row + "-" + OEE_SHIFT_BREAK_MINUTES + ",0)",
-    columnToLetter(downtimeColumn + 7) + row,
+    "MAX(" + columnToLetter(downtimeColumn + 6) + row + ",0)",
+    "MAX(" + columnToLetter(downtimeColumn + 7) + row + ",0)",
   ];
   return "=IFERROR(" + cells.join("+") + ",0)";
 }

@@ -434,10 +434,6 @@ const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
 const clampTimeSlots = (slots: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? Math.min(roundNumber(Math.max(Number(slots) || 0, 0)), slotsFromMinutes(maxShiftWorkMinutes, minutesPerSlot)) : 0;
 
-const minutesToSlots = (minutes: number, minutesPerSlot: number) =>
-  minutesPerSlot > 0 ? roundNumber(minutes / minutesPerSlot) : 0;
-
-const slotsToMinutes = (slots: number, minutesPerSlot: number) => roundNumber(slots * minutesPerSlot);
 const removeAutomaticBreakMinutes = <T extends { meetingMinutes: number; shift: string }>(draft: T): T => ({
   ...draft,
   meetingMinutes:
@@ -868,8 +864,8 @@ function getDowntimeStats(logs: ProductionLog[]): DowntimeStatRow[] {
   const totalMinutes = logs.reduce((sum, log) => sum + totalDowntime(log), 0);
   return downtimeFields
     .map((field) => {
-      const minutes = logs.reduce((sum, log) => sum + Number(log[field.key] || 0), 0);
-      const count = logs.reduce((sum, log) => sum + (Number(log[field.key] || 0) > 0 ? 1 : 0), 0);
+      const minutes = logs.reduce((sum, log) => sum + effectiveDowntimeValue(log, field.key), 0);
+      const count = logs.reduce((sum, log) => sum + (effectiveDowntimeValue(log, field.key) > 0 ? 1 : 0), 0);
       return {
         ...field,
         count,
@@ -3219,12 +3215,11 @@ function App() {
     }));
   };
 
-  const updateDowntimeSlots = (key: keyof typeof downtimeExcelCodes, value: string) => {
-    const slots = toPositiveNumber(value);
+  const updateDowntimeMinutes = (key: keyof typeof downtimeExcelCodes, value: string) => {
+    const minutes = toPositiveNumber(value);
     setDraft((prev) => ({
       ...prev,
-      [key]:
-        slotsToMinutes(slots, prev.minutesPerSlot),
+      [key]: roundNumber(minutes),
     }));
   };
 
@@ -4893,7 +4888,7 @@ function App() {
               <p className="slot-help">
                 {isEmployeeEntry
                   ? "กดหัวข้อใดก่อนก็ได้ ปุ่มแรกคือเวลาเริ่มงานจริง จากนั้นกดหัวข้อใหม่เพื่อหยุดหัวข้อก่อนหน้าและเริ่มนับหัวข้อใหม่"
-                  : `กรอกเป็นจำนวนช่อง: 1 ช่อง = ${formatRate(draft.minutesPerSlot || defaultMinutesPerSlot)} นาที ค่าเริ่มต้น 0 และแก้ไขได้`}
+                  : "กรอกเวลาหยุดเป็นนาทีจริง ระบบจะไม่คูณ 5 นาที และจะนำไปคำนวณ OEE/ปัญหาตามนาทีที่กรอก"}
               </p>
               {isEmployeeEntry && currentMachineSharedStatus && (
                 <div className="employee-shared-entry-status" aria-live="polite">
@@ -4976,13 +4971,13 @@ function App() {
                     ) : (
                       <div className="downtime-slot-input">
                         <input
-                          value={numberInputValue(minutesToSlots(Number(draft[field.key] || 0), draft.minutesPerSlot))}
-                          onChange={(event) => updateDowntimeSlots(field.key, event.target.value)}
+                          value={numberInputValue(Number(draft[field.key] || 0))}
+                          onChange={(event) => updateDowntimeMinutes(field.key, event.target.value)}
                           min="0"
-                          step="1"
+                          step="0.01"
                           type="number"
                         />
-                        <b>ช่อง</b>
+                        <b>นาที</b>
                       </div>
                     )}
                     <small>{formatRate(visibleDowntimeFieldMinutes(field.key))} นาที</small>
