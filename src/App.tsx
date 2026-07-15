@@ -383,6 +383,7 @@ const getShiftBreakLabel = (shift: string) =>
 const toPositiveNumber = (value: string) => Math.max(Number(value) || 0, 0);
 const numberInputValue = (value: number | undefined) => (Number(value || 0) > 0 ? String(value) : "");
 const roundNumber = (value: number) => Number(value.toFixed(2));
+const roundMinuteValue = (value: number) => Math.max(Math.round(Number(value) || 0), 0);
 const getExcelCodeTone = (code: string) => {
   if (code === "A") return "code-a";
   if (code === "C") return "code-c";
@@ -426,7 +427,7 @@ const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTi
   if (!role || role === "admin" || role === "production") return true;
   return (employeeTimerRolePermissions[role] ?? []).includes(key);
 };
-const clampWorkMinutes = (value: number) => Math.min(roundNumber(Math.max(Number(value) || 0, 0)), maxShiftWorkMinutes);
+const clampWorkMinutes = (value: number) => Math.min(roundMinuteValue(value), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
   minutesPerSlot > 0 ? Math.round(clampWorkMinutes(workMinutes) / minutesPerSlot) : 0;
@@ -742,7 +743,7 @@ const getSharedStatusLiveMinutes = (status: EmployeeMachineStatus | undefined, n
   const baseAt = status.activeTimerBaseAt || status.updatedAt || status.entryUpdatedAt || "";
   if (!baseAt) return baseMinutes;
   const liveMinutes = getElapsedShiftWorkMinutes(status.date || getTodayInputValue(), status.shift, now, baseAt);
-  return roundNumber(baseMinutes + liveMinutes);
+  return roundMinuteValue(baseMinutes + liveMinutes);
 };
 
 const getElapsedShiftWorkMinutes = (productionDate: string, shift: string, now = new Date(), workStartedAt?: string) => {
@@ -784,7 +785,7 @@ const applyEmployeeTimerElapsed = (targetDraft: EntryDraft, timer: EmployeeActiv
   const nextMinutes = Number(targetDraft[timer.key] || 0) + elapsed;
   return {
     ...targetDraft,
-    [timer.key]: roundNumber(nextMinutes),
+    [timer.key]: roundMinuteValue(nextMinutes),
   };
 };
 
@@ -3219,7 +3220,7 @@ function App() {
     const minutes = toPositiveNumber(value);
     setDraft((prev) => ({
       ...prev,
-      [key]: roundNumber(minutes),
+      [key]: roundMinuteValue(minutes),
     }));
   };
 
@@ -3597,13 +3598,14 @@ function App() {
     if (clearedAt && storedUpdatedAt && storedUpdatedAt.getTime() <= clearedAt.getTime()) return;
     const expiresAt = parseStoredDateTime(stored.shiftEndAt || stored.draft.shiftEndAt)?.toISOString() || stored.shiftEndAt || stored.draft.shiftEndAt || "";
     const machineName = machines.find((machine) => machine.id === stored.draft.machineId)?.name || stored.draft.machineId;
-    const downtimeMinutes = totalDowntime(stored.draft);
+    const downtimeMinutes = roundMinuteValue(totalDowntime(stored.draft));
+    const statusWorkMinutes = clampWorkMinutes(stored.draft.workMinutes);
     const activeTimerStartedAt = stored.activeTimer?.originalStartedAt || stored.activeTimer?.startedAt || "";
     const activeTimerBaseAt = stored.activeTimer ? stored.savedAt : "";
     const activeTimerBaseMinutes = stored.activeTimer
       ? stored.activeTimer.key === "work"
-        ? Number(stored.draft.workMinutes || 0)
-        : Number(stored.draft[stored.activeTimer.key as DowntimeKey] || 0)
+        ? statusWorkMinutes
+        : roundMinuteValue(Number(stored.draft[stored.activeTimer.key as DowntimeKey] || 0))
       : 0;
     const buttonDetails = buildEmployeeButtonDetails(stored.draft, Array.isArray(stored.entryEvents) ? stored.entryEvents : [], new Date(), stored.activeTimer ?? null);
     const status: EmployeeMachineStatus = {
@@ -3619,22 +3621,22 @@ function App() {
       goodQty: Number(stored.draft.goodQty || 0),
       ngQty: Number(stored.draft.ngQty || 0),
       testQty: Number(stored.draft.testQty || 0),
-      workMinutes: Number(stored.draft.workMinutes || 0),
+      workMinutes: statusWorkMinutes,
       timeSlots: Number(stored.draft.timeSlots || 0),
       minutesPerSlot: Number(stored.draft.minutesPerSlot || 0),
       machineSpeed: Number(stored.draft.machineSpeed || 0),
       cavityQty: Number(stored.draft.cavityQty || 0),
       downtimeMinutes,
-      normalMinutes: Math.max(Number(stored.draft.workMinutes || 0) - downtimeMinutes, 0),
-      changeoverMinutes: Number(stored.draft.changeoverMinutes || 0),
-      inspectionMinutes: Number(stored.draft.inspectionMinutes || 0),
-      equipmentRepairMinutes: Number(stored.draft.equipmentRepairMinutes || 0),
-      moldRepairMinutes: Number(stored.draft.moldRepairMinutes || 0),
-      materialChangeMinutes: Number(stored.draft.materialChangeMinutes || 0),
-      emergencyStopMinutes: Number(stored.draft.emergencyStopMinutes || 0),
-      meetingMinutes: Number(stored.draft.meetingMinutes || 0),
-      plannedStopMinutes: Number(stored.draft.plannedStopMinutes || 0),
-      newModelMinutes: Number(stored.draft.newModelMinutes || 0),
+      normalMinutes: roundMinuteValue(Math.max(statusWorkMinutes - downtimeMinutes, 0)),
+      changeoverMinutes: roundMinuteValue(Number(stored.draft.changeoverMinutes || 0)),
+      inspectionMinutes: roundMinuteValue(Number(stored.draft.inspectionMinutes || 0)),
+      equipmentRepairMinutes: roundMinuteValue(Number(stored.draft.equipmentRepairMinutes || 0)),
+      moldRepairMinutes: roundMinuteValue(Number(stored.draft.moldRepairMinutes || 0)),
+      materialChangeMinutes: roundMinuteValue(Number(stored.draft.materialChangeMinutes || 0)),
+      emergencyStopMinutes: roundMinuteValue(Number(stored.draft.emergencyStopMinutes || 0)),
+      meetingMinutes: roundMinuteValue(Number(stored.draft.meetingMinutes || 0)),
+      plannedStopMinutes: roundMinuteValue(Number(stored.draft.plannedStopMinutes || 0)),
+      newModelMinutes: roundMinuteValue(Number(stored.draft.newModelMinutes || 0)),
       note: stored.draft.note || "",
       activeTimerKey: stored.activeTimer?.key || "",
       activeTimerLabel: stored.activeTimer ? getEmployeeTimerLabel(stored.activeTimer.key) : "",
@@ -3838,15 +3840,29 @@ function App() {
       meetingMinutes: Number(targetDraft.meetingMinutes || 0),
       shift: targetDraft.shift,
     }).meetingMinutes;
+    const normalizedTargetDraft = {
+      ...targetDraft,
+      workMinutes: savedWorkMinutes,
+      timeSlots: savedTimeSlots,
+      changeoverMinutes: roundMinuteValue(Number(targetDraft.changeoverMinutes || 0)),
+      inspectionMinutes: roundMinuteValue(Number(targetDraft.inspectionMinutes || 0)),
+      equipmentRepairMinutes: roundMinuteValue(Number(targetDraft.equipmentRepairMinutes || 0)),
+      moldRepairMinutes: roundMinuteValue(Number(targetDraft.moldRepairMinutes || 0)),
+      materialChangeMinutes: roundMinuteValue(Number(targetDraft.materialChangeMinutes || 0)),
+      emergencyStopMinutes: roundMinuteValue(Number(targetDraft.emergencyStopMinutes || 0)),
+      meetingMinutes: roundMinuteValue(savedMeetingMinutes),
+      plannedStopMinutes: roundMinuteValue(Number(targetDraft.plannedStopMinutes || 0)),
+      newModelMinutes: roundMinuteValue(Number(targetDraft.newModelMinutes || 0)),
+    };
+    const savedDowntimeMinutes = roundMinuteValue(totalDowntime(normalizedTargetDraft));
     const submittedAt = options.submittedAt ?? new Date();
     const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
     const entryEventsForDetails = options.entryEvents ?? employeeDraftEventsRef.current;
     const entryUser = options.entryUser || session?.displayName || session?.username || "";
     const log: ProductionLog = {
-      ...targetDraft,
-      buttonDetails: isEmployeeEntry && !shouldUpdate ? buildEmployeeButtonDetails(targetDraft, entryEventsForDetails, submittedAt, activeTimerForDetails) : targetDraft.buttonDetails || options.editingLog?.buttonDetails || "",
+      ...normalizedTargetDraft,
+      buttonDetails: isEmployeeEntry && !shouldUpdate ? buildEmployeeButtonDetails(normalizedTargetDraft, entryEventsForDetails, submittedAt, activeTimerForDetails) : targetDraft.buttonDetails || options.editingLog?.buttonDetails || "",
       entryUser: entryUser || targetDraft.entryUser || options.editingLog?.entryUser || "",
-      meetingMinutes: savedMeetingMinutes,
       minutesPerSlot: savedMinutesPerSlot,
       recordDate: savedRecordDate,
       recordTime: savedRecordTime,
@@ -3854,11 +3870,9 @@ function App() {
       date: savedDate,
       shiftStartAt: shiftStartAt(savedDate, targetDraft.shift),
       shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
-      timeSlots: savedTimeSlots,
-      workMinutes: savedWorkMinutes,
       id: options.editingLog?.id ?? makeLogId(),
       machineName: machine.name,
-      normalMinutes: Math.max(savedWorkMinutes - totalDowntime({ ...targetDraft, meetingMinutes: savedMeetingMinutes }), 0),
+      normalMinutes: roundMinuteValue(Math.max(savedWorkMinutes - savedDowntimeMinutes, 0)),
       createdAt: options.editingLog?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       source: remoteEnabled ? "google-sheet" : "local",
