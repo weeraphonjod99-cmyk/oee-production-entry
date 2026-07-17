@@ -6859,6 +6859,8 @@ type DailyPerformanceRow = {
   machineCount: number;
   machineNames: string[];
   normalMinutes: number;
+  oee: number;
+  productNames: string[];
   targetQty: number;
   utilization: number;
   workMinutes: number;
@@ -6979,30 +6981,38 @@ function buildDailyPerformanceRows(
         machineIds: new Set<string>(),
         machineNames: new Set<string>(),
         normalMinutes: 0,
+        productNames: new Set<string>(),
         targetQty: 0,
         workMinutes: 0,
       };
     const machineName = machineNameLookup.get(log.machineId) || log.machineName || log.machineId;
+    const productLabel = [log.productName, log.partNo, log.step ? `Step ${log.step}` : ""].filter(Boolean).join(" / ");
     current.actualOutput += totalOutput(log);
     current.count += 1;
     current.machineIds.add(log.machineId);
     current.machineNames.add(machineName);
     current.normalMinutes += Number(log.normalMinutes || 0);
+    if (productLabel) current.productNames.add(productLabel);
     current.targetQty += getCapacityTargetQtyForLog(log, capacityContext).targetQty;
     current.workMinutes += getLogWorkMinutes(log);
     map.set(log.date, current);
     return map;
-  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "machineNames" | "utilization"> & { machineIds: Set<string>; machineNames: Set<string> }>());
+  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "machineNames" | "oee" | "productNames" | "utilization"> & { machineIds: Set<string>; machineNames: Set<string>; productNames: Set<string> }>());
 
   return [...rows.values()]
-    .map(({ machineIds, machineNames, ...row }) => {
+    .map(({ machineIds, machineNames, productNames, ...row }) => {
+      const availability = row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0;
+      const utilization = row.targetQty > 0 ? row.actualOutput / row.targetQty : 0;
       const sortedMachineNames = [...machineNames].sort((a, b) => a.localeCompare(b, "en"));
+      const sortedProductNames = [...productNames].sort((a, b) => a.localeCompare(b, "en"));
       return {
         ...row,
-        availability: row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0,
+        availability,
         machineCount: machineIds.size,
         machineNames: sortedMachineNames,
-        utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
+        oee: availability * utilization,
+        productNames: sortedProductNames,
+        utilization,
       };
     })
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -7016,6 +7026,23 @@ function formatDailyMachineNames(row: DailyPerformanceRow): string {
     return row.machineNames.join(", ");
   }
   return `${row.machineNames.slice(0, 2).join(", ")} +${formatNumber(row.machineNames.length - 2)}`;
+}
+
+function formatDailyProductNames(row: DailyPerformanceRow, limit = 2): string {
+  if (row.productNames.length === 0) {
+    return "-";
+  }
+  if (row.productNames.length <= limit) {
+    return row.productNames.join(" | ");
+  }
+  return `${row.productNames.slice(0, limit).join(" | ")} +${formatNumber(row.productNames.length - limit)}`;
+}
+
+function compactChartLabel(value: string, maxLength = 64): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 }
 
 function DailyMachineCompactTrendChart({
@@ -7056,11 +7083,14 @@ function DailyMachineCompactTrendChart({
     const x = rows.length <= 1 ? plotLeft + plotWidth / 2 : plotLeft + index * stepX;
     const y = plotTop + plotHeight - ratio * plotHeight;
     const barHeight = Math.max(3, ratio * plotHeight);
+    const productLabel = formatDailyProductNames(row, 3);
     return {
       barHeight,
       dateLabel: row.date.slice(5),
       machineLabel: formatDailyMachineNames(row),
       outputLabel: formatNumber(row.actualOutput),
+      productLabel,
+      productPreview: compactChartLabel(productLabel, 68),
       row,
       x,
       y,
@@ -7151,7 +7181,7 @@ function DailyMachineCompactTrendChart({
                     <span className="daily-performance-machine-name" title={row.machineNames.join(", ")}>
                       {formatDailyMachineNames(row)}
                     </span>
-                    <em>U {formatPercent(row.utilization)} · A {formatPercent(row.availability)}</em>
+                    <em title={`Products: ${formatDailyProductNames(row, 8)}`}>OEE {formatPercent(row.oee)}</em>
                   </div>
                 </div>
               );
@@ -7201,11 +7231,14 @@ function DailyMachineProfessionalTrendChart({
     const x = rows.length <= 1 ? plotLeft + plotWidth / 2 : plotLeft + index * stepX;
     const y = plotTop + plotHeight - ratio * plotHeight;
     const barHeight = Math.max(3, ratio * plotHeight);
+    const productLabel = formatDailyProductNames(row, 3);
     return {
       barHeight,
       dateLabel: row.date.slice(5),
       machineLabel: formatDailyMachineNames(row),
       outputLabel: formatNumber(row.actualOutput),
+      productLabel,
+      productPreview: compactChartLabel(productLabel, 68),
       row,
       x,
       y,
@@ -7286,13 +7319,13 @@ function DailyMachineProfessionalTrendChart({
               {chartDays.map((point) => {
                 const barX = point.x - barWidth / 2;
                 const barY = plotTop + plotHeight - point.barHeight;
-                const tooltipWidth = 206;
-                const tooltipHeight = 112;
+                const tooltipWidth = 260;
+                const tooltipHeight = 138;
                 const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
                 const tooltipY = point.y - tooltipHeight - 16 < 8 ? point.y + 18 : point.y - tooltipHeight - 16;
                 return (
                   <g className="daily-pro-point" key={point.row.date}>
-                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, Target ${formatNumber(point.row.targetQty)}, U ${formatPercent(point.row.utilization)}, A ${formatPercent(point.row.availability)}`}</title>
+                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, Target ${formatNumber(point.row.targetQty)}, OEE ${formatPercent(point.row.oee)}, Products ${point.productLabel}`}</title>
                     <rect className="daily-pro-hit-area" x={point.x - 36} y={plotTop - 12} width="72" height={plotHeight + 92} rx="10" />
                     <rect className="daily-pro-track" x={barX} y={plotTop} width={barWidth} height={plotHeight} rx="10" />
                     <rect className="daily-pro-output-bar" x={barX} y={barY} width={barWidth} height={point.barHeight} rx="8" />
@@ -7307,7 +7340,7 @@ function DailyMachineProfessionalTrendChart({
                       {point.machineLabel}
                     </text>
                     <text className="daily-pro-metrics" x={point.x} y={plotTop + plotHeight + 61} textAnchor="middle">
-                      {`U ${formatPercent(point.row.utilization)}   A ${formatPercent(point.row.availability)}`}
+                      {`OEE ${formatPercent(point.row.oee)}`}
                     </text>
                     <g className="daily-pro-tooltip" transform={`translate(${tooltipX} ${tooltipY})`}>
                       <rect width={tooltipWidth} height={tooltipHeight} rx="12" />
@@ -7322,9 +7355,13 @@ function DailyMachineProfessionalTrendChart({
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="68" textAnchor="end">
                         {formatNumber(point.row.targetQty)}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="14" y="89">Utilization / Availability</text>
+                      <text className="daily-pro-tooltip-label" x="14" y="89">OEE</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="89" textAnchor="end">
-                        {formatPercent(point.row.utilization)} / {formatPercent(point.row.availability)}
+                        {formatPercent(point.row.oee)}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="14" y="110">Products stamped</text>
+                      <text className="daily-pro-tooltip-product" x="14" y="130">
+                        {point.productPreview}
                       </text>
                     </g>
                   </g>

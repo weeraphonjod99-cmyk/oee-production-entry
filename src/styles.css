@@ -3811,6 +3811,12 @@ select:disabled {
   font-weight: 1000;
 }
 
+.daily-pro-tooltip-product {
+  fill: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .daily-performance-column-chart {
   align-items: end;
   background:
