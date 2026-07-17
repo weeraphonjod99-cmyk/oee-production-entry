@@ -3828,9 +3828,18 @@ select:disabled {
   transition: filter 0.16s ease, opacity 0.16s ease;
 }
 
+.daily-pro-point.high-oee .daily-pro-output-bar {
+  fill: #16a34a;
+  filter: drop-shadow(0 7px 8px rgba(22, 163, 74, 0.2));
+}
+
 .daily-pro-point:hover .daily-pro-output-bar {
   filter: drop-shadow(0 10px 14px rgba(249, 115, 22, 0.28));
   opacity: 0.96;
+}
+
+.daily-pro-point.high-oee:hover .daily-pro-output-bar {
+  filter: drop-shadow(0 10px 14px rgba(22, 163, 74, 0.28));
 }
 
 .daily-pro-point:hover .daily-pro-track {
@@ -3853,6 +3862,10 @@ select:disabled {
   fill: #c2410c;
   font-size: 12px;
   font-weight: 1000;
+}
+
+.daily-pro-point.high-oee .daily-pro-output-label {
+  fill: #15803d;
 }
 
 .daily-pro-date {

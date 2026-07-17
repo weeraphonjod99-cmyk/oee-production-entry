@@ -7185,6 +7185,7 @@ function DailyMachineCompactTrendChart({
     return {
       barHeight,
       dateLabel: row.date.slice(5),
+      isHighOee: row.oee >= 0.85,
       machineLabel: formatDailyMachineNames(row),
       outputLabel: formatNumber(row.actualOutput),
       productLabel,
@@ -7333,6 +7334,7 @@ function DailyMachineProfessionalTrendChart({
     return {
       barHeight,
       dateLabel: row.date.slice(5),
+      isHighOee: row.oee >= 0.85,
       machineLabel: formatDailyMachineNames(row),
       outputLabel: formatNumber(row.actualOutput),
       productLabel,
@@ -7422,7 +7424,7 @@ function DailyMachineProfessionalTrendChart({
                 const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
                 const tooltipY = point.y - tooltipHeight - 16 < 8 ? point.y + 18 : point.y - tooltipHeight - 16;
                 return (
-                  <g className="daily-pro-point" key={point.row.date}>
+                  <g className={`daily-pro-point ${point.isHighOee ? "high-oee" : ""}`} key={point.row.date}>
                     <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, Target ${formatNumber(point.row.targetQty)}, OEE ${formatPercent(point.row.oee)}, Products ${point.productLabel}`}</title>
                     <rect className="daily-pro-hit-area" x={point.x - 36} y={plotTop - 12} width="72" height={plotHeight + 92} rx="10" />
                     <rect className="daily-pro-track" x={barX} y={plotTop} width={barWidth} height={plotHeight} rx="10" />
