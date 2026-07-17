@@ -3408,7 +3408,7 @@ select:disabled {
 }
 
 .daily-performance-legend .trend {
-  background: #0f172a;
+  background: #2563eb;
 }
 
 .daily-compact-trend-panel {
@@ -3425,89 +3425,99 @@ select:disabled {
 
 .daily-compact-chart {
   background:
-    linear-gradient(#e8eee9 1px, transparent 1px) 0 0 / 100% 25%,
-    #fbfcfb;
-  border: 1px solid #e1e8e1;
+    linear-gradient(#edf2ef 1px, transparent 1px) 0 0 / 100% 33.333%,
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+  border: 1px solid #dfe8df;
   border-radius: 8px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(78px, 1fr);
+  grid-auto-columns: minmax(72px, 1fr);
   margin-top: 10px;
-  min-height: 300px;
+  min-height: 280px;
   overflow-x: auto;
-  padding: 14px 14px 12px;
+  padding: 14px 16px 12px;
   position: relative;
 }
 
 .daily-compact-line {
-  height: 155px;
-  left: 24px;
+  height: 126px;
+  left: 32px;
+  opacity: 0.9;
   pointer-events: none;
   position: absolute;
-  right: 24px;
-  top: 72px;
-  width: calc(100% - 48px);
-  z-index: 3;
+  right: 32px;
+  top: 96px;
+  width: calc(100% - 64px);
+  z-index: 5;
 }
 
 .daily-compact-line polyline {
   fill: none;
-  stroke: #0f172a;
+  stroke: #2563eb;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.2;
+  stroke-width: 2.6;
+  vector-effect: non-scaling-stroke;
 }
 
 .daily-compact-line circle {
-  fill: #0f172a;
+  fill: #2563eb;
   stroke: #ffffff;
-  stroke-width: 0.8;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
 }
 
 .daily-compact-day {
   display: grid;
-  gap: 6px;
-  grid-template-rows: auto auto 150px auto;
-  min-width: 78px;
+  gap: 5px;
+  grid-template-rows: 24px 18px 128px auto;
+  min-width: 72px;
   position: relative;
   z-index: 2;
 }
 
 .daily-compact-delta {
   align-items: center;
+  align-self: center;
   border: 1px solid #d4dce0;
-  border-radius: 7px;
-  display: grid;
-  gap: 1px;
-  justify-items: center;
-  min-height: 40px;
-  padding: 5px 4px;
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 4px;
+  justify-content: center;
+  justify-self: center;
+  min-height: 20px;
+  max-width: 100%;
+  padding: 2px 7px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .daily-compact-delta b {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 1000;
   line-height: 1;
 }
 
 .daily-compact-delta span {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 1000;
   line-height: 1.15;
+  max-width: 58px;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  text-overflow: ellipsis;
 }
 
 .daily-compact-delta.up {
-  background: #edfdf2;
-  border-color: #86efac;
+  background: #ecfdf3;
+  border-color: #bbf7d0;
   color: #15803d;
 }
 
 .daily-compact-delta.down {
   background: #fff1f2;
-  border-color: #fda4af;
+  border-color: #fecdd3;
   color: #be123c;
 }
 
@@ -3519,7 +3529,7 @@ select:disabled {
 
 .daily-compact-output {
   color: #c2410c;
-  font-size: 12px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   font-weight: 1000;
   text-align: center;
@@ -3533,18 +3543,19 @@ select:disabled {
 
 .daily-compact-bar i {
   align-items: end;
-  background: #edf2ef;
-  border-radius: 7px 7px 4px 4px;
+  background: #f0f4f1;
+  border-radius: 999px 999px 5px 5px;
   display: flex;
   height: 100%;
   justify-content: center;
   overflow: hidden;
-  width: 28px;
+  width: 20px;
 }
 
 .daily-compact-bar b {
-  background: linear-gradient(180deg, #fb923c, #ea580c);
-  border-radius: 7px 7px 3px 3px;
+  background: linear-gradient(180deg, #fb923c 0%, #f97316 56%, #ea580c 100%);
+  border-radius: 999px 999px 4px 4px;
+  box-shadow: 0 7px 14px rgba(249, 115, 22, 0.18);
   display: block;
   min-height: 2px;
   width: 100%;
@@ -3553,21 +3564,21 @@ select:disabled {
 .daily-compact-meta {
   border-top: 1px solid #e4e9e4;
   display: grid;
-  gap: 3px;
+  gap: 2px;
   padding-top: 6px;
   text-align: center;
 }
 
 .daily-compact-meta strong {
   color: #061635;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 1000;
 }
 
 .daily-compact-meta span,
 .daily-compact-meta em {
   color: #344054;
-  font-size: 10px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 900;
   line-height: 1.2;
