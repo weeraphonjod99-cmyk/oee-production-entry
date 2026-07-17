@@ -7450,7 +7450,8 @@ function DailyMachineProfessionalTrendChart({
                 const tooltipWidth = 520;
                 const tooltipHeight = 224;
                 const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
-                const tooltipY = point.y - tooltipHeight - 22 < 8 ? point.y + 30 : point.y - tooltipHeight - 22;
+                const preferredTooltipY = point.y - tooltipHeight - 22;
+                const tooltipY = Math.min(Math.max(preferredTooltipY, 8), chartHeight - tooltipHeight - 8);
                 return (
                   <g className="daily-pro-hover" key={`${point.row.date}-${point.machineLabel}-front-tooltip`}>
                     <rect className="daily-pro-tooltip-hit-area" x={point.x - 62} y={plotTop - 22} width="124" height={plotHeight + 128} rx="14" />
