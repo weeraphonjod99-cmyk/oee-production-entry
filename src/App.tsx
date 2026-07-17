@@ -7446,6 +7446,39 @@ function DailyMachineProfessionalTrendChart({
                   </g>
                 );
               })}
+              {chartDays.map((point) => {
+                const tooltipWidth = 360;
+                const tooltipHeight = 166;
+                const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
+                const tooltipY = point.y - tooltipHeight - 18 < 8 ? point.y + 22 : point.y - tooltipHeight - 18;
+                return (
+                  <g className="daily-pro-hover" key={`${point.row.date}-${point.machineLabel}-front-tooltip`}>
+                    <rect className="daily-pro-tooltip-hit-area" x={point.x - 46} y={plotTop - 18} width="92" height={plotHeight + 112} rx="12" />
+                    <g className="daily-pro-tooltip daily-pro-tooltip-front" transform={`translate(${tooltipX} ${tooltipY})`}>
+                      <rect width={tooltipWidth} height={tooltipHeight} rx="12" />
+                      <text className="daily-pro-tooltip-title" x="16" y="26">
+                        {point.row.date} - {point.machineLabel}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="16" y="55">Output</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 16} y="55" textAnchor="end">
+                        {point.outputLabel}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="16" y="80">Target</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 16} y="80" textAnchor="end">
+                        {formatNumber(point.row.targetQty)}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="16" y="105">OEE</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 16} y="105" textAnchor="end">
+                        {formatPercent(point.row.oee)}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="16" y="130">Products stamped</text>
+                      <text className="daily-pro-tooltip-product" x="16" y="152">
+                        {point.productPreview}
+                      </text>
+                    </g>
+                  </g>
+                );
+              })}
             </svg>
           </div>
         </>
