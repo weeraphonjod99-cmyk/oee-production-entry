@@ -7027,7 +7027,7 @@ function DailyMachineCompactTrendChart({
   logs: ProductionLog[];
   machines: Machine[];
 }) {
-  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
   const latest = rows.at(-1);
   const previous = rows.length > 1 ? rows.at(-2) : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
@@ -7172,7 +7172,7 @@ function DailyMachineProfessionalTrendChart({
   logs: ProductionLog[];
   machines: Machine[];
 }) {
-  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
   const latest = rows.at(-1);
   const previous = rows.length > 1 ? rows.at(-2) : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
@@ -7324,7 +7324,7 @@ function DailyMachineProductionTrendChart({
   logs: ProductionLog[];
   machines: Machine[];
 }) {
-  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
   const latest = rows.at(-1);
   const previous = rows.length > 1 ? rows.at(-2) : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
@@ -7453,7 +7453,7 @@ function DailyMachinePerformanceChart({
   logs: ProductionLog[];
   machines: Machine[];
 }) {
-  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
   const latest = rows.at(-1);
   const previous = rows.length > 1 ? rows.at(-2) : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
