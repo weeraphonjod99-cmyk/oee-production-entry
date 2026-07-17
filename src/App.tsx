@@ -427,6 +427,7 @@ const canPressEmployeeTimerForRole = (role: AppRole | undefined, key: EmployeeTi
   if (!role || role === "admin" || role === "production") return true;
   return (employeeTimerRolePermissions[role] ?? []).includes(key);
 };
+const clampRatio = (value: number) => Math.min(Math.max(Number.isFinite(value) ? value : 0, 0), 1);
 const clampWorkMinutes = (value: number) => Math.min(roundMinuteValue(value), maxShiftWorkMinutes);
 
 const slotsFromMinutes = (workMinutes: number, minutesPerSlot: number) =>
@@ -1485,8 +1486,8 @@ function summarizeDashboardOee(logs: ProductionLog[], context: DashboardCapacity
     },
     { matched: 0, targetQty: 0 },
   );
-  const kpi = target.targetQty > 0 ? base.total / target.targetQty : 1;
-  const oee = base.availability * base.quality * kpi;
+  const kpi = clampRatio(target.targetQty > 0 ? base.total / target.targetQty : 1);
+  const oee = clampRatio(base.availability) * clampRatio(base.quality) * kpi;
   return {
     ...base,
     capacityMatchedLogs: target.matched,
@@ -6695,11 +6696,13 @@ function OeeSummaryChart({
   downtimeItems?: ReturnType<typeof groupDowntime>;
   summary: OeeSummaryInput;
 }) {
-  const oee = summary.oee ?? summary.availability * summary.quality;
+  const availability = clampRatio(summary.availability);
+  const quality = clampRatio(summary.quality);
+  const oee = clampRatio(summary.oee ?? availability * quality);
   const factors = [
-    { label: "Availability", value: summary.availability, minutes: summary.run, color: "#22c55e", radius: 58 },
-    { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#0ea5e9", radius: 44 },
-    { label: "OEE", value: oee, minutes: summary.run * summary.quality, color: "#facc15", radius: 30 },
+    { label: "Availability", value: availability, minutes: summary.run, color: "#22c55e", radius: 58 },
+    { label: "Quality", value: quality, minutes: summary.run * quality, color: "#0ea5e9", radius: 44 },
+    { label: "OEE", value: oee, minutes: summary.run * quality, color: "#facc15", radius: 30 },
   ];
   const issueColors = ["#ef4444", "#fb923c", "#facc15", "#94a3b8", "#64748b"];
   const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 3);
@@ -7099,8 +7102,8 @@ function buildDailyPerformanceRows(
 
   return [...rows.values()]
     .map(({ machineIds, machineNames, productNames, ...row }) => {
-      const availability = row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0;
-      const utilization = row.targetQty > 0 ? row.actualOutput / row.targetQty : 0;
+      const availability = clampRatio(row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0);
+      const utilization = clampRatio(row.targetQty > 0 ? row.actualOutput / row.targetQty : 0);
       const sortedMachineNames = [...machineNames].sort((a, b) => a.localeCompare(b, "en"));
       const sortedProductNames = [...productNames].sort((a, b) => a.localeCompare(b, "en"));
       return {
@@ -7799,9 +7802,9 @@ function buildMachineCapacityRows(
   return [...rows.values()]
     .map((row) => ({
       ...row,
-      availability: row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0,
+      availability: clampRatio(row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0),
       gapQty: row.actualOutput - row.targetQty,
-      utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
+      utilization: clampRatio(row.targetQty > 0 ? row.actualOutput / row.targetQty : 0),
     }))
     .sort(
       (a, b) =>
