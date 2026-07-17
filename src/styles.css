@@ -3016,8 +3016,8 @@ select:disabled {
 
 .filters-bar {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 18px;
+  padding: 20px;
 }
 
 .dashboard-filter-panel {
@@ -3062,7 +3062,7 @@ select:disabled {
   display: flex;
   flex: 0 0 auto;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -3071,10 +3071,10 @@ select:disabled {
   border: 1px solid #b8d8c3;
   border-radius: 8px;
   color: #075e35;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 1000;
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 46px;
+  padding: 0 18px;
 }
 
 .filter-quick-actions button:hover {
@@ -3084,21 +3084,21 @@ select:disabled {
 
 .filter-control-grid {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   grid-template-columns: minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(280px, 1.5fr) minmax(180px, 0.8fr);
 }
 
 .filter-control {
   background: #f8fbf8;
   border: 1px solid #d9e7dc;
-  border-radius: 8px;
-  gap: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  gap: 10px;
+  padding: 14px;
 }
 
 .filter-control span {
   color: #243b57;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 1000;
 }
 
@@ -3106,9 +3106,11 @@ select:disabled {
 .filter-control select {
   background: #ffffff;
   border-color: #b8cfc0;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 19px;
   font-weight: 900;
-  min-height: 48px;
+  min-height: 64px;
+  padding: 0 18px;
 }
 
 .filter-control select {
