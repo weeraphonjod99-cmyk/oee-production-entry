@@ -6530,39 +6530,58 @@ function FiltersBar({
   machines: Machine[];
   setFilters: (filters: Filters) => void;
 }) {
+  const today = getTodayInputValue();
+  const selectedMachineName = filters.machineId ? machines.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
+  const activeFilterCount = [filters.from, filters.to, filters.machineId, filters.shift].filter(Boolean).length;
+  const updateFilters = (patch: Partial<Filters>) => setFilters({ ...filters, ...patch });
+
   return (
-    <div className="filters-bar">
-      <label>
-        จาก
-        <input value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} type="date" />
-      </label>
-      <label>
-        ถึง
-        <input value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} type="date" />
-      </label>
-      <label>
-        เครื่อง
-        <select value={filters.machineId} onChange={(event) => setFilters({ ...filters, machineId: event.target.value })}>
-          <option value="">ทั้งหมด</option>
-          {machines.map((machine) => (
-            <option key={machine.id} value={machine.id}>
-              {machine.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        กะ
-        <select value={filters.shift} onChange={(event) => setFilters({ ...filters, shift: event.target.value })}>
-          <option value="">ทั้งหมด</option>
-          {orderedShiftOptions.map((shift) => (
-            <option key={shift} value={shift}>
-              {shiftLabel(shift)}
-            </option>
-          ))}
-        </select>
-      </label>
-    </div>
+    <section className="filters-bar dashboard-filter-panel" aria-label="Dashboard filters">
+      <div className="filter-panel-heading">
+        <div>
+          <span>FILTERS</span>
+          <h2>เลือกข้อมูลที่ต้องการดู</h2>
+          <p>{selectedMachineName} · {filters.shift ? shiftLabel(filters.shift) : "ทุกกะ"} · {activeFilterCount > 0 ? `${activeFilterCount} ตัวกรอง` : "ยังไม่กรองข้อมูล"}</p>
+        </div>
+        <div className="filter-quick-actions">
+          <button type="button" onClick={() => updateFilters({ from: today, to: today })}>วันนี้</button>
+          <button type="button" onClick={() => updateFilters({ from: "", to: "" })}>ทุกวัน</button>
+          <button type="button" onClick={() => setFilters({ machineId: "", shift: "", from: "", to: "" })}>ล้างทั้งหมด</button>
+        </div>
+      </div>
+      <div className="filter-control-grid">
+        <label className="filter-control">
+          <span>จาก / From</span>
+          <input value={filters.from} onChange={(event) => updateFilters({ from: event.target.value })} type="date" />
+        </label>
+        <label className="filter-control">
+          <span>ถึง / To</span>
+          <input value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} type="date" />
+        </label>
+        <label className="filter-control filter-control-wide">
+          <span>เครื่องจักร / Machine</span>
+          <select value={filters.machineId} onChange={(event) => updateFilters({ machineId: event.target.value })}>
+            <option value="">ทั้งหมด / All machines</option>
+            {machines.map((machine) => (
+              <option key={machine.id} value={machine.id}>
+                {machine.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="filter-control">
+          <span>กะ / Shift</span>
+          <select value={filters.shift} onChange={(event) => updateFilters({ shift: event.target.value })}>
+            <option value="">ทุกกะ / All shifts</option>
+            {orderedShiftOptions.map((shift) => (
+              <option key={shift} value={shift}>
+                {shiftLabel(shift)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </section>
   );
 }
 
