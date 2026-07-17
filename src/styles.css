@@ -3719,9 +3719,29 @@ select:disabled {
   fill: #edf3ef;
 }
 
+.daily-pro-hit-area {
+  fill: transparent;
+  pointer-events: all;
+}
+
 .daily-pro-output-bar {
   fill: url(#dailyOutputGradient);
   filter: drop-shadow(0 7px 8px rgba(249, 115, 22, 0.18));
+  transition: filter 0.16s ease, opacity 0.16s ease;
+}
+
+.daily-pro-point:hover .daily-pro-output-bar {
+  filter: drop-shadow(0 10px 14px rgba(249, 115, 22, 0.28));
+  opacity: 0.96;
+}
+
+.daily-pro-point:hover .daily-pro-track {
+  fill: #e6efe9;
+}
+
+.daily-pro-point:hover .daily-pro-dot {
+  stroke: #1d4ed8;
+  stroke-width: 4;
 }
 
 .daily-pro-dot {
@@ -3753,6 +3773,42 @@ select:disabled {
   fill: #536174;
   font-size: 9px;
   font-weight: 900;
+}
+
+.daily-pro-tooltip {
+  filter: drop-shadow(0 14px 22px rgba(6, 22, 53, 0.22));
+  opacity: 0;
+  pointer-events: none;
+  transform-box: fill-box;
+  transition: opacity 0.12s ease;
+}
+
+.daily-pro-point:hover .daily-pro-tooltip {
+  opacity: 1;
+}
+
+.daily-pro-tooltip rect {
+  fill: #061635;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
+}
+
+.daily-pro-tooltip-title {
+  fill: #ffffff;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.daily-pro-tooltip-label {
+  fill: #b8c2d4;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.daily-pro-tooltip-value {
+  fill: #ffffff;
+  font-size: 11px;
+  font-weight: 1000;
 }
 
 .daily-performance-column-chart {

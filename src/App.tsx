@@ -7286,9 +7286,14 @@ function DailyMachineProfessionalTrendChart({
               {chartDays.map((point) => {
                 const barX = point.x - barWidth / 2;
                 const barY = plotTop + plotHeight - point.barHeight;
+                const tooltipWidth = 206;
+                const tooltipHeight = 112;
+                const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
+                const tooltipY = point.y - tooltipHeight - 16 < 8 ? point.y + 18 : point.y - tooltipHeight - 16;
                 return (
                   <g className="daily-pro-point" key={point.row.date}>
-                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, U ${formatPercent(point.row.utilization)}, A ${formatPercent(point.row.availability)}`}</title>
+                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, Target ${formatNumber(point.row.targetQty)}, U ${formatPercent(point.row.utilization)}, A ${formatPercent(point.row.availability)}`}</title>
+                    <rect className="daily-pro-hit-area" x={point.x - 36} y={plotTop - 12} width="72" height={plotHeight + 92} rx="10" />
                     <rect className="daily-pro-track" x={barX} y={plotTop} width={barWidth} height={plotHeight} rx="10" />
                     <rect className="daily-pro-output-bar" x={barX} y={barY} width={barWidth} height={point.barHeight} rx="8" />
                     <circle className="daily-pro-dot" cx={point.x} cy={point.y} r="4" />
@@ -7304,6 +7309,24 @@ function DailyMachineProfessionalTrendChart({
                     <text className="daily-pro-metrics" x={point.x} y={plotTop + plotHeight + 61} textAnchor="middle">
                       {`U ${formatPercent(point.row.utilization)}   A ${formatPercent(point.row.availability)}`}
                     </text>
+                    <g className="daily-pro-tooltip" transform={`translate(${tooltipX} ${tooltipY})`}>
+                      <rect width={tooltipWidth} height={tooltipHeight} rx="12" />
+                      <text className="daily-pro-tooltip-title" x="14" y="23">
+                        {point.row.date} · {point.machineLabel}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="14" y="47">กำลังผลิต / Output</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="47" textAnchor="end">
+                        {point.outputLabel}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="14" y="68">ความสามารถ / Target</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="68" textAnchor="end">
+                        {formatNumber(point.row.targetQty)}
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="14" y="89">Utilization / Availability</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="89" textAnchor="end">
+                        {formatPercent(point.row.utilization)} / {formatPercent(point.row.availability)}
+                      </text>
+                    </g>
                   </g>
                 );
               })}
