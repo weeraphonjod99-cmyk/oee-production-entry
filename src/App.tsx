@@ -5177,7 +5177,7 @@ function App() {
               shift={currentDashboardShift.shift}
             />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
-            <DailyMachineProductionTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
+            <DailyMachineCompactTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <MachineCapacityDashboard capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
@@ -7018,6 +7018,128 @@ function formatDailyMachineNames(row: DailyPerformanceRow): string {
   return `${row.machineNames.slice(0, 2).join(", ")} +${formatNumber(row.machineNames.length - 2)}`;
 }
 
+function DailyMachineCompactTrendChart({
+  capacityContext,
+  logs,
+  machines,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  logs: ProductionLog[];
+  machines: Machine[];
+}) {
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const latest = rows.at(-1);
+  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
+  const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
+  const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
+  const latestTrendClass = latestOutputDelta > 0 ? "up" : latestOutputDelta < 0 ? "down" : "flat";
+  const latestTrendLabel = previous
+    ? latestOutputDelta > 0
+      ? `เพิ่มขึ้น +${formatNumber(latestOutputDelta)} / Up ${formatPercent(latestOutputDeltaPercent)}`
+      : latestOutputDelta < 0
+        ? `ลดลง -${formatNumber(Math.abs(latestOutputDelta))} / Down ${formatPercent(Math.abs(latestOutputDeltaPercent))}`
+        : "เท่าเดิม / Stable"
+    : "รอข้อมูลวันก่อนหน้า / Need previous day";
+  const trendPoints = rows
+    .map((row, index) => {
+      const x = rows.length <= 1 ? 50 : (index / (rows.length - 1)) * 100;
+      const y = 92 - Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 74;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="analysis-panel daily-compact-trend-panel">
+      <div className="report-table-heading compact-heading">
+        <div>
+          <h2>แนวโน้มกำลังผลิตรายวัน / Daily Production Trend</h2>
+          <p>แท่งเดียวต่อวันดูจำนวนงาน เส้นด้านบนบอกทิศทางขึ้นลง พร้อมค่า Utilization และ Availability</p>
+        </div>
+        <span>{formatNumber(rows.length)} วัน</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="empty-text">ไม่มีข้อมูลรายวันตามตัวกรองนี้ / No daily data for this filter</p>
+      ) : (
+        <>
+          {latest && (
+            <div className="daily-performance-summary daily-compact-summary">
+              <div>
+                <span>วันล่าสุด / Latest date</span>
+                <strong>{latest.date}</strong>
+              </div>
+              <div>
+                <span>Output</span>
+                <strong>{formatNumber(latest.actualOutput)}</strong>
+              </div>
+              <div>
+                <span>Utilization</span>
+                <strong>{formatPercent(latest.utilization)}</strong>
+              </div>
+              <div>
+                <span>Availability</span>
+                <strong>{formatPercent(latest.availability)}</strong>
+              </div>
+              <div className={`daily-trend-summary ${latestTrendClass}`}>
+                <span>แนวโน้มงาน / Output trend</span>
+                <strong>{latestTrendLabel}</strong>
+              </div>
+            </div>
+          )}
+          <div className="daily-performance-legend daily-compact-legend">
+            <span><i className="output" /> จำนวนงานต่อวัน / Daily output</span>
+            <span><i className="trend" /> เส้นแนวโน้ม / Trend line</span>
+          </div>
+          <div className="daily-compact-chart" role="img" aria-label="Daily output compact bar chart with trend line">
+            <svg className="daily-compact-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points={trendPoints} />
+              {rows.map((row, index) => {
+                const x = rows.length <= 1 ? 50 : (index / (rows.length - 1)) * 100;
+                const y = 92 - Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 74;
+                return <circle cx={x} cy={y} key={row.date} r="1.35" />;
+              })}
+            </svg>
+            {rows.map((row, index) => {
+              const previousRow = index > 0 ? rows[index - 1] : undefined;
+              const outputDelta = previousRow ? row.actualOutput - previousRow.actualOutput : 0;
+              const outputDeltaPercent = previousRow && previousRow.actualOutput > 0 ? outputDelta / previousRow.actualOutput : 0;
+              const trendClass = !previousRow ? "flat" : outputDelta > 0 ? "up" : outputDelta < 0 ? "down" : "flat";
+              const trendMark = !previousRow ? "-" : outputDelta > 0 ? "↑" : outputDelta < 0 ? "↓" : "→";
+              const trendText = !previousRow
+                ? "เริ่มต้น"
+                : outputDelta > 0
+                  ? `+${formatNumber(outputDelta)} (${formatPercent(outputDeltaPercent)})`
+                  : outputDelta < 0
+                    ? `-${formatNumber(Math.abs(outputDelta))} (${formatPercent(Math.abs(outputDeltaPercent))})`
+                    : "0";
+              const outputHeight = `${Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 100}%`;
+              return (
+                <div className="daily-compact-day" key={row.date}>
+                  <div className={`daily-compact-delta ${trendClass}`}>
+                    <b>{trendMark}</b>
+                    <span>{trendText}</span>
+                  </div>
+                  <strong className="daily-compact-output">{formatNumber(row.actualOutput)}</strong>
+                  <div className="daily-compact-bar">
+                    <i><b style={{ height: outputHeight }} /></i>
+                  </div>
+                  <div className="daily-compact-meta">
+                    <strong>{row.date.slice(5)}</strong>
+                    <span className="daily-performance-machine-name" title={row.machineNames.join(", ")}>
+                      {formatDailyMachineNames(row)}
+                    </span>
+                    <em>U {formatPercent(row.utilization)} · A {formatPercent(row.availability)}</em>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DailyMachineProductionTrendChart({
   capacityContext,
   logs,
@@ -7031,6 +7153,13 @@ function DailyMachineProductionTrendChart({
   const latest = rows.at(-1);
   const previous = rows.length > 1 ? rows.at(-2) : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
+  const trendPoints = rows
+    .map((row, index) => {
+      const x = rows.length <= 1 ? 50 : (index / (rows.length - 1)) * 100;
+      const y = 92 - Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 72;
+      return `${x},${y}`;
+    })
+    .join(" ");
   const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
   const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
   const latestTrendClass = latestOutputDelta > 0 ? "up" : latestOutputDelta < 0 ? "down" : "flat";
