@@ -3807,7 +3807,25 @@ select:disabled {
 }
 
 .daily-pro-tooltip-front rect {
-  filter: drop-shadow(0 18px 22px rgba(6, 22, 53, 0.32));
+  stroke: rgba(255, 205, 92, 0.92);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 20px 28px rgba(6, 22, 53, 0.45));
+}
+
+.daily-pro-tooltip-front .daily-pro-tooltip-title {
+  font-size: 20px;
+}
+
+.daily-pro-tooltip-front .daily-pro-tooltip-label {
+  font-size: 16px;
+}
+
+.daily-pro-tooltip-front .daily-pro-tooltip-value {
+  font-size: 18px;
+}
+
+.daily-pro-tooltip-front .daily-pro-tooltip-product {
+  font-size: 16px;
 }
 
 .daily-pro-tooltip-title {
