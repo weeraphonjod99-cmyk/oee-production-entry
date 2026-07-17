@@ -3345,6 +3345,33 @@ select:disabled {
   font-weight: 1000;
 }
 
+.daily-performance-summary .daily-trend-summary.up {
+  background: #ecfdf3;
+  border-color: #86efac;
+}
+
+.daily-performance-summary .daily-trend-summary.down {
+  background: #fff1f2;
+  border-color: #fda4af;
+}
+
+.daily-performance-summary .daily-trend-summary.flat {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.daily-performance-summary .daily-trend-summary.up strong {
+  color: #15803d;
+}
+
+.daily-performance-summary .daily-trend-summary.down strong {
+  color: #be123c;
+}
+
+.daily-performance-summary .daily-trend-summary.flat strong {
+  color: #475569;
+}
+
 .daily-performance-legend {
   align-items: center;
   display: flex;
@@ -3400,8 +3427,52 @@ select:disabled {
   align-items: stretch;
   display: grid;
   gap: 8px;
-  grid-template-rows: auto 190px auto;
+  grid-template-rows: auto auto 190px auto;
   min-width: 96px;
+}
+
+.daily-output-trend {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  min-height: 46px;
+  padding: 6px 5px;
+  text-align: center;
+}
+
+.daily-output-trend b {
+  font-size: 18px;
+  font-weight: 1000;
+  line-height: 1;
+}
+
+.daily-output-trend span {
+  color: #344054;
+  font-size: 10px;
+  font-weight: 1000;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.daily-output-trend.up {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #15803d;
+}
+
+.daily-output-trend.down {
+  background: #ffe4e6;
+  border-color: #fb7185;
+  color: #be123c;
+}
+
+.daily-output-trend.flat {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
 }
 
 .daily-performance-value-labels {

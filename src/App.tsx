@@ -5177,7 +5177,7 @@ function App() {
               shift={currentDashboardShift.shift}
             />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
-            <DailyMachinePerformanceChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
+            <DailyMachineProductionTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <MachineCapacityDashboard capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
@@ -7018,6 +7018,128 @@ function formatDailyMachineNames(row: DailyPerformanceRow): string {
   return `${row.machineNames.slice(0, 2).join(", ")} +${formatNumber(row.machineNames.length - 2)}`;
 }
 
+function DailyMachineProductionTrendChart({
+  capacityContext,
+  logs,
+  machines,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  logs: ProductionLog[];
+  machines: Machine[];
+}) {
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const latest = rows.at(-1);
+  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
+  const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
+  const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
+  const latestTrendClass = latestOutputDelta > 0 ? "up" : latestOutputDelta < 0 ? "down" : "flat";
+  const latestTrendLabel = previous
+    ? latestOutputDelta > 0
+      ? `เพิ่มขึ้น +${formatNumber(latestOutputDelta)} / Up ${formatPercent(latestOutputDeltaPercent)}`
+      : latestOutputDelta < 0
+        ? `ลดลง -${formatNumber(Math.abs(latestOutputDelta))} / Down ${formatPercent(Math.abs(latestOutputDeltaPercent))}`
+        : "เท่าเดิม / Stable"
+    : "รอข้อมูลวันก่อนหน้า / Need previous day";
+
+  return (
+    <div className="analysis-panel daily-performance-panel">
+      <div className="report-table-heading compact-heading">
+        <div>
+          <h2>แนวโน้มกำลังผลิตรายวัน / Daily Production Trend</h2>
+          <p>แสดงจำนวนงานผลิตของแต่ละวัน พร้อมทิศทางขึ้นลง Utilization และ Availability</p>
+        </div>
+        <span>{formatNumber(rows.length)} วัน</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="empty-text">ไม่มีข้อมูลรายวันตามตัวกรองนี้ / No daily data for this filter</p>
+      ) : (
+        <>
+          {latest && (
+            <div className="daily-performance-summary">
+              <div>
+                <span>วันล่าสุด / Latest date</span>
+                <strong>{latest.date}</strong>
+              </div>
+              <div>
+                <span>Utilization</span>
+                <strong>{formatPercent(latest.utilization)}</strong>
+              </div>
+              <div>
+                <span>Availability</span>
+                <strong>{formatPercent(latest.availability)}</strong>
+              </div>
+              <div>
+                <span>เครื่อง / Logs</span>
+                <strong>{formatNumber(latest.machineCount)} / {formatNumber(latest.count)}</strong>
+              </div>
+              <div className={`daily-trend-summary ${latestTrendClass}`}>
+                <span>แนวโน้มงาน / Output trend</span>
+                <strong>{latestTrendLabel}</strong>
+              </div>
+            </div>
+          )}
+          <div className="daily-performance-legend">
+            <span><i className="utilization" /> อัตราการใช้เครื่อง / Utilization</span>
+            <span><i className="availability" /> ประสิทธิภาพเครื่อง / Availability</span>
+            <span><i className="output" /> จำนวนงาน / Output</span>
+          </div>
+          <div className="daily-performance-column-chart" role="img" aria-label="Daily production output trend with utilization and availability">
+            {rows.map((row, index) => {
+              const previousRow = index > 0 ? rows[index - 1] : undefined;
+              const outputDelta = previousRow ? row.actualOutput - previousRow.actualOutput : 0;
+              const outputDeltaPercent = previousRow && previousRow.actualOutput > 0 ? outputDelta / previousRow.actualOutput : 0;
+              const trendClass = !previousRow ? "flat" : outputDelta > 0 ? "up" : outputDelta < 0 ? "down" : "flat";
+              const trendMark = !previousRow ? "-" : outputDelta > 0 ? "↑" : outputDelta < 0 ? "↓" : "→";
+              const trendText = !previousRow
+                ? "เริ่มต้น"
+                : outputDelta > 0
+                  ? `+${formatNumber(outputDelta)} (${formatPercent(outputDeltaPercent)})`
+                  : outputDelta < 0
+                    ? `-${formatNumber(Math.abs(outputDelta))} (${formatPercent(Math.abs(outputDeltaPercent))})`
+                    : "0";
+              const utilizationHeight = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
+              const availabilityHeight = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
+              const outputHeight = `${Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 100}%`;
+              return (
+                <div className="daily-performance-column" key={row.date}>
+                  <div className={`daily-output-trend ${trendClass}`}>
+                    <b>{trendMark}</b>
+                    <span>{trendText}</span>
+                  </div>
+                  <div className="daily-performance-value-labels">
+                    <span className="utilization-value">{formatPercent(row.utilization)}</span>
+                    <span className="availability-value">{formatPercent(row.availability)}</span>
+                    <span className="output-value">{formatNumber(row.actualOutput)}</span>
+                  </div>
+                  <div className="daily-performance-column-bars">
+                    <i className="utilization" title="อัตราการใช้เครื่อง / Utilization"><b style={{ height: utilizationHeight }} /></i>
+                    <i className="availability" title="ประสิทธิภาพเครื่อง / Availability"><b style={{ height: availabilityHeight }} /></i>
+                    <i className="output" title="จำนวนงาน / Output"><b style={{ height: outputHeight }} /></i>
+                  </div>
+                  <div className="daily-performance-bar-labels" aria-hidden="true">
+                    <span>ใช้</span>
+                    <span>ประสิทธิภาพ</span>
+                    <span>งาน</span>
+                  </div>
+                  <div className="daily-performance-column-date">
+                    <strong>{row.date.slice(5)}</strong>
+                    <span className="daily-performance-machine-name" title={row.machineNames.join(", ")}>
+                      {formatDailyMachineNames(row)}
+                    </span>
+                    <span>{formatNumber(row.machineCount)} เครื่อง / Machines</span>
+                    <em>Output {formatNumber(row.actualOutput)}</em>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DailyMachinePerformanceChart({
   capacityContext,
   logs,
@@ -7029,7 +7151,18 @@ function DailyMachinePerformanceChart({
 }) {
   const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
   const latest = rows.at(-1);
+  const previous = rows.length > 1 ? rows.at(-2) : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
+  const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
+  const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
+  const latestTrendClass = latestOutputDelta > 0 ? "up" : latestOutputDelta < 0 ? "down" : "flat";
+  const latestTrendLabel = previous
+    ? latestOutputDelta > 0
+      ? `เพิ่มขึ้น +${formatNumber(latestOutputDelta)} / Up ${formatPercent(latestOutputDeltaPercent)}`
+      : latestOutputDelta < 0
+        ? `ลดลง -${formatNumber(Math.abs(latestOutputDelta))} / Down ${formatPercent(Math.abs(latestOutputDeltaPercent))}`
+        : "เท่าเดิม / Stable"
+    : "รอข้อมูลวันก่อนหน้า / Need previous day";
 
   return (
     <div className="analysis-panel daily-performance-panel">
@@ -7062,6 +7195,10 @@ function DailyMachinePerformanceChart({
                 <span>เครื่อง / Logs</span>
                 <strong>{formatNumber(latest.machineCount)} / {formatNumber(latest.count)}</strong>
               </div>
+              <div className={`daily-trend-summary ${latestTrendClass}`}>
+                <span>แนวโน้มงาน / Output trend</span>
+                <strong>{latestTrendLabel}</strong>
+              </div>
             </div>
           )}
           <div className="daily-performance-legend">
@@ -7070,12 +7207,28 @@ function DailyMachinePerformanceChart({
             <span><i className="output" /> จำนวนงาน / Quantity</span>
           </div>
           <div className="daily-performance-column-chart" role="img" aria-label="Daily machine utilization, availability, and quantity bar chart">
-            {rows.map((row) => {
+            {rows.map((row, index) => {
+              const previousRow = index > 0 ? rows[index - 1] : undefined;
+              const outputDelta = previousRow ? row.actualOutput - previousRow.actualOutput : 0;
+              const outputDeltaPercent = previousRow && previousRow.actualOutput > 0 ? outputDelta / previousRow.actualOutput : 0;
+              const trendClass = !previousRow ? "flat" : outputDelta > 0 ? "up" : outputDelta < 0 ? "down" : "flat";
+              const trendMark = !previousRow ? "-" : outputDelta > 0 ? "↑" : outputDelta < 0 ? "↓" : "→";
+              const trendText = !previousRow
+                ? "เริ่มต้น"
+                : outputDelta > 0
+                  ? `+${formatNumber(outputDelta)} (${formatPercent(outputDeltaPercent)})`
+                  : outputDelta < 0
+                    ? `-${formatNumber(Math.abs(outputDelta))} (${formatPercent(Math.abs(outputDeltaPercent))})`
+                    : "0";
               const utilizationHeight = `${Math.min(Math.max(row.utilization, 0), 1) * 100}%`;
               const availabilityHeight = `${Math.min(Math.max(row.availability, 0), 1) * 100}%`;
               const outputHeight = `${Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 100}%`;
               return (
                 <div className="daily-performance-column" key={row.date}>
+                  <div className={`daily-output-trend ${trendClass}`}>
+                    <b>{trendMark}</b>
+                    <span>{trendText}</span>
+                  </div>
                   <div className="daily-performance-value-labels">
                     <span className="utilization-value">{formatPercent(row.utilization)}</span>
                     <span className="availability-value">{formatPercent(row.availability)}</span>
