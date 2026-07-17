@@ -5161,6 +5161,14 @@ function App() {
               <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
               <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
             </div>
+            <DashboardExecutiveBrief
+              capacityContext={dashboardCapacityContext}
+              currentShiftLogs={currentDashboardShiftLogs}
+              downtimeItems={downtime}
+              logs={dashboardLogs}
+              machines={machines}
+              summary={summary}
+            />
             <FiltersBar filters={dashboardFilters} machines={machines} setFilters={setDashboardFilters} />
             {dashboardEmptyMessage && (
               <FilterEmptyNotice
@@ -6592,6 +6600,114 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone: strin
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function DashboardExecutiveBrief({
+  capacityContext,
+  currentShiftLogs,
+  downtimeItems,
+  logs,
+  machines,
+  summary,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  currentShiftLogs: ProductionLog[];
+  downtimeItems: ReturnType<typeof groupDowntime>;
+  logs: ProductionLog[];
+  machines: Machine[];
+  summary: DashboardSummary;
+}) {
+  const oee = clampRatio(summary.oee ?? summary.availability * summary.quality);
+  const oeeStatus =
+    oee >= 0.85
+      ? { className: "good", label: "ดีมาก", note: "รักษามาตรฐานและติดตามไม่ให้ตก" }
+      : oee >= 0.7
+        ? { className: "warn", label: "ต้องติดตาม", note: "ตรวจสาเหตุ downtime และความเร็วเครื่อง" }
+        : { className: "critical", label: "ต้องแก้ด่วน", note: "โฟกัสปัญหาหลักก่อนเริ่มกะถัดไป" };
+  const topIssues = downtimeItems.filter((item) => item.minutes > 0).slice(0, 3);
+  const topIssue = topIssues[0];
+  const machineIssueRows = aggregateReportRows(logs, (log) => log.machineName || log.machineId, () => "")
+    .filter((row) => row.downtime > 0 || row.count > 0)
+    .sort((a, b) => b.downtime - a.downtime || a.label.localeCompare(b.label, "en"))
+    .slice(0, 3);
+  const currentMachineRows = buildCurrentShiftMachineOeeRows(currentShiftLogs, machines, capacityContext)
+    .filter((row) => row.count > 0)
+    .sort((a, b) => a.oee - b.oee || b.output - a.output)
+    .slice(0, 3);
+  const focusAction = topIssue
+    ? getOeeImprovementAction(topIssue.label)
+    : "ยังไม่พบ downtime ตามตัวกรองนี้ ให้รักษามาตรฐานการผลิตและบันทึกเหตุผลให้ครบ";
+  const totalTime = summary.run + summary.downtime;
+  const downtimeShare = totalTime > 0 ? summary.downtime / totalTime : 0;
+
+  return (
+    <section className={`analysis-panel dashboard-brief-panel ${oeeStatus.className}`}>
+      <div className="dashboard-brief-head">
+        <div>
+          <span>Supervisor brief</span>
+          <h2>สรุปสำหรับหัวหน้างาน</h2>
+        </div>
+        <strong>{logs.length > 0 ? `${formatNumber(logs.length)} รายการ` : "ยังไม่มีข้อมูล"}</strong>
+      </div>
+      <div className="dashboard-brief-grid">
+        <article className="brief-card brief-oee-card">
+          <span>สถานะ OEE</span>
+          <strong>{formatPercent(oee)}</strong>
+          <b>{oeeStatus.label}</b>
+          <p>{oeeStatus.note}</p>
+        </article>
+        <article className="brief-card">
+          <span>ผลงานรวม</span>
+          <strong>{formatNumber(summary.total)}</strong>
+          <p>
+            Good {formatNumber(summary.good)} · NG {formatNumber(summary.ng)} · Test {formatNumber(summary.test)}
+          </p>
+          <em>Run {formatNumber(summary.run)} นาที · Downtime {formatPercent(downtimeShare)}</em>
+        </article>
+        <article className="brief-card">
+          <span>ปัญหาหลัก</span>
+          <strong>{topIssue?.shortLabel ?? "ไม่มี downtime"}</strong>
+          <p>
+            {topIssue ? `${formatNumber(topIssue.minutes)} นาที · ${formatPercent(topIssue.minutes / Math.max(summary.downtime, 1))}` : "ยังไม่พบปัญหาตามตัวกรองนี้"}
+          </p>
+          <em>{focusAction}</em>
+        </article>
+        <article className="brief-card brief-list-card">
+          <span>เครื่องที่ควรดู</span>
+          {machineIssueRows.length > 0 ? (
+            <ul>
+              {machineIssueRows.map((row) => (
+                <li key={row.label}>
+                  <b>{row.label}</b>
+                  <small>DT {formatNumber(row.downtime)} นาที · Output {formatNumber(row.total)}</small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>ยังไม่มีเครื่องที่มี downtime ตามตัวกรองนี้</p>
+          )}
+        </article>
+      </div>
+      <div className="dashboard-action-strip">
+        <div>
+          <span>Top 3 ปัญหา</span>
+          {topIssues.length > 0 ? (
+            <p>{topIssues.map((item) => `${item.shortLabel} ${formatNumber(item.minutes)} นาที`).join(" · ")}</p>
+          ) : (
+            <p>ไม่มี downtime ให้ติดตาม</p>
+          )}
+        </div>
+        <div>
+          <span>กะปัจจุบันที่ต้องติดตาม</span>
+          {currentMachineRows.length > 0 ? (
+            <p>{currentMachineRows.map((row) => `${row.machineName} OEE ${formatPercent(row.oee)}`).join(" · ")}</p>
+          ) : (
+            <p>ยังไม่มีข้อมูลผลิตในกะปัจจุบัน</p>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
