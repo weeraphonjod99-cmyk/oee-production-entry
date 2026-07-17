@@ -5177,7 +5177,7 @@ function App() {
               shift={currentDashboardShift.shift}
             />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
-            <DailyMachineCompactTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
+            <DailyMachineProfessionalTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <MachineCapacityDashboard capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
@@ -7041,13 +7041,36 @@ function DailyMachineCompactTrendChart({
         ? `ลดลง -${formatNumber(Math.abs(latestOutputDelta))} / Down ${formatPercent(Math.abs(latestOutputDeltaPercent))}`
         : "เท่าเดิม / Stable"
     : "รอข้อมูลวันก่อนหน้า / Need previous day";
-  const trendPoints = rows
-    .map((row, index) => {
-      const x = rows.length <= 1 ? 50 : (index / (rows.length - 1)) * 100;
-      const y = 92 - Math.min(Math.max(row.actualOutput / maxOutput, 0), 1) * 74;
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const chartWidth = Math.max(960, rows.length * 92);
+  const chartHeight = 300;
+  const plotLeft = 42;
+  const plotRight = 28;
+  const plotTop = 44;
+  const plotBottom = 86;
+  const plotHeight = chartHeight - plotTop - plotBottom;
+  const plotWidth = chartWidth - plotLeft - plotRight;
+  const stepX = rows.length <= 1 ? 0 : plotWidth / (rows.length - 1);
+  const barWidth = Math.max(18, Math.min(30, plotWidth / Math.max(rows.length, 1) * 0.32));
+  const chartDays = rows.map((row, index) => {
+    const ratio = Math.min(Math.max(row.actualOutput / maxOutput, 0), 1);
+    const x = rows.length <= 1 ? plotLeft + plotWidth / 2 : plotLeft + index * stepX;
+    const y = plotTop + plotHeight - ratio * plotHeight;
+    const barHeight = Math.max(3, ratio * plotHeight);
+    return {
+      barHeight,
+      dateLabel: row.date.slice(5),
+      machineLabel: formatDailyMachineNames(row),
+      outputLabel: formatNumber(row.actualOutput),
+      row,
+      x,
+      y,
+    };
+  });
+  const trendPoints = chartDays.map((point) => `${point.x},${point.y}`).join(" ");
+  const trendAreaPath =
+    chartDays.length > 0
+      ? `M ${chartDays[0].x} ${plotTop + plotHeight} L ${chartDays.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${chartDays.at(-1)?.x ?? chartDays[0].x} ${plotTop + plotHeight} Z`
+      : "";
 
   return (
     <div className="analysis-panel daily-compact-trend-panel">
@@ -7133,6 +7156,158 @@ function DailyMachineCompactTrendChart({
                 </div>
               );
             })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DailyMachineProfessionalTrendChart({
+  capacityContext,
+  logs,
+  machines,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  logs: ProductionLog[];
+  machines: Machine[];
+}) {
+  const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-14), [capacityContext, logs, machines]);
+  const latest = rows.at(-1);
+  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
+  const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
+  const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
+  const latestTrendClass = latestOutputDelta > 0 ? "up" : latestOutputDelta < 0 ? "down" : "flat";
+  const latestTrendLabel = previous
+    ? latestOutputDelta > 0
+      ? `+${formatNumber(latestOutputDelta)} / Up ${formatPercent(latestOutputDeltaPercent)}`
+      : latestOutputDelta < 0
+        ? `-${formatNumber(Math.abs(latestOutputDelta))} / Down ${formatPercent(Math.abs(latestOutputDeltaPercent))}`
+        : "Stable"
+    : "Need previous day";
+  const chartWidth = Math.max(960, rows.length * 94);
+  const chartHeight = 310;
+  const plotLeft = 44;
+  const plotRight = 34;
+  const plotTop = 50;
+  const plotBottom = 90;
+  const plotHeight = chartHeight - plotTop - plotBottom;
+  const plotWidth = chartWidth - plotLeft - plotRight;
+  const stepX = rows.length <= 1 ? 0 : plotWidth / (rows.length - 1);
+  const barWidth = Math.max(18, Math.min(30, plotWidth / Math.max(rows.length, 1) * 0.32));
+  const chartDays = rows.map((row, index) => {
+    const ratio = Math.min(Math.max(row.actualOutput / maxOutput, 0), 1);
+    const x = rows.length <= 1 ? plotLeft + plotWidth / 2 : plotLeft + index * stepX;
+    const y = plotTop + plotHeight - ratio * plotHeight;
+    const barHeight = Math.max(3, ratio * plotHeight);
+    return {
+      barHeight,
+      dateLabel: row.date.slice(5),
+      machineLabel: formatDailyMachineNames(row),
+      outputLabel: formatNumber(row.actualOutput),
+      row,
+      x,
+      y,
+    };
+  });
+  const trendPoints = chartDays.map((point) => `${point.x},${point.y}`).join(" ");
+  const trendAreaPath =
+    chartDays.length > 0
+      ? `M ${chartDays[0].x} ${plotTop + plotHeight} L ${chartDays.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${chartDays.at(-1)?.x ?? chartDays[0].x} ${plotTop + plotHeight} Z`
+      : "";
+
+  return (
+    <div className="analysis-panel daily-pro-trend-panel">
+      <div className="report-table-heading compact-heading">
+        <div>
+          <h2>แนวโน้มกำลังผลิตรายวัน / Daily Production Trend</h2>
+          <p>ดูจำนวนงานรายวันและทิศทางการผลิตแบบสรุป อ่านง่ายสำหรับเทียบขึ้นลงในแต่ละวัน</p>
+        </div>
+        <span>{formatNumber(rows.length)} วัน</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="empty-text">ไม่มีข้อมูลรายวันตามตัวกรองนี้ / No daily data for this filter</p>
+      ) : (
+        <>
+          {latest && (
+            <div className="daily-pro-summary">
+              <div>
+                <span>Latest date</span>
+                <strong>{latest.date}</strong>
+              </div>
+              <div>
+                <span>Output</span>
+                <strong>{formatNumber(latest.actualOutput)}</strong>
+              </div>
+              <div>
+                <span>Utilization</span>
+                <strong>{formatPercent(latest.utilization)}</strong>
+              </div>
+              <div>
+                <span>Availability</span>
+                <strong>{formatPercent(latest.availability)}</strong>
+              </div>
+              <div className={`daily-pro-trend-card ${latestTrendClass}`}>
+                <span>Output trend</span>
+                <strong>{latestTrendLabel}</strong>
+              </div>
+            </div>
+          )}
+          <div className="daily-pro-legend">
+            <span><i className="output" /> Daily output</span>
+            <span><i className="trend" /> Trend line</span>
+          </div>
+          <div className="daily-pro-chart" role="img" aria-label="Daily output trend chart">
+            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: chartWidth, minWidth: chartWidth }}>
+              <defs>
+                <linearGradient id="dailyOutputGradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#fb923c" />
+                  <stop offset="100%" stopColor="#ea580c" />
+                </linearGradient>
+                <linearGradient id="dailyTrendFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
+                const y = plotTop + plotHeight - tick * plotHeight;
+                return (
+                  <g key={tick}>
+                    <line className="daily-pro-grid" x1={plotLeft} x2={chartWidth - plotRight} y1={y} y2={y} />
+                    <text className="daily-pro-axis" x={plotLeft - 10} y={y + 4} textAnchor="end">
+                      {Math.round(tick * 100)}%
+                    </text>
+                  </g>
+                );
+              })}
+              <path className="daily-pro-area" d={trendAreaPath} />
+              <polyline className="daily-pro-line" points={trendPoints} />
+              {chartDays.map((point) => {
+                const barX = point.x - barWidth / 2;
+                const barY = plotTop + plotHeight - point.barHeight;
+                return (
+                  <g className="daily-pro-point" key={point.row.date}>
+                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, U ${formatPercent(point.row.utilization)}, A ${formatPercent(point.row.availability)}`}</title>
+                    <rect className="daily-pro-track" x={barX} y={plotTop} width={barWidth} height={plotHeight} rx="10" />
+                    <rect className="daily-pro-output-bar" x={barX} y={barY} width={barWidth} height={point.barHeight} rx="8" />
+                    <circle className="daily-pro-dot" cx={point.x} cy={point.y} r="4" />
+                    <text className="daily-pro-output-label" x={point.x} y={Math.max(18, barY - 10)} textAnchor="middle">
+                      {point.outputLabel}
+                    </text>
+                    <text className="daily-pro-date" x={point.x} y={plotTop + plotHeight + 25} textAnchor="middle">
+                      {point.dateLabel}
+                    </text>
+                    <text className="daily-pro-machine" x={point.x} y={plotTop + plotHeight + 43} textAnchor="middle">
+                      {point.machineLabel}
+                    </text>
+                    <text className="daily-pro-metrics" x={point.x} y={plotTop + plotHeight + 61} textAnchor="middle">
+                      {`U ${formatPercent(point.row.utilization)}   A ${formatPercent(point.row.availability)}`}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
           </div>
         </>
       )}
