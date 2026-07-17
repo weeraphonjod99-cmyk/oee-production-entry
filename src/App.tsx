@@ -6646,6 +6646,29 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
   );
 }
 
+function getOeeImprovementAction(label: string): string {
+  const normalized = label.toLowerCase();
+  if (label.includes("ซ่อมแม่พิมพ์") || normalized.includes("mold")) {
+    return "จัดอันดับแม่พิมพ์เสียซ้ำ ทำ PM ก่อนขึ้นงาน และเตรียมอะไหล่หรือแม่พิมพ์สำรอง";
+  }
+  if (label.includes("ตรวจสอบ") || normalized.includes("inspect") || normalized.includes("qc")) {
+    return "แยกจุดตรวจที่ใช้เวลานาน แจ้ง QC ก่อนเริ่มล็อต และกำหนดมาตรฐานตัวอย่างงาน";
+  }
+  if (label.includes("หยุดตามแผน") || normalized.includes("plan")) {
+    return "ล็อกช่วงหยุดให้ชัด ย้ายงานค้างก่อนถึงเวลาหยุด และตรวจเวลาที่เกินแผนทุกวัน";
+  }
+  if (label.includes("เปลี่ยนรุ่น") || normalized.includes("change")) {
+    return "เตรียม jig, material และเอกสารล่วงหน้า ลดเวลาตั้งเครื่องก่อนเปลี่ยนรุ่น";
+  }
+  if (label.includes("วัตถุดิบ") || normalized.includes("material")) {
+    return "ตรวจวัตถุดิบก่อนเริ่มกะ ตั้งจุดเติมใกล้เครื่อง และแจ้งเตือนเมื่อวัตถุดิบต่ำ";
+  }
+  if (label.includes("ซ่อมเครื่อง") || normalized.includes("equipment") || normalized.includes("repair")) {
+    return "แยกอาการเสียซ้ำ เปิดรายการ PM และกำหนดเจ้าของเครื่องที่ต้องติดตาม";
+  }
+  return "เก็บเหตุผลให้ครบทุกครั้ง แล้วสรุปสาเหตุซ้ำรายวันเพื่อเลือกงานแก้ไขก่อน";
+}
+
 function OeeSummaryChart({
   downtimeItems = [],
   summary,
@@ -6659,7 +6682,7 @@ function OeeSummaryChart({
     { label: "Quality", value: summary.quality, minutes: summary.run * summary.quality, color: "#0ea5e9", radius: 44 },
     { label: "OEE", value: oee, minutes: summary.run * summary.quality, color: "#facc15", radius: 30 },
   ];
-  const issueColors = ["#ef4444", "#fb923c", "#facc15", "#94a3b8"];
+  const issueColors = ["#ef4444", "#fb923c", "#facc15", "#94a3b8", "#64748b"];
   const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 3);
   const topIssueMinutes = topIssueItems.reduce((total, item) => total + item.minutes, 0);
   const otherIssueMinutes = Math.max(summary.downtime - topIssueMinutes, 0);
@@ -6708,12 +6731,68 @@ function OeeSummaryChart({
     totalTime > 0
       ? `#16a34a 0% ${runPercent * 100}%, #dc2626 ${runPercent * 100}% 100%`
       : "#e5e7eb 0% 100%";
+  const oeeStatus =
+    oee >= 0.75 ? "ดีมาก" : oee >= 0.5 ? "ต้องติดตาม" : "ต้องแก้ไขเร่งด่วน";
+  const oeeStatusClass = oee >= 0.75 ? "good" : oee >= 0.5 ? "warn" : "critical";
+  const actionRows =
+    topIssueItems.length > 0
+      ? topIssueItems.map((item) => ({
+          label: item.label,
+          minutes: item.minutes,
+          percent: item.minutes / Math.max(summary.downtime, 1),
+          action: getOeeImprovementAction(item.label),
+        }))
+      : [
+          {
+            label: "ไม่มี Downtime หลัก",
+            minutes: 0,
+            percent: 0,
+            action: "รักษามาตรฐานการผลิตและติดตามความเร็วเครื่องต่อเนื่อง",
+          },
+        ];
 
   return (
     <div className="analysis-panel oee-summary-chart">
       <div className="section-title">
         <Gauge size={20} />
         <h2>สรุป OEE</h2>
+      </div>
+      <div className={`oee-executive-summary ${oeeStatusClass}`}>
+        <div className="oee-hero-score">
+          <span>OEE รวม / Overall OEE</span>
+          <strong>{formatPercent(oee)}</strong>
+          <b>{oeeStatus}</b>
+        </div>
+        <div className="oee-hero-metrics">
+          <p>
+            <span>Run time</span>
+            <strong>{formatNumber(summary.run)} นาที</strong>
+            <em>{formatPercent(runPercent)} ของเวลารวม</em>
+          </p>
+          <p>
+            <span>Downtime</span>
+            <strong>{formatNumber(summary.downtime)} นาที</strong>
+            <em>{formatPercent(downtimePercent)} ของเวลารวม</em>
+          </p>
+          <p>
+            <span>Total output</span>
+            <strong>{formatNumber(summary.total)}</strong>
+            <em>ยอดผลิตรวมตามตัวกรอง</em>
+          </p>
+        </div>
+        <div className="oee-improvement-card">
+          <span>แนวทางปรับปรุง / Improvement Focus</span>
+          <strong>{mainIssue ? `โฟกัสปัญหา: ${mainIssue.label}` : "ยังไม่พบปัญหาหลัก"}</strong>
+          <ul>
+            {actionRows.map((item, index) => (
+              <li key={item.label}>
+                <b>{index + 1}. {item.label}</b>
+                <span>{formatNumber(item.minutes)} นาที · {formatPercent(item.percent)}</span>
+                <em>{item.action}</em>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
       <div className="oee-summary-layout">
         <div className="oee-factor-list">
