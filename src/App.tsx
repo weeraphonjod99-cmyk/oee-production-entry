@@ -6554,6 +6554,7 @@ function FiltersBar({
   setFilters: (filters: Filters) => void;
 }) {
   const today = getTodayInputValue();
+  const oneDayValue = filters.from === filters.to ? filters.from : filters.from || filters.to || today;
   const selectedMachineIds = getFilterMachineIds(filters);
   const selectedMachineLabel = getFilterMachineLabel(filters, machines);
   const activeFilterCount = [filters.from, filters.to, selectedMachineIds.length > 0 ? "machines" : "", filters.shift].filter(Boolean).length;
@@ -6593,14 +6594,15 @@ function FiltersBar({
           <span>ถึง / To</span>
           <input value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} type="date" />
         </label>
-        <button
-          className={`filter-today-only ${filters.from === today && filters.to === today ? "active" : ""}`}
-          type="button"
-          onClick={() => updateFilters({ from: today, to: today })}
-        >
-          <span>วันนี้</span>
-          <strong>1 วัน</strong>
-        </button>
+        <label className="filter-one-day-picker">
+          <span>เลือก 1 วัน</span>
+          <input
+            aria-label="เลือกวันที่เดียว"
+            type="date"
+            value={oneDayValue}
+            onChange={(event) => updateFilters({ from: event.target.value, to: event.target.value })}
+          />
+        </label>
         <div className="filter-control filter-control-wide">
           <span>เครื่องจักร / Machine</span>
           <details className="machine-multi-select">
