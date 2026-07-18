@@ -7228,6 +7228,10 @@ function DailyMachineCompactTrendChart({
                 <strong>{formatNumber(latest.actualOutput)}</strong>
               </div>
               <div>
+                <span>Work time</span>
+                <strong>{formatNumber(latest.workMinutes)} นาที</strong>
+              </div>
+              <div>
                 <span>Utilization</span>
                 <strong>{formatPercent(latest.utilization)}</strong>
               </div>
@@ -7319,11 +7323,11 @@ function DailyMachineProfessionalTrendChart({
         : "Stable"
     : "Need previous day";
   const chartWidth = Math.max(960, rows.length * 94);
-  const chartHeight = 310;
+  const chartHeight = 328;
   const plotLeft = 44;
   const plotRight = 34;
   const plotTop = 50;
-  const plotBottom = 90;
+  const plotBottom = 108;
   const plotHeight = chartHeight - plotTop - plotBottom;
   const plotWidth = chartWidth - plotLeft - plotRight;
   const stepX = rows.length <= 1 ? 0 : plotWidth / (rows.length - 1);
@@ -7377,6 +7381,10 @@ function DailyMachineProfessionalTrendChart({
                 <strong>{formatNumber(latest.actualOutput)}</strong>
               </div>
               <div>
+                <span>Work time</span>
+                <strong>{formatNumber(latest.workMinutes)} นาที</strong>
+              </div>
+              <div>
                 <span>Utilization</span>
                 <strong>{formatPercent(latest.utilization)}</strong>
               </div>
@@ -7423,13 +7431,13 @@ function DailyMachineProfessionalTrendChart({
                 const barX = point.x - barWidth / 2;
                 const barY = plotTop + plotHeight - point.barHeight;
                 const tooltipWidth = 260;
-                const tooltipHeight = 138;
+                const tooltipHeight = 160;
                 const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
                 const tooltipY = point.y - tooltipHeight - 16 < 8 ? point.y + 18 : point.y - tooltipHeight - 16;
                 return (
                   <g className={`daily-pro-point ${point.isHighOee ? "high-oee" : ""}`} key={point.row.date}>
-                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, Target ${formatNumber(point.row.targetQty)}, OEE ${formatPercent(point.row.oee)}, Products ${point.productLabel}`}</title>
-                    <rect className="daily-pro-hit-area" x={point.x - 36} y={plotTop - 12} width="72" height={plotHeight + 92} rx="10" />
+                    <title>{`${point.row.date} ${point.machineLabel}: Output ${point.outputLabel}, Work time ${formatNumber(point.row.workMinutes)} min, Target ${formatNumber(point.row.targetQty)}, OEE ${formatPercent(point.row.oee)}, Products ${point.productLabel}`}</title>
+                    <rect className="daily-pro-hit-area" x={point.x - 36} y={plotTop - 12} width="72" height={plotHeight + 110} rx="10" />
                     <rect className="daily-pro-track" x={barX} y={plotTop} width={barWidth} height={plotHeight} rx="10" />
                     <rect className="daily-pro-output-bar" x={barX} y={barY} width={barWidth} height={point.barHeight} rx="8" />
                     <circle className="daily-pro-dot" cx={point.x} cy={point.y} r="4" />
@@ -7444,6 +7452,9 @@ function DailyMachineProfessionalTrendChart({
                     </text>
                     <text className="daily-pro-metrics" x={point.x} y={plotTop + plotHeight + 61} textAnchor="middle">
                       {`OEE ${formatPercent(point.row.oee)}`}
+                    </text>
+                    <text className="daily-pro-worktime" x={point.x} y={plotTop + plotHeight + 78} textAnchor="middle">
+                      {`Work ${formatNumber(point.row.workMinutes)} min`}
                     </text>
                     <g className="daily-pro-tooltip" transform={`translate(${tooltipX} ${tooltipY})`}>
                       <rect width={tooltipWidth} height={tooltipHeight} rx="12" />
@@ -7472,13 +7483,13 @@ function DailyMachineProfessionalTrendChart({
               })}
               {chartDays.map((point) => {
                 const tooltipWidth = 520;
-                const tooltipHeight = 224;
+                const tooltipHeight = 264;
                 const tooltipX = Math.min(Math.max(point.x - tooltipWidth / 2, plotLeft), chartWidth - plotRight - tooltipWidth);
                 const preferredTooltipY = point.y - tooltipHeight - 22;
                 const tooltipY = Math.min(Math.max(preferredTooltipY, 8), chartHeight - tooltipHeight - 8);
                 return (
                   <g className="daily-pro-hover" key={`${point.row.date}-${point.machineLabel}-front-tooltip`}>
-                    <rect className="daily-pro-tooltip-hit-area" x={point.x - 62} y={plotTop - 22} width="124" height={plotHeight + 128} rx="14" />
+                    <rect className="daily-pro-tooltip-hit-area" x={point.x - 62} y={plotTop - 22} width="124" height={plotHeight + 146} rx="14" />
                     <g className="daily-pro-tooltip daily-pro-tooltip-front" transform={`translate(${tooltipX} ${tooltipY})`}>
                       <rect width={tooltipWidth} height={tooltipHeight} rx="12" />
                       <text className="daily-pro-tooltip-title" x="22" y="36">
@@ -7488,16 +7499,20 @@ function DailyMachineProfessionalTrendChart({
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="76" textAnchor="end">
                         {point.outputLabel}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="112">Target</text>
+                      <text className="daily-pro-tooltip-label" x="22" y="112">Work time</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="112" textAnchor="end">
+                        {formatNumber(point.row.workMinutes)} min
+                      </text>
+                      <text className="daily-pro-tooltip-label" x="22" y="148">Target</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="148" textAnchor="end">
                         {formatNumber(point.row.targetQty)}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="148">OEE</text>
-                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="148" textAnchor="end">
+                      <text className="daily-pro-tooltip-label" x="22" y="184">OEE</text>
+                      <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="184" textAnchor="end">
                         {formatPercent(point.row.oee)}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="184">Products stamped</text>
-                      <text className="daily-pro-tooltip-product" x="22" y="207">
+                      <text className="daily-pro-tooltip-label" x="22" y="220">Products stamped</text>
+                      <text className="daily-pro-tooltip-product" x="22" y="244">
                         {point.productPreview}
                       </text>
                     </g>

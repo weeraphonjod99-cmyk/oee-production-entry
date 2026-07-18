@@ -3691,7 +3691,7 @@ select:disabled {
 .daily-pro-summary {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
   margin-top: 12px;
 }
 
@@ -3884,6 +3884,12 @@ select:disabled {
   fill: #536174;
   font-size: 9px;
   font-weight: 900;
+}
+
+.daily-pro-worktime {
+  fill: #0f5132;
+  font-size: 9px;
+  font-weight: 1000;
 }
 
 .daily-pro-tooltip {
