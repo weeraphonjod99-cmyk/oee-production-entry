@@ -5186,6 +5186,12 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
+            <MachineComparisonPanel
+              capacityContext={dashboardCapacityContext}
+              logs={dashboardLogs}
+              machines={machines}
+              selectedMachineIds={getFilterMachineIds(dashboardFilters)}
+            />
             <CurrentShiftMachineOeeTable
               capacityContext={dashboardCapacityContext}
               logs={currentDashboardShiftLogs}
@@ -6636,6 +6642,85 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone: strin
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function MachineComparisonPanel({
+  capacityContext,
+  logs,
+  machines,
+  selectedMachineIds,
+}: {
+  capacityContext: DashboardCapacityContext | null;
+  logs: ProductionLog[];
+  machines: Machine[];
+  selectedMachineIds: string[];
+}) {
+  const rows = useMemo(() => {
+    if (selectedMachineIds.length < 2) return [];
+    const machineLookup = new Map(machines.map((machine) => [machine.id, machine]));
+    return selectedMachineIds.map((machineId) => {
+      const machine = machineLookup.get(machineId);
+      const machineLogs = logs.filter((log) => log.machineId === machineId);
+      const summary = summarizeDashboardOee(machineLogs, capacityContext);
+      return {
+        machineId,
+        machineName: machine?.name ?? machineLogs[0]?.machineName ?? machineId,
+        summary,
+        logs: machineLogs.length,
+      };
+    });
+  }, [capacityContext, logs, machines, selectedMachineIds]);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="machine-compare-panel">
+      <div className="machine-compare-heading">
+        <div>
+          <span>COMPARE</span>
+          <h2>เปรียบเทียบรายเครื่อง / Machine comparison</h2>
+          <p>แสดงผลแยกตามเครื่องที่เลือก ไม่รวมยอดปนกัน</p>
+        </div>
+        <b>{formatNumber(rows.length)} เครื่อง</b>
+      </div>
+      <div className="machine-compare-grid">
+        {rows.map((row) => {
+          const totalTime = row.summary.run + row.summary.downtime;
+          const runPercent = totalTime > 0 ? row.summary.run / totalTime : 0;
+          return (
+            <article className="machine-compare-card" key={row.machineId}>
+              <div className="machine-compare-card-head">
+                <strong>{row.machineName}</strong>
+                <span>OEE {formatPercent(row.summary.oee)}</span>
+              </div>
+              <div className="machine-compare-metrics">
+                <div>
+                  <small>Output</small>
+                  <b>{formatNumber(row.summary.total)}</b>
+                </div>
+                <div>
+                  <small>Good</small>
+                  <b>{formatNumber(row.summary.good)}</b>
+                </div>
+                <div>
+                  <small>NG</small>
+                  <b>{formatNumber(row.summary.ng)}</b>
+                </div>
+                <div>
+                  <small>Downtime</small>
+                  <b>{formatNumber(row.summary.downtime)} นาที</b>
+                </div>
+              </div>
+              <div className="machine-compare-foot">
+                <span>Run {formatNumber(row.summary.run)} นาที · {formatPercent(runPercent)}</span>
+                <span>{formatNumber(row.logs)} logs</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
