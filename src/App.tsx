@@ -26,7 +26,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { FormEvent, memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   appendRemoteLog,
   clearEmployeeMachineStatus,
@@ -6699,6 +6699,8 @@ function MachineComparisonPanel({
           const totalTime = row.summary.run + row.summary.downtime;
           const runPercent = totalTime > 0 ? row.summary.run / totalTime : 0;
           const oeePercent = Math.max(0, Math.min(row.summary.oee, 1));
+          const availabilityPercent = Math.max(0, Math.min(row.summary.availability, 1));
+          const qualityPercent = Math.max(0, Math.min(row.summary.quality, 1));
           return (
             <article className="machine-compare-card" key={row.machineId}>
               <div className="machine-compare-card-head">
@@ -6718,8 +6720,20 @@ function MachineComparisonPanel({
                   </div>
                 </div>
                 <div className="machine-compare-factors">
-                  <span>Availability {formatPercent(row.summary.availability)}</span>
-                  <span>Quality {formatPercent(row.summary.quality)}</span>
+                  <div className="machine-compare-factor machine-compare-factor-availability" style={{ "--value": `${availabilityPercent * 100}%` } as CSSProperties}>
+                    <span>
+                      <b>Availability</b>
+                      <strong>{formatPercent(row.summary.availability)}</strong>
+                    </span>
+                    <i />
+                  </div>
+                  <div className="machine-compare-factor machine-compare-factor-quality" style={{ "--value": `${qualityPercent * 100}%` } as CSSProperties}>
+                    <span>
+                      <b>Quality</b>
+                      <strong>{formatPercent(row.summary.quality)}</strong>
+                    </span>
+                    <i />
+                  </div>
                 </div>
               </div>
               <div className="machine-compare-metrics">
