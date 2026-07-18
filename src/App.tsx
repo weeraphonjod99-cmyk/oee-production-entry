@@ -6593,6 +6593,14 @@ function FiltersBar({
           <span>ถึง / To</span>
           <input value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} type="date" />
         </label>
+        <button
+          className={`filter-today-only ${filters.from === today && filters.to === today ? "active" : ""}`}
+          type="button"
+          onClick={() => updateFilters({ from: today, to: today })}
+        >
+          <span>วันนี้</span>
+          <strong>1 วัน</strong>
+        </button>
         <div className="filter-control filter-control-wide">
           <span>เครื่องจักร / Machine</span>
           <details className="machine-multi-select">
