@@ -6673,9 +6673,30 @@ function MachineComparisonPanel({
       const machine = machineLookup.get(machineId);
       const machineLogs = logs.filter((log) => log.machineId === machineId);
       const summary = summarizeDashboardOee(machineLogs, capacityContext);
+      const productRows = [
+        ...machineLogs
+          .reduce(
+            (map, log) => {
+              const productName = String(log.productName || "-").trim() || "-";
+              const partNo = String(log.partNo || "-").trim() || "-";
+              const step = String(log.step || "-").trim() || "-";
+              const key = [productName, partNo, step].join("::");
+              const current = map.get(key) ?? { logs: 0, partNo, productName, step, total: 0 };
+              current.logs += 1;
+              current.total += Number(log.goodQty || 0) + Number(log.ngQty || 0) + Number(log.testQty || 0);
+              map.set(key, current);
+              return map;
+            },
+            new Map<string, { logs: number; partNo: string; productName: string; step: string; total: number }>(),
+          )
+          .values(),
+      ]
+        .sort((a, b) => b.total - a.total || b.logs - a.logs || a.productName.localeCompare(b.productName))
+        .slice(0, 3);
       return {
         machineId,
         machineName: machine?.name ?? machineLogs[0]?.machineName ?? machineId,
+        products: productRows,
         summary,
         logs: machineLogs.length,
       };
@@ -6706,6 +6727,24 @@ function MachineComparisonPanel({
               <div className="machine-compare-card-head">
                 <strong>{row.machineName}</strong>
                 <span>OEE {formatPercent(row.summary.oee)}</span>
+              </div>
+              <div className="machine-compare-products">
+                <small>ชิ้นงาน / Products stamped</small>
+                {row.products.length > 0 ? (
+                  <div>
+                    {row.products.map((product) => (
+                      <span key={`${product.productName}-${product.partNo}-${product.step}`}>
+                        <b>{product.productName}</b>
+                        <em>
+                          Part No. {product.partNo}
+                          {product.step && product.step !== "-" ? ` · Step ${product.step}` : ""} · Output {formatNumber(product.total)}
+                        </em>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p>ยังไม่มีชิ้นงานในช่วงนี้</p>
+                )}
               </div>
               <div className="machine-compare-visual">
                 <div
