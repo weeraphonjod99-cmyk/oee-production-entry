@@ -86,6 +86,7 @@ type TabId = "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | 
 
 type Filters = {
   machineId: string;
+  machineIds?: string[];
   shift: string;
   from: string;
   to: string;
@@ -1047,8 +1048,22 @@ const reportRangeLabel = (filters: Filters) => {
   return "ทั้งหมด";
 };
 
-const reportMachineLabel = (filters: Filters, machineItems: Machine[]) =>
-  filters.machineId ? machineItems.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
+const getFilterMachineIds = (filters: Filters) => {
+  const ids = Array.isArray(filters.machineIds) ? filters.machineIds : [];
+  const values = ids.length > 0 ? ids : filters.machineId ? [filters.machineId] : [];
+  return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
+};
+
+const getFilterMachineLabel = (filters: Filters, machineItems: Machine[]) => {
+  const machineIds = getFilterMachineIds(filters);
+  if (machineIds.length === 0) return "ทุกเครื่อง";
+  const names = machineIds.map((id) => machineItems.find((machine) => machine.id === id)?.name ?? id);
+  if (names.length === 1) return names[0];
+  const visibleNames = names.slice(0, 3).join(", ");
+  return `${names.length} เครื่อง: ${visibleNames}${names.length > 3 ? ` +${names.length - 3}` : ""}`;
+};
+
+const reportMachineLabel = (filters: Filters, machineItems: Machine[]) => getFilterMachineLabel(filters, machineItems);
 
 const reportShiftLabel = (filters: Filters) => (filters.shift ? shiftLabel(filters.shift) : "ทุกกะ");
 
@@ -1056,9 +1071,10 @@ const shiftRuleLabel = (shift: string) =>
   normalizeShiftCode(shift) === SHIFT_NIGHT ? "20:00 - 08:00 ของวันถัดไป" : "08:00 - 20:00 ของวันที่ผลิต";
 
 const filterLogsByFilters = (logs: ProductionLog[], filters: Filters, includeDateRange = true) => {
+  const selectedMachineIds = getFilterMachineIds(filters);
   const wantedShift = filters.shift ? normalizeShiftCode(filters.shift) : "";
   return logs.filter((log) => {
-    if (filters.machineId && log.machineId !== filters.machineId) return false;
+    if (selectedMachineIds.length > 0 && !selectedMachineIds.includes(log.machineId)) return false;
     if (wantedShift && normalizeShiftCode(log.shift) !== wantedShift) return false;
     if (includeDateRange && filters.from && log.date < filters.from) return false;
     if (includeDateRange && filters.to && log.date > filters.to) return false;
@@ -6532,9 +6548,21 @@ function FiltersBar({
   setFilters: (filters: Filters) => void;
 }) {
   const today = getTodayInputValue();
-  const selectedMachineName = filters.machineId ? machines.find((machine) => machine.id === filters.machineId)?.name ?? filters.machineId : "ทุกเครื่อง";
-  const activeFilterCount = [filters.from, filters.to, filters.machineId, filters.shift].filter(Boolean).length;
+  const selectedMachineIds = getFilterMachineIds(filters);
+  const selectedMachineLabel = getFilterMachineLabel(filters, machines);
+  const activeFilterCount = [filters.from, filters.to, selectedMachineIds.length > 0 ? "machines" : "", filters.shift].filter(Boolean).length;
   const updateFilters = (patch: Partial<Filters>) => setFilters({ ...filters, ...patch });
+  const setMachineIds = (machineIds: string[]) => {
+    const uniqueIds = Array.from(new Set(machineIds.filter(Boolean)));
+    updateFilters({ machineIds: uniqueIds, machineId: uniqueIds.length === 1 ? uniqueIds[0] : "" });
+  };
+  const toggleMachineId = (machineId: string) => {
+    setMachineIds(
+      selectedMachineIds.includes(machineId)
+        ? selectedMachineIds.filter((id) => id !== machineId)
+        : [...selectedMachineIds, machineId],
+    );
+  };
 
   return (
     <section className="filters-bar dashboard-filter-panel" aria-label="Dashboard filters">
@@ -6542,12 +6570,12 @@ function FiltersBar({
         <div>
           <span>FILTERS</span>
           <h2>เลือกข้อมูลที่ต้องการดู</h2>
-          <p>{selectedMachineName} · {filters.shift ? shiftLabel(filters.shift) : "ทุกกะ"} · {activeFilterCount > 0 ? `${activeFilterCount} ตัวกรอง` : "ยังไม่กรองข้อมูล"}</p>
+          <p>{selectedMachineLabel} · {filters.shift ? shiftLabel(filters.shift) : "ทุกกะ"} · {activeFilterCount > 0 ? `${activeFilterCount} ตัวกรอง` : "ยังไม่กรองข้อมูล"}</p>
         </div>
         <div className="filter-quick-actions">
           <button type="button" onClick={() => updateFilters({ from: today, to: today })}>วันนี้</button>
           <button type="button" onClick={() => updateFilters({ from: "", to: "" })}>ทุกวัน</button>
-          <button type="button" onClick={() => setFilters({ machineId: "", shift: "", from: "", to: "" })}>ล้างทั้งหมด</button>
+          <button type="button" onClick={() => setFilters({ machineId: "", machineIds: [], shift: "", from: "", to: "" })}>ล้างทั้งหมด</button>
         </div>
       </div>
       <div className="filter-control-grid">
@@ -6559,17 +6587,33 @@ function FiltersBar({
           <span>ถึง / To</span>
           <input value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} type="date" />
         </label>
-        <label className="filter-control filter-control-wide">
+        <div className="filter-control filter-control-wide">
           <span>เครื่องจักร / Machine</span>
-          <select value={filters.machineId} onChange={(event) => updateFilters({ machineId: event.target.value })}>
-            <option value="">ทั้งหมด / All machines</option>
-            {machines.map((machine) => (
-              <option key={machine.id} value={machine.id}>
-                {machine.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <details className="machine-multi-select">
+            <summary>
+              <b>{selectedMachineLabel}</b>
+              <small>{selectedMachineIds.length === 0 ? "ทั้งหมด / All machines" : `${selectedMachineIds.length} เครื่องที่เลือก`}</small>
+            </summary>
+            <div className="machine-multi-menu">
+              <div className="machine-multi-actions">
+                <button type="button" onClick={() => setMachineIds([])}>ทั้งหมด</button>
+                <button type="button" onClick={() => setMachineIds(machines.map((machine) => machine.id))}>เลือกทุกเครื่อง</button>
+              </div>
+              <div className="machine-multi-options">
+                {machines.map((machine) => (
+                  <label key={machine.id} className="machine-multi-option">
+                    <input
+                      checked={selectedMachineIds.includes(machine.id)}
+                      onChange={() => toggleMachineId(machine.id)}
+                      type="checkbox"
+                    />
+                    <span>{machine.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
+        </div>
         <label className="filter-control">
           <span>กะ / Shift</span>
           <select value={filters.shift} onChange={(event) => updateFilters({ shift: event.target.value })}>
