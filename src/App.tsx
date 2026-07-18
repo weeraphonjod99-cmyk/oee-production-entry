@@ -6722,6 +6722,7 @@ function MachineComparisonPanel({
           const oeePercent = Math.max(0, Math.min(row.summary.oee, 1));
           const availabilityPercent = Math.max(0, Math.min(row.summary.availability, 1));
           const qualityPercent = Math.max(0, Math.min(row.summary.quality, 1));
+          const targetGap = row.summary.total - row.summary.targetQty;
           return (
             <article className="machine-compare-card" key={row.machineId}>
               <div className="machine-compare-card-head">
@@ -6779,6 +6780,14 @@ function MachineComparisonPanel({
                 <div>
                   <small>Output</small>
                   <b>{formatNumber(row.summary.total)}</b>
+                </div>
+                <div>
+                  <small>Target</small>
+                  <b>{formatNumber(row.summary.targetQty)}</b>
+                </div>
+                <div className={targetGap >= 0 ? "machine-compare-gap-positive" : "machine-compare-gap-negative"}>
+                  <small>Gap</small>
+                  <b>{row.summary.targetQty > 0 ? `${targetGap > 0 ? "+" : ""}${formatNumber(targetGap)}` : "-"}</b>
                 </div>
                 <div>
                   <small>Good</small>
