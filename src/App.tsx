@@ -6688,11 +6688,29 @@ function MachineComparisonPanel({
         {rows.map((row) => {
           const totalTime = row.summary.run + row.summary.downtime;
           const runPercent = totalTime > 0 ? row.summary.run / totalTime : 0;
+          const oeePercent = Math.max(0, Math.min(row.summary.oee, 1));
           return (
             <article className="machine-compare-card" key={row.machineId}>
               <div className="machine-compare-card-head">
                 <strong>{row.machineName}</strong>
                 <span>OEE {formatPercent(row.summary.oee)}</span>
+              </div>
+              <div className="machine-compare-visual">
+                <div
+                  className="machine-compare-donut"
+                  style={{
+                    background: `conic-gradient(#16a34a 0% ${oeePercent * 100}%, #e8f0eb ${oeePercent * 100}% 100%)`,
+                  }}
+                >
+                  <div>
+                    <small>OEE</small>
+                    <strong>{formatPercent(row.summary.oee)}</strong>
+                  </div>
+                </div>
+                <div className="machine-compare-factors">
+                  <span>Availability {formatPercent(row.summary.availability)}</span>
+                  <span>Quality {formatPercent(row.summary.quality)}</span>
+                </div>
               </div>
               <div className="machine-compare-metrics">
                 <div>
