@@ -1099,6 +1099,15 @@ const getFilterEmptyMessage = (visibleLogs: ProductionLog[], filters: Filters, s
   return `ไม่พบข้อมูลในช่วงวันที่ที่เลือก มีข้อมูลของเครื่อง/กะนี้ตั้งแต่ ${range.firstDate} ถึง ${range.lastDate} รวม ${formatNumber(range.count)} รายการ`;
 };
 
+const getDashboardFilterDateLabel = (filters: Filters, logs: ProductionLog[]) => {
+  if (filters.from && filters.to) return filters.from === filters.to ? filters.from : `${filters.from} - ${filters.to}`;
+  if (filters.from) return `ตั้งแต่ ${filters.from}`;
+  if (filters.to) return `ถึง ${filters.to}`;
+  const range = getFilterAvailableDateRange(logs);
+  if (range) return range.firstDate === range.lastDate ? range.firstDate : `${range.firstDate} - ${range.lastDate}`;
+  return "ทุกวันที่ / All dates";
+};
+
 const tableRowsHtml = (rows: ReportRow[]) =>
   rows.length
     ? rows
@@ -2568,16 +2577,6 @@ function App() {
     [dashboardCapacityContext, dashboardLogs, tab],
   );
   const downtime = useMemo(() => (tab === "dashboard" ? groupDowntime(dashboardLogs) : groupDowntime([])), [dashboardLogs, tab]);
-  const currentDashboardShift = useMemo(() => getCurrentProductionShift(employeeReportNow), [employeeReportNow]);
-  const currentDashboardShiftLogs = useMemo(
-    () =>
-      allLogs.filter(
-        (log) =>
-          log.date === currentDashboardShift.date &&
-          normalizeShiftCode(log.shift) === currentDashboardShift.shift,
-      ),
-    [allLogs, currentDashboardShift.date, currentDashboardShift.shift],
-  );
   const isEmployeeEntry = tab === "employeeEntry";
   const readOnlyEntry = isReadOnlyRole(session?.role);
   const canSubmitProduction = canSubmitProductionForRole(session?.role);
@@ -5205,10 +5204,9 @@ function App() {
             />
             <CurrentShiftMachineOeeTable
               capacityContext={dashboardCapacityContext}
-              logs={currentDashboardShiftLogs}
+              filters={dashboardFilters}
+              logs={dashboardLogs}
               machines={machines}
-              productionDate={currentDashboardShift.date}
-              shift={currentDashboardShift.shift}
             />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <DailyMachineProfessionalTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
@@ -7231,29 +7229,29 @@ function buildCurrentShiftMachineOeeRows(
 
 function CurrentShiftMachineOeeTable({
   capacityContext,
+  filters,
   logs,
   machines,
-  productionDate,
-  shift,
 }: {
   capacityContext: DashboardCapacityContext | null;
+  filters: Filters;
   logs: ProductionLog[];
   machines: Machine[];
-  productionDate: string;
-  shift: string;
 }) {
   const rows = useMemo(() => buildCurrentShiftMachineOeeRows(logs, machines, capacityContext), [capacityContext, logs, machines]);
   const totalOutput = rows.reduce((sum, row) => sum + row.output, 0);
   const shiftSummary = summarizeDashboardOee(logs, capacityContext);
   const shiftOee = shiftSummary.oee;
+  const dateLabel = getDashboardFilterDateLabel(filters, logs);
+  const shiftName = filters.shift ? shiftLabel(filters.shift) : "ทุกกะ / All shifts";
 
   return (
     <div className="data-table-wrap report-table current-shift-oee-table">
       <div className="report-table-heading current-shift-heading">
         <div>
-          <h2>สรุปการผลิตตามกะปัจจุบัน</h2>
+          <h2>สรุปการผลิตตามตัวกรอง</h2>
           <p>
-            วันที่ผลิต {productionDate} · {shiftLabel(shift)} · {shiftWindowLabel(productionDate, shift)}
+            วันที่ผลิต {dateLabel} · {shiftName}
           </p>
         </div>
         <div className="current-shift-totals" aria-label="Current shift production totals">
@@ -7273,7 +7271,7 @@ function CurrentShiftMachineOeeTable({
           {rows.length === 0 ? (
             <tr>
               <td className="empty-cell" colSpan={3}>
-                ยังไม่มีข้อมูลผลิตของกะนี้
+                ยังไม่มีข้อมูลผลิตตามตัวกรองนี้
               </td>
             </tr>
           ) : (
