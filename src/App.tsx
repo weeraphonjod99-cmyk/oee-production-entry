@@ -3872,6 +3872,17 @@ function App() {
       newModelMinutes: roundMinuteValue(Number(targetDraft.newModelMinutes || 0)),
     };
     const savedDowntimeMinutes = roundMinuteValue(totalDowntime(normalizedTargetDraft));
+    const savedNormalMinutes = roundMinuteValue(Math.max(savedWorkMinutes - savedDowntimeMinutes, 0));
+    const savedOutputQty = totalOutput(normalizedTargetDraft);
+    if (savedOutputQty > 0 && savedNormalMinutes <= 0) {
+      const message =
+        savedWorkMinutes <= 0
+          ? "มียอดชิ้นงาน Good/NG/Test แต่ยังไม่มีเวลางานจริง ระบบจะไม่บันทึกลง Google Sheet เพื่อป้องกันสูตร OEE ผิดพลาด กรุณากดเริ่มผลิตหรือกดหัวข้อเวลาที่ใช้งานจริงก่อนส่งยอด"
+          : "มียอดชิ้นงาน Good/NG/Test แต่เวลาผลิตจริงเป็น 0 นาที เพราะเวลาที่บันทึกอยู่เป็น Downtime ทั้งหมด กรุณากด A เริ่มผลิตหรือแก้เวลาการผลิตก่อนส่งยอด";
+      setStatus(message);
+      setProblemDialog({ title: "ตรวจสอบเวลาผลิต", message });
+      return false;
+    }
     const submittedAt = options.submittedAt ?? new Date();
     const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
     const entryEventsForDetails = options.entryEvents ?? employeeDraftEventsRef.current;
@@ -3889,7 +3900,7 @@ function App() {
       shiftEndAt: shiftEndAt(savedDate, targetDraft.shift),
       id: options.editingLog?.id ?? makeLogId(),
       machineName: machine.name,
-      normalMinutes: roundMinuteValue(Math.max(savedWorkMinutes - savedDowntimeMinutes, 0)),
+      normalMinutes: savedNormalMinutes,
       createdAt: options.editingLog?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       source: remoteEnabled ? "google-sheet" : "local",

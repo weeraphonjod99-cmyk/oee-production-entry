@@ -3345,7 +3345,52 @@ function normalizeProductionLogMinuteFields(log) {
   ].forEach(function(key) {
     next[key] = minuteNumber(next[key]);
   });
+  repairProductionLogMinuteConsistency(next);
+  validateProductionLogMinuteConsistency(next);
   return next;
+}
+
+function productionLogOutputQty(log) {
+  return numberValue(log.goodQty) + numberValue(log.ngQty) + numberValue(log.testQty);
+}
+
+function productionLogDowntimeMinutes(log) {
+  return sumValues([
+    log.changeoverMinutes,
+    log.inspectionMinutes,
+    log.equipmentRepairMinutes,
+    log.moldRepairMinutes,
+    log.materialChangeMinutes,
+    log.emergencyStopMinutes,
+    log.meetingMinutes,
+    log.plannedStopMinutes,
+    log.newModelMinutes,
+  ]);
+}
+
+function repairProductionLogMinuteConsistency(log) {
+  if (productionLogOutputQty(log) <= 0) {
+    return log;
+  }
+  const downtimeMinutes = minuteNumber(productionLogDowntimeMinutes(log));
+  if (minuteNumber(log.workMinutes) <= 0 && minuteNumber(log.normalMinutes) > 0) {
+    log.workMinutes = minuteNumber(log.normalMinutes + downtimeMinutes);
+    log.timeSlots = minuteNumber(log.workMinutes);
+  }
+  if (minuteNumber(log.normalMinutes) <= 0 && minuteNumber(log.workMinutes) > downtimeMinutes) {
+    log.normalMinutes = minuteNumber(log.workMinutes - downtimeMinutes);
+  }
+  return log;
+}
+
+function validateProductionLogMinuteConsistency(log) {
+  if (productionLogOutputQty(log) <= 0) {
+    return;
+  }
+  if (minuteNumber(log.normalMinutes) > 0) {
+    return;
+  }
+  throw new Error("มียอดชิ้นงาน Good/NG/Test แต่ไม่มีเวลาผลิตจริง กรุณากดเริ่มผลิตหรือกดหัวข้อเวลาที่ใช้งานจริงก่อนส่งยอด");
 }
 
 function sumValues(values) {
