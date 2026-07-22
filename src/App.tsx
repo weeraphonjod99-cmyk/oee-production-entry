@@ -1512,7 +1512,9 @@ function summarizeDashboardOee(logs: ProductionLog[], context: DashboardCapacity
     { matched: 0, targetQty: 0 },
   );
   const kpi = clampRatio(target.targetQty > 0 ? base.total / target.targetQty : 1);
-  const oee = clampRatio(base.availability) * clampRatio(base.quality) * kpi;
+  // Match the Google Sheet OEE formula: time utilization x pass rate.
+  // Keep capacity target as a separate KPI so it does not pull OEE away from the sheet.
+  const oee = clampRatio(base.availability) * clampRatio(base.quality);
   return {
     ...base,
     capacityMatchedLogs: target.matched,
@@ -7185,12 +7187,16 @@ type DailyPerformanceRow = {
   availability: number;
   count: number;
   date: string;
+  good: number;
   machineCount: number;
   machineNames: string[];
+  ng: number;
   normalMinutes: number;
   oee: number;
   productNames: string[];
+  quality: number;
   targetQty: number;
+  test: number;
   utilization: number;
   workMinutes: number;
 };
@@ -7307,30 +7313,37 @@ function buildDailyPerformanceRows(
         actualOutput: 0,
         count: 0,
         date: log.date,
+        good: 0,
         machineIds: new Set<string>(),
         machineNames: new Set<string>(),
+        ng: 0,
         normalMinutes: 0,
         productNames: new Set<string>(),
         targetQty: 0,
+        test: 0,
         workMinutes: 0,
       };
     const machineName = machineNameLookup.get(log.machineId) || log.machineName || log.machineId;
     const productLabel = [log.productName, log.partNo, log.step ? `Step ${log.step}` : ""].filter(Boolean).join(" / ");
     current.actualOutput += totalOutput(log);
     current.count += 1;
+    current.good += Number(log.goodQty || 0);
     current.machineIds.add(log.machineId);
     current.machineNames.add(machineName);
+    current.ng += Number(log.ngQty || 0);
     current.normalMinutes += Number(log.normalMinutes || 0);
     if (productLabel) current.productNames.add(productLabel);
     current.targetQty += getCapacityTargetQtyForLog(log, capacityContext).targetQty;
+    current.test += Number(log.testQty || 0);
     current.workMinutes += getLogWorkMinutes(log);
     map.set(log.date, current);
     return map;
-  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "machineNames" | "oee" | "productNames" | "utilization"> & { machineIds: Set<string>; machineNames: Set<string>; productNames: Set<string> }>());
+  }, new Map<string, Omit<DailyPerformanceRow, "availability" | "machineCount" | "machineNames" | "oee" | "productNames" | "quality" | "utilization"> & { machineIds: Set<string>; machineNames: Set<string>; productNames: Set<string> }>());
 
   return [...rows.values()]
     .map(({ machineIds, machineNames, productNames, ...row }) => {
       const availability = clampRatio(row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0);
+      const quality = clampRatio(row.good + row.ng > 0 ? row.good / (row.good + row.ng) : 0);
       const utilization = clampRatio(row.targetQty > 0 ? row.actualOutput / row.targetQty : 0);
       const sortedMachineNames = [...machineNames].sort((a, b) => a.localeCompare(b, "en"));
       const sortedProductNames = [...productNames].sort((a, b) => a.localeCompare(b, "en"));
@@ -7339,8 +7352,9 @@ function buildDailyPerformanceRows(
         availability,
         machineCount: machineIds.size,
         machineNames: sortedMachineNames,
-        oee: availability * utilization,
+        oee: availability * quality,
         productNames: sortedProductNames,
+        quality,
         utilization,
       };
     })
