@@ -5204,12 +5204,6 @@ function App() {
               machines={machines}
               selectedMachineIds={getFilterMachineIds(dashboardFilters)}
             />
-            <CurrentShiftMachineOeeTable
-              capacityContext={dashboardCapacityContext}
-              filters={dashboardFilters}
-              logs={dashboardLogs}
-              machines={machines}
-            />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
             <DailyMachineProfessionalTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <MachineCapacityDashboard capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
