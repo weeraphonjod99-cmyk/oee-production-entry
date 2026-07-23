@@ -4174,30 +4174,76 @@ function App() {
       return;
     }
     const now = new Date();
-    const activeTimer = employeeActiveTimerRef.current;
-    const finalized = isEmployeeEntry && !editingLog ? finalizeEmployeeDraftForSubmit(draft, activeTimer, now) : null;
+    const isEmployeeSubmit = isEmployeeEntry && !editingLog;
+    const storedBeforeSubmit = isEmployeeSubmit ? writeEmployeeStoredDraft(draftRef.current) : null;
+    const snapshot = isEmployeeSubmit
+      ? getEmployeeSubmitSnapshot(storedBeforeSubmit)
+      : {
+          activeTimer: employeeActiveTimerRef.current,
+          draft,
+          entryEvents: employeeDraftEventsRef.current,
+          entryUser: session?.displayName || session?.username || "",
+          workStartedAt: employeeWorkStartedAt,
+        };
+    const activeTimer = snapshot.activeTimer ?? null;
+    const finalized = isEmployeeSubmit ? finalizeEmployeeDraftForSubmit(snapshot.draft, activeTimer, now, undefined, snapshot.workStartedAt || "") : null;
     const targetDraft =
-      isEmployeeEntry && !editingLog
-        ? finalized?.draft ?? draft
+      isEmployeeSubmit
+        ? finalized?.draft ?? snapshot.draft
         : draft;
     if (targetDraft !== draft) setDraft(targetDraft);
-    if (isEmployeeEntry && !editingLog) {
+    let submitEntryEvents = snapshot.entryEvents;
+    const submitEntryStartedAt =
+      storedBeforeSubmit?.entryStartedAt ||
+      employeeDraftStartedAt ||
+      snapshot.workStartedAt ||
+      now.toISOString();
+    const submitWorkStartedAt = snapshot.workStartedAt || employeeWorkStartedAt;
+    if (isEmployeeSubmit) {
       setEmployeeDraftUpdatedAt(now.toISOString());
       recordEmployeeDraftEvent("สิ้นสุดการผลิต / ส่งยอดบันทึก", `${finalized?.endDate ?? formatInputDate(now)} ${finalized?.endTime ?? formatInputTime(now)}`);
     }
-    if (isEmployeeEntry && !editingLog) autoSubmittingEmployeeDraft.current = true;
+    if (isEmployeeSubmit) {
+      submitEntryEvents = employeeDraftEventsRef.current.length > 0 ? employeeDraftEventsRef.current : snapshot.entryEvents;
+      const storedForSubmit = persistEmployeeStoredDraft(buildEmployeeStoredDraft(targetDraft, false, {
+        activeTimer,
+        entryEvents: submitEntryEvents,
+        entryStartedAt: submitEntryStartedAt,
+        entryUpdatedAt: now.toISOString(),
+        workStartedAt: submitWorkStartedAt,
+      }));
+      publishEmployeeMachineStatus(storedForSubmit);
+    }
+    if (isEmployeeSubmit) autoSubmittingEmployeeDraft.current = true;
     try {
-      const saved = await submitProductionDraft(targetDraft, { activeTimer, editingLog, resetAfterSave: true, submittedAt: now });
-      if (saved && isEmployeeEntry && !editingLog) {
+      const saved = await submitProductionDraft(targetDraft, {
+        activeTimer,
+        editingLog,
+        entryEvents: isEmployeeSubmit ? submitEntryEvents : undefined,
+        entryUser: isEmployeeSubmit ? snapshot.entryUser : undefined,
+        resetAfterSave: true,
+        submittedAt: now,
+      });
+      if (saved && isEmployeeSubmit) {
         clearEmployeeActiveTimer();
         setEmployeeWorkStartedAt("");
-      } else if (!saved && isEmployeeEntry && !editingLog && activeTimer) {
-        const nextTimer = { ...activeTimer, startedAt: now.toISOString() };
-        setEmployeeActiveTimer(nextTimer);
-        employeeActiveTimerRef.current = nextTimer;
+      } else if (!saved && isEmployeeSubmit) {
+        const nextTimer = activeTimer ? { ...activeTimer, startedAt: now.toISOString() } : null;
+        if (nextTimer) {
+          setEmployeeActiveTimer(nextTimer);
+          employeeActiveTimerRef.current = nextTimer;
+        }
+        const storedAfterFailedSubmit = persistEmployeeStoredDraft(buildEmployeeStoredDraft(targetDraft, false, {
+          activeTimer: nextTimer,
+          entryEvents: submitEntryEvents,
+          entryStartedAt: submitEntryStartedAt,
+          entryUpdatedAt: now.toISOString(),
+          workStartedAt: submitWorkStartedAt,
+        }));
+        publishEmployeeMachineStatus(storedAfterFailedSubmit);
       }
     } finally {
-      if (isEmployeeEntry && !editingLog) autoSubmittingEmployeeDraft.current = false;
+      if (isEmployeeSubmit) autoSubmittingEmployeeDraft.current = false;
     }
   };
 
