@@ -29,6 +29,61 @@ const HIDDEN_MACHINE_IDS = {
 function isVisibleMachineId(machineId) {
   return !HIDDEN_MACHINE_IDS[String(machineId || "").trim()];
 }
+const REQUIRED_MACHINE_DEFINITIONS = [
+  {
+    id: "13-110t",
+    name: "13# 110T",
+    capacityUnits: 0,
+    capacityMinutes: 0,
+    hasStep: true,
+    rowCount: 0,
+    afterId: "12-200t",
+  },
+];
+function mergeRequiredMachines_(machines) {
+  const next = machines.slice();
+  const ids = {};
+  next.forEach(function(machine) {
+    ids[String(machine.id || "").trim().toLowerCase()] = true;
+  });
+  REQUIRED_MACHINE_DEFINITIONS.forEach(function(machine) {
+    const id = String(machine.id || "").trim();
+    const key = id.toLowerCase();
+    if (!id || ids[key] || !isVisibleMachineId(id)) return;
+    const machineCopy = {
+      id: machine.id,
+      name: machine.name,
+      capacityUnits: Number(machine.capacityUnits || 0),
+      capacityMinutes: Number(machine.capacityMinutes || 0),
+      hasStep: machine.hasStep === true || String(machine.hasStep).toLowerCase() === "true",
+      rowCount: Number(machine.rowCount || 0),
+    };
+    const afterKey = String(machine.afterId || "").trim().toLowerCase();
+    let insertIndex = -1;
+    if (afterKey) {
+      insertIndex = next.findIndex(function(item) {
+        return String(item.id || "").trim().toLowerCase() === afterKey;
+      });
+    }
+    if (insertIndex >= 0) {
+      next.splice(insertIndex + 1, 0, machineCopy);
+    } else {
+      next.push(machineCopy);
+    }
+    ids[key] = true;
+  });
+  return next;
+}
+function addRequiredMachinesToMap_(map) {
+  REQUIRED_MACHINE_DEFINITIONS.forEach(function(machine) {
+    if (!machine.id || !machine.name || !isVisibleMachineId(machine.id)) return;
+    map[normalizeSheetName(machine.name)] = {
+      id: machine.id,
+      name: machine.name,
+    };
+  });
+  return map;
+}
 const KPI_DASHBOARD_SHEET = "kpi_dashboard";
 const KPI_MACHINE_SHEET = "kpi_machine";
 const KPI_MACHINE_STEP_SHEET = "kpi_machine_step";
@@ -4463,13 +4518,13 @@ function getMachineMap() {
       name: name,
     };
   });
-  return map;
+  return addRequiredMachinesToMap_(map);
 }
 
 function getMachines() {
   const sheet = ensureSheet(MACHINE_SHEET, MACHINE_HEADERS);
   const rows = sheet.getDataRange().getValues();
-  return rows.slice(1).map(function(row) {
+  const machines = rows.slice(1).map(function(row) {
     const id = String(row[0] || "").trim();
     const name = String(row[1] || "").trim();
     if (!isVisibleMachineId(id)) return null;
@@ -4485,6 +4540,7 @@ function getMachines() {
   }).filter(function(machine) {
     return Boolean(machine);
   });
+  return mergeRequiredMachines_(machines);
 }
 
 function mergeLogs(primaryLogs, fallbackLogs) {

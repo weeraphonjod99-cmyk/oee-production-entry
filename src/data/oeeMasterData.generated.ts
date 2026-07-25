@@ -98,6 +98,14 @@ export const machines = [
     "rowCount": 36
   },
   {
+    "id": "13-110t",
+    "name": "13# 110T",
+    "capacityUnits": 0,
+    "capacityMinutes": 0,
+    "hasStep": true,
+    "rowCount": 0
+  },
+  {
     "id": "bending-1",
     "name": "Bending #1",
     "capacityUnits": 67,

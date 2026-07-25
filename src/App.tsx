@@ -172,7 +172,31 @@ const withCanonicalMachineDisplayName = (machine: Machine): Machine => {
   if (!canonicalName || machine.name === canonicalName) return machine;
   return { ...machine, name: canonicalName };
 };
-const normalizeMachineList = (items: Machine[]) => items.filter(isVisibleMachine).map(withCanonicalMachineDisplayName);
+const requiredVisibleMachines: Machine[] = [
+  {
+    id: "13-110t",
+    name: "13# 110T",
+    capacityUnits: 0,
+    capacityMinutes: 0,
+    hasStep: true,
+    rowCount: 0,
+  },
+];
+const mergeRequiredMachines = (items: Machine[]) => {
+  const next = [...items];
+  const ids = new Set(next.map((machine) => String(machine.id || "").trim()));
+  requiredVisibleMachines.forEach((machine) => {
+    if (ids.has(machine.id) || !isVisibleMachine(machine)) return;
+    const afterIndex = next.findIndex((item) => item.id === "12-200t");
+    const beforeIndex = next.findIndex((item) => item.id === "bending-1");
+    const insertIndex = afterIndex >= 0 ? afterIndex + 1 : beforeIndex >= 0 ? beforeIndex : next.length;
+    next.splice(insertIndex, 0, machine);
+    ids.add(machine.id);
+  });
+  return next;
+};
+const normalizeMachineList = (items: Machine[]) =>
+  mergeRequiredMachines(items.filter(isVisibleMachine).map(withCanonicalMachineDisplayName));
 const fallbackMachines: Machine[] = [
   {
     id: "1-ocp-80t",
