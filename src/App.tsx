@@ -79,7 +79,7 @@ import {
   totalDowntime,
   totalOutput,
 } from "./lib/metrics";
-import { appendLocalLog, exportLogsCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
+import { appendLocalLog, exportLogsCsv, exportMasterCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
 type TabId = "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
@@ -4371,6 +4371,14 @@ function App() {
     }
     setStatus("เปิดรายงานแล้ว เลือก Save as PDF ในหน้าต่างพิมพ์");
   };
+  const downloadCsv = () => {
+    if (tab === "master") {
+      exportMasterCsv(canonicalProducts);
+      return;
+    }
+    exportLogsCsv(activeLogs);
+  };
+
   const useLatestDashboardDate = () => {
     if (!dashboardAvailableDateRange?.lastDate) return;
     setDashboardFilters((prev) => ({ ...prev, from: dashboardAvailableDateRange.lastDate, to: dashboardAvailableDateRange.lastDate }));
@@ -4524,7 +4532,7 @@ function App() {
             <button className="ghost-button" onClick={shareApp} type="button">
               <Share2 size={17} /> Share
             </button>
-            <button className="ghost-button" onClick={() => exportLogsCsv(activeLogs)} type="button">
+            <button className="ghost-button" onClick={downloadCsv} type="button">
               <Download size={17} /> CSV
             </button>
             <button className="ghost-button" onClick={downloadPdfReport} type="button">

@@ -1,4 +1,4 @@
-import type { ProductionLog } from "../types";
+import type { ProductionLog, ProductMaster } from "../types";
 
 const STORAGE_KEY = "oee-production-local-logs-v1";
 
@@ -29,6 +29,23 @@ export function upsertLocalLog(log: ProductionLog) {
   const next = index >= 0 ? existing.map((item) => (item.id === log.id ? log : item)) : [log, ...existing];
   saveLocalLogs(next);
   return next;
+}
+
+function csvValue(value: unknown) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, headers: string[], rows: unknown[][]) {
+  const csvRows = rows.map((row) => row.map(csvValue).join(","));
+  const blob = new Blob([["\ufeff" + headers.map(csvValue).join(","), ...csvRows].join("\n")], {
+    type: "text/csv;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 export function exportLogsCsv(logs: ProductionLog[]) {
@@ -64,21 +81,18 @@ export function exportLogsCsv(logs: ProductionLog[]) {
     "note",
     "updatedAt",
   ];
-  const rows = logs.map((log) =>
-    headers
-      .map((header) => {
-        const value = String(log[header as keyof ProductionLog] ?? "");
-        return `"${value.replace(/"/g, '""')}"`;
-      })
-      .join(","),
-  );
-  const blob = new Blob([[headers.join(","), ...rows].join("\n")], {
-    type: "text/csv;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `production-logs-${new Date().toISOString().slice(0, 10)}.csv`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const rows = logs.map((log) => headers.map((header) => log[header as keyof ProductionLog] ?? ""));
+  downloadCsv(`production-logs-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+}
+
+export function exportMasterCsv(products: ProductMaster[]) {
+  const headers = ["Machine", "Product", "Part No.", "Step", "Sample Good"];
+  const rows = products.map((product) => [
+    product.machineName,
+    product.productName,
+    product.partNo,
+    product.step || "-",
+    product.sampleGoodQty,
+  ]);
+  downloadCsv(`master-data-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
 }
