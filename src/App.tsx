@@ -903,6 +903,31 @@ function getDowntimeStats(logs: ProductionLog[]): DowntimeStatRow[] {
     .sort((a, b) => b.minutes - a.minutes || b.count - a.count || a.label.localeCompare(b.label));
 }
 
+function getDowntimeActionText(key: string) {
+  switch (key) {
+    case "changeoverMinutes":
+      return "เตรียม jig, material และเอกสารล่วงหน้า ลดเวลาตั้งเครื่องก่อนเปลี่ยนรุ่น";
+    case "inspectionMinutes":
+      return "แจ้ง QC ก่อนเริ่มล็อต แยกจุดตรวจรอหน้างาน และกำหนดตัวอย่างมาตรฐาน";
+    case "equipmentRepairMinutes":
+      return "ตรวจ PM รายวัน เช็คอะไหล่หลัก และบันทึกอาการซ้ำเพื่อแก้ที่ต้นเหตุ";
+    case "moldRepairMinutes":
+      return "ตรวจสภาพแม่พิมพ์ก่อนขึ้นงาน ทำ PM แม่พิมพ์ และเตรียมอะไหล่ที่เสียบ่อย";
+    case "materialChangeMinutes":
+      return "จัดวัตถุดิบตามลำดับออเดอร์ ยืนยัน lot และเตรียมพื้นที่ก่อนเริ่มผลิต";
+    case "emergencyStopMinutes":
+      return "ระบุสาเหตุทุกครั้ง แยกปัญหาคน/เครื่อง/วัตถุดิบ แล้วปิด action ภายในกะ";
+    case "meetingMinutes":
+      return "ล็อกเวลาประชุม/5S ให้ชัด และไม่ให้ชนกับช่วงเร่งผลิต";
+    case "plannedStopMinutes":
+      return "วางแผนหยุดให้ตรงช่วงพักหรือช่วงไม่มีออเดอร์ เพื่อลดผลกระทบต่อ output";
+    case "newModelMinutes":
+      return "เตรียม check sheet ทดลองงาน และสรุปเงื่อนไขมาตรฐานหลังจบทดลอง";
+    default:
+      return "ตรวจสอบสาเหตุซ้ำ กำหนดผู้รับผิดชอบ และติดตามผลในกะถัดไป";
+  }
+}
+
 const normalizeCell = (value: unknown) => String(value ?? "").trim();
 
 const trimMatrix = (matrix: unknown[][]) =>
@@ -6748,6 +6773,9 @@ function MachineComparisonPanel({
       const machine = machineLookup.get(machineId);
       const machineLogs = logs.filter((log) => log.machineId === machineId);
       const summary = summarizeDashboardOee(machineLogs, capacityContext);
+      const downtimeProblems = getDowntimeStats(machineLogs)
+        .filter((problem) => problem.minutes > 0)
+        .slice(0, 3);
       const productRows = [
         ...machineLogs
           .reduce(
@@ -6771,6 +6799,7 @@ function MachineComparisonPanel({
       return {
         machineId,
         machineName: machine?.name ?? machineLogs[0]?.machineName ?? machineId,
+        downtimeProblems,
         products: productRows,
         summary,
         logs: machineLogs.length,
@@ -6876,6 +6905,29 @@ function MachineComparisonPanel({
                   <small>Downtime</small>
                   <b>{formatNumber(row.summary.downtime)} นาที</b>
                 </div>
+              </div>
+              <div className="machine-compare-downtime">
+                <div className="machine-compare-downtime-head">
+                  <small>Downtime Problem</small>
+                  <b>{row.downtimeProblems.length > 0 ? `${formatNumber(row.summary.downtime)} นาที` : "ปกติ"}</b>
+                </div>
+                {row.downtimeProblems.length > 0 ? (
+                  <div className="machine-compare-downtime-list">
+                    {row.downtimeProblems.map((problem) => (
+                      <div className="machine-compare-downtime-row" key={problem.key}>
+                        <span>
+                          <strong>{problem.label}</strong>
+                          <em>{getDowntimeActionText(problem.key)}</em>
+                        </span>
+                        <b>
+                          {formatNumber(problem.minutes)} นาที · {formatPercent(problem.percent)}
+                        </b>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>ไม่มีปัญหา downtime ในช่วงที่เลือก</p>
+                )}
               </div>
               <div className="machine-compare-foot">
                 <span>Run {formatNumber(row.summary.run)} นาที · {formatPercent(runPercent)}</span>
