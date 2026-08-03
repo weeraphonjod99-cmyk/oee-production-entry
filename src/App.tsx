@@ -651,6 +651,50 @@ const isFreshEmployeeMachineStatus = (status: EmployeeMachineStatus) => {
   return !expiresAt || expiresAt.getTime() >= Date.now();
 };
 
+const getEmployeeMachineStatusTimeMs = (status: EmployeeMachineStatus) =>
+  parseStoredDateTime(
+    status.updatedAt || status.entryUpdatedAt || status.buttonDetailsUpdatedAt || status.activeTimerBaseAt || status.activeTimerStartedAt || status.workStartedAt,
+  )?.getTime() || 0;
+
+const isEmployeeMachineStatusAfterClear = (status: EmployeeMachineStatus, clearedAtByMachine: Record<string, string>) => {
+  const clearedAt = parseStoredDateTime(clearedAtByMachine[status.machineId]);
+  if (!clearedAt) return true;
+  return getEmployeeMachineStatusTimeMs(status) > clearedAt.getTime();
+};
+
+const mergeEmployeeMachineStatuses = (
+  previous: EmployeeMachineStatus[],
+  incoming: EmployeeMachineStatus[],
+  clearedAtByMachine: Record<string, string>,
+) => {
+  const mergedByMachine = new Map<string, EmployeeMachineStatus>();
+  const now = Date.now();
+
+  for (const status of previous) {
+    if (!isVisibleEmployeeStatus(status) || !isFreshEmployeeMachineStatus(status) || !isEmployeeMachineStatusAfterClear(status, clearedAtByMachine)) continue;
+    mergedByMachine.set(status.machineId, status);
+  }
+
+  for (const status of incoming) {
+    if (!isVisibleEmployeeStatus(status) || !isFreshEmployeeMachineStatus(status) || !isEmployeeMachineStatusAfterClear(status, clearedAtByMachine)) continue;
+    const previousStatus = mergedByMachine.get(status.machineId);
+    if (!previousStatus) {
+      mergedByMachine.set(status.machineId, status);
+      continue;
+    }
+
+    const previousTime = getEmployeeMachineStatusTimeMs(previousStatus);
+    const incomingTime = getEmployeeMachineStatusTimeMs(status);
+    if (incomingTime >= previousTime || now - previousTime > employeeStatusHeartbeatMs * 2) {
+      mergedByMachine.set(status.machineId, status);
+    }
+  }
+
+  return Array.from(mergedByMachine.values())
+    .filter(isFreshEmployeeMachineStatus)
+    .sort((a, b) => a.machineId.localeCompare(b.machineId));
+};
+
 const getEmployeeStatusesSignature = (statuses: EmployeeMachineStatus[]) =>
   statuses
     .filter(isFreshEmployeeMachineStatus)
@@ -2342,24 +2386,21 @@ function App() {
       refreshing = true;
       try {
         const statuses = (await fetchEmployeeMachineStatuses()).filter(isVisibleEmployeeStatus);
-        const freshStatuses = statuses
-          .filter(isFreshEmployeeMachineStatus)
-          .filter((status) => {
-            const clearedAt = parseStoredDateTime(employeeClearedMachineAt[status.machineId]);
-            if (!clearedAt) return true;
-            const statusUpdatedAt = parseStoredDateTime(status.updatedAt || status.entryUpdatedAt);
-            return Boolean(statusUpdatedAt && statusUpdatedAt.getTime() > clearedAt.getTime());
-          });
-        if (freshStatuses.length === 0 && employeeSharedMachineStatusesRef.current.length > 0) {
+        const mergedStatuses = mergeEmployeeMachineStatuses(
+          employeeSharedMachineStatusesRef.current,
+          statuses,
+          employeeClearedMachineAtRef.current,
+        );
+        if (statuses.filter(isFreshEmployeeMachineStatus).length === 0 && employeeSharedMachineStatusesRef.current.length > 0) {
           employeeStatusesEmptyReadsRef.current += 1;
           if (employeeStatusesEmptyReadsRef.current < employeeStatusesEmptyReadGrace) return;
         } else {
           employeeStatusesEmptyReadsRef.current = 0;
         }
-        const signature = getEmployeeStatusesSignature(freshStatuses);
+        const signature = getEmployeeStatusesSignature(mergedStatuses);
         if (!cancelled && signature !== employeeStatusesSignatureRef.current) {
           employeeStatusesSignatureRef.current = signature;
-          setEmployeeSharedMachineStatuses(freshStatuses);
+          setEmployeeSharedMachineStatuses(mergedStatuses);
         }
       } catch {
         // Keep the last known shared machine statuses visible.
@@ -2378,7 +2419,7 @@ function App() {
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
     };
-  }, [tab, employeeClearedMachineAt]);
+  }, [tab]);
 
   useEffect(() => {
     if (session && !canAccessTab(session, tab)) setTab("employeeEntry");
@@ -2524,20 +2565,7 @@ function App() {
     () => new Map(canonicalMachineOrderSummaries.map((summary) => [summary.machineId, summary])),
     [canonicalMachineOrderSummaries],
   );
-  const currentEmployeeUserName = session?.displayName || session?.username || "";
-  const isMachineStatusOwnedByCurrentUser = useCallback(
-    (status?: EmployeeMachineStatus) => !status?.userName || normalizeText(status.userName) === normalizeText(currentEmployeeUserName),
-    [currentEmployeeUserName],
-  );
-  const getMachineOccupiedByOtherUser = useCallback(
-    (machineId: string) => {
-      const status = employeeSharedStatusByMachineId.get(machineId);
-      return status && !isMachineStatusOwnedByCurrentUser(status) ? status : null;
-    },
-    [employeeSharedStatusByMachineId, isMachineStatusOwnedByCurrentUser],
-  );
   const currentMachineSharedStatus = employeeSharedStatusByMachineId.get(draft.machineId);
-  const currentMachineOccupiedByOtherUser = getMachineOccupiedByOtherUser(draft.machineId);
   const currentMachineSharedActivity = getEmployeeMachineActivityLabel(currentMachineSharedStatus);
   const currentMachineSharedTimerKey = currentMachineSharedStatus?.activeTimerKey || "";
   const currentMachineSharedLiveMinutes = getSharedStatusLiveMinutes(currentMachineSharedStatus, employeeReportNow);
@@ -3066,16 +3094,6 @@ function App() {
   };
 
   const openEmployeeMachineEntry = useCallback((machineId: string) => {
-    const occupiedStatus = getMachineOccupiedByOtherUser(machineId);
-    if (occupiedStatus && false) {
-      const machineName = machines.find((machine) => machine.id === machineId)?.name ?? occupiedStatus!.machineName ?? machineId;
-      const message = `${machineName} มีผู้ใช้งาน ${occupiedStatus!.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(occupiedStatus!) || "กำลังกรอก"}) กรุณารอให้ส่งยอดหรือออกจากเครื่องก่อน`;
-      window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
-      setEmployeeMachineSelected(false);
-      setStatus(message);
-      setProblemDialog({ title: "เครื่องนี้กำลังถูกใช้งาน", message });
-      return;
-    }
     if (employeeMachineSelected && employeeDraftActive) writeEmployeeStoredDraft(draft);
     window.localStorage.setItem(EMPLOYEE_SELECTED_MACHINE_KEY, machineId);
     if (!loadEmployeeStoredDraftForMachine(machineId)) {
@@ -3104,7 +3122,7 @@ function App() {
     setEmployeeMachineSelected(true);
     setProductSearch("");
     setStatus(`เลือกเครื่อง ${machines.find((machine) => machine.id === machineId)?.name ?? machineId} สำหรับกรอกยอดพนักงาน`);
-  }, [allLogs, canonicalProducts, draft, employeeDraftActive, employeeMachineSelected, getMachineOccupiedByOtherUser, machines]);
+  }, [allLogs, canonicalProducts, draft, employeeDraftActive, employeeMachineSelected, machines]);
 
   const returnToEmployeeMachineMenu = () => {
     window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
@@ -3122,17 +3140,6 @@ function App() {
     employeeSelectedMachineRestoredRef.current = true;
     openEmployeeMachineEntry(storedMachineId);
   }, [employeeMachineSelected, machines, openEmployeeMachineEntry, tab]);
-
-  useEffect(() => {
-    if (tab !== "employeeEntry" || !employeeMachineSelected || !currentMachineOccupiedByOtherUser) return;
-    return;
-    if (employeeDraftActive) writeEmployeeStoredDraft(draft);
-    window.localStorage.removeItem(EMPLOYEE_SELECTED_MACHINE_KEY);
-    setEmployeeMachineSelected(false);
-    const message = `${currentMachine.name} มีผู้ใช้งาน ${currentMachineOccupiedByOtherUser!.userName || "-"} กำลังกรอกอยู่ (${getEmployeeMachineActivityLabel(currentMachineOccupiedByOtherUser!) || "กำลังกรอก"}) ระบบเด้งกลับหน้าเลือกเครื่องเพื่อป้องกันการกรอกชนกัน`;
-    setStatus(message);
-    setProblemDialog({ title: "เครื่องนี้มีผู้ใช้อื่นกำลังกรอก", message });
-  }, [currentMachine.name, currentMachineOccupiedByOtherUser, draft, employeeDraftActive, employeeMachineSelected, tab]);
 
   const updateProductField = (key: ProductFieldKey, value: string) => {
     const matchedProduct = findMatchingProduct(machineProductChoices, key, value, draft);
@@ -3720,7 +3727,7 @@ function App() {
       expiresAt,
     };
     setEmployeeSharedMachineStatuses((items) => {
-      const next = [status, ...items.filter((item) => item.machineId !== status.machineId)].filter(isFreshEmployeeMachineStatus);
+      const next = mergeEmployeeMachineStatuses(items, [status], employeeClearedMachineAtRef.current);
       employeeStatusesSignatureRef.current = getEmployeeStatusesSignature(next);
       return next;
     });
