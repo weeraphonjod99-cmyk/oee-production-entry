@@ -1291,6 +1291,10 @@ select:disabled {
   padding: 14px;
 }
 
+.production-order-disabled {
+  display: none !important;
+}
+
 .pending-order-header {
   align-items: center;
   display: flex;

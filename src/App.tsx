@@ -349,6 +349,7 @@ const roleNotificationsRefreshMs = 15000;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const productionOrderRefreshMs = 30000;
+const PRODUCTION_ORDER_SHEET_ENABLED = false;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
 const EMPLOYEE_MACHINE_STATUS_CACHE_KEY = "oee-production-employee-machine-status-cache-v1";
@@ -767,10 +768,14 @@ const saveCachedEmployeeMachineStatuses = (statuses: EmployeeMachineStatus[]) =>
   saveCachedList(EMPLOYEE_MACHINE_STATUS_CACHE_KEY, statuses.filter(isVisibleEmployeeStatus).filter(isFreshEmployeeMachineStatus));
 
 const loadCachedMachineOrderSummaries = () =>
-  loadCachedList<ProductionOrderMachineSummary>(MACHINE_ORDER_SUMMARY_CACHE_KEY).filter(isVisibleOrderSummary);
+  PRODUCTION_ORDER_SHEET_ENABLED
+    ? loadCachedList<ProductionOrderMachineSummary>(MACHINE_ORDER_SUMMARY_CACHE_KEY).filter(isVisibleOrderSummary)
+    : [];
 
-const saveCachedMachineOrderSummaries = (summaries: ProductionOrderMachineSummary[]) =>
+const saveCachedMachineOrderSummaries = (summaries: ProductionOrderMachineSummary[]) => {
+  if (!PRODUCTION_ORDER_SHEET_ENABLED) return;
   saveCachedList(MACHINE_ORDER_SUMMARY_CACHE_KEY, summaries.filter(isVisibleOrderSummary));
+};
 
 const getEmployeeStatusPublishSignature = (status: EmployeeMachineStatus) =>
   [
@@ -2508,15 +2513,14 @@ function App() {
     () => buildProductChoices(draft.machineId, machineProducts, allLogs),
     [allLogs, draft.machineId, machineProducts],
   );
-  const visibleProductionOrders = useMemo(
-    () =>
-      productionOrders
-        .filter((order) => !isCompletedProductionOrder(order) && (order.productName || order.partNo || order.orderNo))
-        .filter((order) => canManageProductionOrders || hasProductionOrderSequence(order))
-        .sort(compareProductionOrders)
-        .slice(0, 12),
-    [canManageProductionOrders, productionOrders],
-  );
+  const visibleProductionOrders = useMemo(() => {
+    if (!PRODUCTION_ORDER_SHEET_ENABLED) return [];
+    return productionOrders
+      .filter((order) => !isCompletedProductionOrder(order) && (order.productName || order.partNo || order.orderNo))
+      .filter((order) => canManageProductionOrders || hasProductionOrderSequence(order))
+      .sort(compareProductionOrders)
+      .slice(0, 12);
+  }, [canManageProductionOrders, productionOrders]);
   const filteredProducts = useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
     if (!query) return machineProductChoices.slice(0, 300);
@@ -2688,12 +2692,10 @@ function App() {
   }, [draft, employeeActiveTimer?.key, employeeActiveTimer?.originalStartedAt, employeeActiveTimer?.startedAt, employeeDraftEvents, employeeWorkStartedAt]);
 
   useEffect(() => {
-    if (!remoteEnabled || !isEmployeeEntry || employeeMachineSelected) {
+    if (!PRODUCTION_ORDER_SHEET_ENABLED || !remoteEnabled || !isEmployeeEntry || employeeMachineSelected) {
       setMachineOrderSummariesLoading(false);
-      if (!isEmployeeEntry) {
-        setMachineOrderSummaries([]);
-        setMachineOrderSummariesError("");
-      }
+      setMachineOrderSummaries([]);
+      setMachineOrderSummariesError("");
       return;
     }
     let cancelled = false;
@@ -2722,7 +2724,8 @@ function App() {
   }, [employeeMachineSelected, isEmployeeEntry]);
 
   useEffect(() => {
-    if (!remoteEnabled || !isEmployeeEntry || !employeeMachineSelected) {
+    if (!PRODUCTION_ORDER_SHEET_ENABLED || !remoteEnabled || !isEmployeeEntry || !employeeMachineSelected) {
+      setProductionOrdersLoading(false);
       setProductionOrders([]);
       setProductionOrdersError("");
       return;
@@ -3204,6 +3207,12 @@ function App() {
 
   const saveProductionOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+      setProductionOrders([]);
+      setProductionOrdersError("");
+      setProductionOrderForm(emptyProductionOrderForm);
+      return;
+    }
     if (!canManageProductionOrders) {
       setProblemDialog({ title: "ไม่มีสิทธิ์แก้ไขออเดอร์", message: "อนุญาตเฉพาะ Administrator และ Planing เท่านั้น" });
       return;
@@ -3884,7 +3893,7 @@ function App() {
     } = {},
   ) => {
     const shouldValidateBeforeSave = !options.autoSubmit;
-    if (shouldValidateBeforeSave && isEmployeeEntry && !canManageProductionOrders && !targetDraft.productionOrderRowNumber) {
+    if (PRODUCTION_ORDER_SHEET_ENABLED && shouldValidateBeforeSave && isEmployeeEntry && !canManageProductionOrders && !targetDraft.productionOrderRowNumber) {
       const message = "ฝ่ายผลิตต้องเลือกออเดอร์ที่ Planning/Admin จัดลำดับไว้แล้วก่อนส่งยอด";
       setStatus(message);
       setProblemDialog({ title: "ต้องเลือกออเดอร์ตามลำดับผลิต", message });
@@ -3977,14 +3986,16 @@ function App() {
         fetchRemoteLogs()
           .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
           .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
-        if (saved.productionOrderRowNumber && saved.machineId === currentMachine.id) {
+        if (PRODUCTION_ORDER_SHEET_ENABLED && saved.productionOrderRowNumber && saved.machineId === currentMachine.id) {
           fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
             .then((orders) => setProductionOrders(orders))
             .catch((error) => setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ"));
         }
-        fetchProductionOrderSummaries()
-          .then((summaries) => setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary)))
-          .catch(() => undefined);
+        if (PRODUCTION_ORDER_SHEET_ENABLED) {
+          fetchProductionOrderSummaries()
+            .then((summaries) => setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary)))
+            .catch(() => undefined);
+        }
       }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
@@ -4709,7 +4720,7 @@ function App() {
                     </select>
                   </label>
                 )}
-                <div className="pending-order-panel" role="status" aria-live="polite">
+                <div className={PRODUCTION_ORDER_SHEET_ENABLED ? "pending-order-panel" : "pending-order-panel production-order-disabled"} role="status" aria-live="polite">
                   <div className="pending-order-header">
                     <div>
                       <span>ORDER QUEUE</span>

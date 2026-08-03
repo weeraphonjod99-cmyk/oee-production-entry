@@ -94,6 +94,7 @@ const KPI_REFRESH_ACTION = "refreshKpi";
 const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
 const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
 const PRODUCTION_ORDER_SPREADSHEET_ID = "1gR-a77vkgVxDu0jdSZ9RPhnGLC5OabIRHSRGBN0hZ18";
+const PRODUCTION_ORDER_SHEET_ENABLED = false;
 const PRODUCTION_ORDER_MAX_ROWS = 200;
 const PRODUCTION_ORDER_COLUMNS = {
   no: 1,
@@ -463,9 +464,15 @@ function doGet(e) {
       return jsonResponse({ ok: true, notifications: getRoleNotifications(e.parameter || {}) });
     }
     if (action === "productionOrders") {
+      if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+        return jsonResponse({ ok: true, disabled: true, orders: [] });
+      }
       return jsonResponse({ ok: true, orders: getProductionOrders(e.parameter || {}) });
     }
     if (action === "productionOrderSummaries") {
+      if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+        return jsonResponse({ ok: true, disabled: true, summaries: [] });
+      }
       return jsonResponse({ ok: true, summaries: getProductionOrderSummaries() });
     }
     if (action === "productionCapacity") {
@@ -576,10 +583,16 @@ function doPost(e) {
       return jsonResponse({ ok: true, notification: notification });
     }
     if (body.action === "upsertProductionOrder") {
+      if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+        return jsonResponse({ ok: false, disabled: true, error: "Production order sheet integration is disabled" });
+      }
       const order = upsertProductionOrder(body.payload || {});
       return jsonResponse({ ok: true, order: order });
     }
     if (body.action === "reorderProductionOrder") {
+      if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+        return jsonResponse({ ok: false, disabled: true, error: "Production order sheet integration is disabled" });
+      }
       const order = reorderProductionOrder(body.payload || {});
       return jsonResponse({ ok: true, order: order });
     }
@@ -818,7 +831,9 @@ function appendLog(payload) {
   const sheet = ensureSheet(LOG_SHEET, LOG_HEADERS);
   writeSerializedLogRow(sheet, Math.max(sheet.getLastRow() + 1, 2), log);
   appendSubmitHistory(log, "บันทึกยอดใหม่", formattedRow);
-  log.productionOrderProgress = updateProductionOrderProgressFromLog(log);
+  if (PRODUCTION_ORDER_SHEET_ENABLED) {
+    log.productionOrderProgress = updateProductionOrderProgressFromLog(log);
+  }
   return log;
 }
 
@@ -1054,6 +1069,9 @@ function clearEmployeeMachineStatus(payload) {
 }
 
 function openProductionOrderWorkbook() {
+  if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+    throw new Error("Production order sheet integration is disabled");
+  }
   return SpreadsheetApp.openById(PRODUCTION_ORDER_SPREADSHEET_ID);
 }
 
