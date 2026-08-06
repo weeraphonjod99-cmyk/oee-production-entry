@@ -93,9 +93,14 @@ const KPI_NOTES_SHEET = "kpi_notes";
 const KPI_REFRESH_ACTION = "refreshKpi";
 const KPI_AUTO_REFRESH_HANDLER = "refreshKpiSheets";
 const KPI_PD_CACHE_PREFIX = "pd_native_cache_";
-const PRODUCTION_ORDER_SPREADSHEET_ID = "1gR-a77vkgVxDu0jdSZ9RPhnGLC5OabIRHSRGBN0hZ18";
-const PRODUCTION_ORDER_SHEET_ENABLED = false;
-const PRODUCTION_ORDER_MAX_ROWS = 200;
+const PRODUCTION_ORDER_SPREADSHEET_ID = "16lXp_T0yfqfwPWyuBlIfRyzTzVFjlRky2ZVmOoa8Klo";
+const PRODUCTION_ORDER_SHEET_ENABLED = true;
+const PRODUCTION_ORDER_WRITEBACK_ENABLED = false;
+const PRODUCTION_ORDER_MAX_ROWS = 5000;
+const PRODUCTION_ORDER_SOURCE_SHEET_IDS = [2004005001];
+const PRODUCTION_ORDER_SOURCE_SHEET_NAMES = ["กรอกออเดอร์"];
+const PRODUCTION_ORDER_SOURCE_SHEET_KEYWORDS = ["order", "ออเดอร์"];
+const PRODUCTION_ORDER_READ_MAX_COLUMNS = 48;
 const PRODUCTION_ORDER_COLUMNS = {
   no: 1,
   openedDate: 2,
@@ -468,6 +473,12 @@ function doGet(e) {
         return jsonResponse({ ok: true, disabled: true, orders: [] });
       }
       return jsonResponse({ ok: true, orders: getProductionOrders(e.parameter || {}) });
+    }
+    if (action === "debugProductionOrders") {
+      if (!PRODUCTION_ORDER_SHEET_ENABLED) {
+        return jsonResponse({ ok: true, disabled: true, debug: [] });
+      }
+      return jsonResponse({ ok: true, debug: debugProductionOrders(e.parameter || {}) });
     }
     if (action === "productionOrderSummaries") {
       if (!PRODUCTION_ORDER_SHEET_ENABLED) {
@@ -1076,10 +1087,388 @@ function openProductionOrderWorkbook() {
 }
 
 function normalizeOrderMachineName(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return String(value || "")
+    .toLowerCase()
+    .replace(/＃/g, "#")
+    .replace(/#\s*(\d+)/g, "$1#")
+    .replace(/[^a-z0-9#]/g, "");
+}
+
+function normalizeProductionOrderMachineKey(value) {
+  const normalized = normalizeOrderMachineName(value);
+  const cncMatch = normalized.match(/^(?:cnc)?c?(\d+)$/);
+  if (cncMatch && (/^cnc/.test(normalized) || /^c\d+$/.test(normalized))) {
+    return "c" + cncMatch[1];
+  }
+  return normalized.replace(/^cnc(?=c?\d+$)/, "");
+}
+
+function getProductionOrderMachineSignature(value) {
+  const raw = String(value || "").toLowerCase();
+  const cncMatch = raw.match(/(?:cnc\s*-?\s*)?c\s*(\d+)|cnc\s*-?\s*(\d+)/);
+  if (cncMatch) return "cnc" + (cncMatch[1] || cncMatch[2]);
+  const numberMatch = raw.match(/(\d+)\s*#|#\s*(\d+)/);
+  const tonMatch = raw.match(/(\d+)\s*t/);
+  if (numberMatch && tonMatch) return (numberMatch[1] || numberMatch[2]) + "#" + tonMatch[1] + "t";
+  return normalizeProductionOrderMachineKey(value);
+}
+
+function productionOrderMachineMatches(expected, actual) {
+  const expectedKey = normalizeProductionOrderMachineKey(expected);
+  const actualKey = normalizeProductionOrderMachineKey(actual);
+  if (!expectedKey) return true;
+  if (!actualKey) return false;
+  if (expectedKey === actualKey) return true;
+  const expectedSignature = getProductionOrderMachineSignature(expected);
+  const actualSignature = getProductionOrderMachineSignature(actual);
+  return !!(expectedSignature && actualSignature && expectedSignature === actualSignature);
+}
+
+function isReadableProductionOrderSheet(sheet) {
+  const name = String(sheet && sheet.getName ? sheet.getName() : "").trim();
+  if (!name) return false;
+  if (/^[_\.]/.test(name)) return false;
+  if (typeof sheet.isSheetHidden === "function" && sheet.isSheetHidden()) return false;
+  return true;
+}
+
+function shouldReadProductionOrderSheet(sheet) {
+  if (!isReadableProductionOrderSheet(sheet)) return false;
+  const name = String(sheet.getName()).trim();
+  const lowerName = name.toLowerCase();
+  const sheetId = typeof sheet.getSheetId === "function" ? sheet.getSheetId() : null;
+  if (PRODUCTION_ORDER_SOURCE_SHEET_IDS.indexOf(sheetId) >= 0) return true;
+  if (PRODUCTION_ORDER_SOURCE_SHEET_NAMES.indexOf(name) >= 0) return true;
+  return PRODUCTION_ORDER_SOURCE_SHEET_KEYWORDS.some(function(keyword) {
+    return lowerName.indexOf(String(keyword).toLowerCase()) >= 0;
+  });
+}
+
+function getProductionOrderSourceSheets(book) {
+  const sheets = book.getSheets().filter(isReadableProductionOrderSheet);
+  const selected = [];
+  const seen = {};
+  function addSheet(sheet) {
+    const key = String(typeof sheet.getSheetId === "function" ? sheet.getSheetId() : sheet.getName());
+    if (seen[key]) return;
+    seen[key] = true;
+    selected.push(sheet);
+  }
+
+  sheets.forEach(function(sheet) {
+    const sheetId = typeof sheet.getSheetId === "function" ? sheet.getSheetId() : null;
+    if (PRODUCTION_ORDER_SOURCE_SHEET_IDS.indexOf(sheetId) >= 0) addSheet(sheet);
+  });
+  if (selected.length) return selected;
+
+  sheets.forEach(function(sheet) {
+    const name = String(sheet.getName()).trim();
+    if (PRODUCTION_ORDER_SOURCE_SHEET_NAMES.indexOf(name) >= 0) addSheet(sheet);
+  });
+  if (selected.length) return selected;
+
+  sheets.forEach(function(sheet) {
+    const lowerName = String(sheet.getName()).toLowerCase();
+    const hasKeyword = PRODUCTION_ORDER_SOURCE_SHEET_KEYWORDS.some(function(keyword) {
+      return lowerName.indexOf(String(keyword).toLowerCase()) >= 0;
+    });
+    if (hasKeyword) addSheet(sheet);
+  });
+  if (selected.length) return selected;
+
+  sheets.forEach(function(sheet) {
+    if (looksLikeProductionOrderSourceSheet(sheet)) addSheet(sheet);
+  });
+
+  return selected;
+}
+
+function looksLikeProductionOrderSourceSheet(sheet) {
+  try {
+    if (!isReadableProductionOrderSheet(sheet)) return false;
+    const lastRow = Math.min(sheet.getLastRow(), 120);
+    const lastColumn = Math.min(sheet.getLastColumn(), PRODUCTION_ORDER_READ_MAX_COLUMNS);
+    if (lastRow < 2 || lastColumn < 6) return false;
+    const values = sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
+    return !!findFixedProductionOrderTable(values);
+  } catch (error) {
+    console.warn("Unable to inspect production order sheet", sheet.getName(), error);
+    return false;
+  }
+}
+
+function normalizeProductionOrderHeader(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\r?\n/g, " ")
+    .replace(/[()（）]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function detectProductionOrderColumns(headers) {
+  const columns = {
+    openedDate: -1,
+    status: -1,
+    machineName: -1,
+    orderNo: -1,
+    productName: -1,
+    partNo: -1,
+    step: -1,
+    rmNo: -1,
+    orderQty: -1,
+    remainingQty: -1,
+    producedQty: -1,
+    ngRework: -1,
+    dailyTarget: -1,
+    usedHours: -1,
+    startDate: -1,
+    endDate: -1,
+    resumeDate: -1,
+  };
+  for (let index = 0; index < headers.length; index++) {
+    const header = normalizeProductionOrderHeader(headers[index]);
+    if (!header) continue;
+    if (header.indexOf("running") >= 0 || header.indexOf("เวลาเริ่ม") >= 0) columns.openedDate = index;
+    else if (header.indexOf("สถานะ") >= 0 || header.indexOf("ลำดับ") >= 0 || header.indexOf("status") >= 0) columns.status = index;
+    else if (header.indexOf("machine no") >= 0 || header === "machine") columns.machineName = index;
+    else if (header.indexOf("order no") >= 0 || header.indexOf("order number") >= 0 || header === "order") columns.orderNo = index;
+    else if (header.indexOf("part name") >= 0 || header.indexOf("product name") >= 0) columns.productName = index;
+    else if (header.indexOf("part no") >= 0 || header.indexOf("part number") >= 0) columns.partNo = index;
+    else if (header === "step" || header.indexOf("step") >= 0) columns.step = index;
+    else if (header.indexOf("tooling") >= 0 || header.indexOf("rm no") >= 0 || header.indexOf("material") >= 0) columns.rmNo = index;
+    else if (header.indexOf("order production") >= 0 || header.indexOf("order qty") >= 0) columns.orderQty = index;
+    else if (header.indexOf("order remaining") >= 0 || header.indexOf("remaining") >= 0) columns.remainingQty = index;
+    else if (header.indexOf("order actual") >= 0 || header.indexOf("actual") >= 0) columns.producedQty = index;
+    else if (header.indexOf("qc") >= 0 || header.indexOf("ng") >= 0) columns.ngRework = index;
+    else if (header.indexOf("qty/hr") >= 0 || header.indexOf("กำลังผลิต") >= 0) columns.dailyTarget = index;
+    else if (header.indexOf("(hr)") >= 0 || header.indexOf("เวลาที่ใช้") >= 0) columns.usedHours = index;
+    else if (header.indexOf("เริ่มตามคิว") >= 0 || header.indexOf("queue") >= 0) columns.startDate = index;
+    else if (header.indexOf("วัน/เวลาจบ") >= 0 || header.indexOf("finish") >= 0 || header.indexOf("end") >= 0) columns.endDate = index;
+    else if (header.indexOf("resume") >= 0 || header.indexOf("เริ่มเดินต่อ") >= 0) columns.resumeDate = index;
+  }
+  return columns;
+}
+
+function compactProductionOrderHeader(value) {
+  return normalizeProductionOrderHeader(value)
+    .replace(/[(){}\[\].:;,_\-\/\\]/g, " ")
+    .replace(/\s+/g, "");
+}
+
+function productionOrderHeaderMatches(header, compact, tokens) {
+  return tokens.some(function(token) {
+    const normalized = normalizeProductionOrderHeader(token).replace(/[(){}\[\].:;,_\-\/\\]/g, " ").replace(/\s+/g, " ").trim();
+    const compactToken = normalized.replace(/\s+/g, "");
+    return (normalized && header.indexOf(normalized) >= 0) || (compactToken && compact.indexOf(compactToken) >= 0);
+  });
+}
+
+function detectProductionOrderColumns(headers) {
+  const columns = {
+    openedDate: -1,
+    status: -1,
+    machineName: -1,
+    orderNo: -1,
+    productName: -1,
+    partNo: -1,
+    step: -1,
+    rmNo: -1,
+    orderQty: -1,
+    remainingQty: -1,
+    producedQty: -1,
+    ngRework: -1,
+    dailyTarget: -1,
+    usedHours: -1,
+    startDate: -1,
+    endDate: -1,
+    resumeDate: -1,
+  };
+  for (let index = 0; index < headers.length; index++) {
+    const header = normalizeProductionOrderHeader(headers[index]).replace(/[(){}\[\].:;,_\-\/\\]/g, " ").replace(/\s+/g, " ").trim();
+    const compact = compactProductionOrderHeader(headers[index]);
+    if (!header) continue;
+    if (productionOrderHeaderMatches(header, compact, ["running", "วัน เวลาเริ่ม", "เวลาเริ่ม"])) columns.openedDate = index;
+    else if (productionOrderHeaderMatches(header, compact, ["status", "สถานะ", "ลำดับงาน", "ลำดับ"])) columns.status = index;
+    else if (productionOrderHeaderMatches(header, compact, ["machine no", "machine", "m/c", "mc", "เครื่อง"])) columns.machineName = index;
+    else if (
+      productionOrderHeaderMatches(header, compact, ["order no", "order number", "เลขออเดอร์"]) &&
+      !productionOrderHeaderMatches(header, compact, ["order production", "order remaining", "order actual"])
+    ) columns.orderNo = index;
+    else if (productionOrderHeaderMatches(header, compact, ["part name", "product name", "ชื่อชิ้นงาน", "รุ่น"])) columns.productName = index;
+    else if (productionOrderHeaderMatches(header, compact, ["part no", "part number"])) columns.partNo = index;
+    else if (productionOrderHeaderMatches(header, compact, ["step", "ขั้นตอน"])) columns.step = index;
+    else if (productionOrderHeaderMatches(header, compact, ["tooling no", "tooling", "rm no", "material"])) columns.rmNo = index;
+    else if (productionOrderHeaderMatches(header, compact, ["order production", "order qty", "production qty", "ยอดสั่งซื้อ"])) columns.orderQty = index;
+    else if (productionOrderHeaderMatches(header, compact, ["order remaining", "remaining qty", "remaining"])) columns.remainingQty = index;
+    else if (productionOrderHeaderMatches(header, compact, ["order actual", "actual qty", "actual", "ยอดการผลิต"])) columns.producedQty = index;
+    else if (productionOrderHeaderMatches(header, compact, ["qc/ng", "ng/rework", "ng rework"]) || (compact.indexOf("qc") >= 0 && compact.indexOf("ng") >= 0)) columns.ngRework = index;
+    else if (productionOrderHeaderMatches(header, compact, ["qty/hr", "target/hr", "กำลังผลิต"])) columns.dailyTarget = index;
+    else if (productionOrderHeaderMatches(header, compact, ["used hr", "time hr", "เวลาที่ใช้"])) columns.usedHours = index;
+    else if (productionOrderHeaderMatches(header, compact, ["queue", "เริ่มตามคิว"])) columns.startDate = index;
+    else if (productionOrderHeaderMatches(header, compact, ["finish", "end", "วัน เวลาจบ", "จบ", "เสร็จ"])) columns.endDate = index;
+    else if (productionOrderHeaderMatches(header, compact, ["resume", "เริ่มเดินต่อ"])) columns.resumeDate = index;
+  }
+  return columns;
+}
+
+function findProductionOrderHeader(values) {
+  const scanRows = Math.min(values.length, 80);
+  let best = null;
+  let bestScore = 0;
+  for (let rowIndex = 0; rowIndex < scanRows; rowIndex++) {
+    const columns = detectProductionOrderColumns(values[rowIndex] || []);
+    const score = [
+      columns.machineName,
+      columns.orderNo,
+      columns.productName,
+      columns.partNo,
+      columns.remainingQty,
+      columns.dailyTarget,
+    ].filter(function(columnIndex) {
+      return columnIndex >= 0;
+    }).length;
+    if (columns.machineName >= 0 && columns.orderNo >= 0 && (columns.productName >= 0 || columns.partNo >= 0) && score > bestScore) {
+      best = { rowIndex, columns };
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+function getFixedProductionOrderColumns() {
+  return {
+    openedDate: 0,
+    status: 1,
+    machineName: 2,
+    orderNo: 3,
+    productName: 4,
+    partNo: 5,
+    step: 6,
+    rmNo: 7,
+    orderQty: 8,
+    remainingQty: 9,
+    producedQty: 10,
+    ngRework: 11,
+    dailyTarget: 12,
+    usedHours: 13,
+    startDate: 14,
+    endDate: 15,
+    resumeDate: 16,
+  };
+}
+
+function compactProductionOrderHeaderText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\r?\n/g, " ")
+    .replace(/[^a-z0-9ก-๙#]+/g, "");
+}
+
+function isFixedProductionOrderHeaderRow(row) {
+  const values = row || [];
+  const text = compactProductionOrderHeaderText(values.slice(0, 24).join(" "));
+  const machineCell = compactProductionOrderHeaderText(values[2] || "");
+  const orderCell = compactProductionOrderHeaderText(values[3] || "");
+  const productCell = compactProductionOrderHeaderText(values[4] || "");
+  const partCell = compactProductionOrderHeaderText(values[5] || "");
+  const fixedColumnsLookRight = machineCell.indexOf("machineno") >= 0
+    && orderCell.indexOf("orderno") >= 0
+    && (productCell.indexOf("partname") >= 0 || productCell.indexOf("product") >= 0)
+    && partCell.indexOf("partno") >= 0;
+  const hasCoreHeaders = text.indexOf("machineno") >= 0
+    && text.indexOf("orderno") >= 0
+    && (text.indexOf("partno") >= 0 || text.indexOf("partname") >= 0 || text.indexOf("product") >= 0);
+  const hasOrderAmount = text.indexOf("orderremaining") >= 0
+    || text.indexOf("remaining") >= 0
+    || text.indexOf("orderproduction") >= 0
+    || text.indexOf("orderactual") >= 0;
+  return fixedColumnsLookRight || (hasCoreHeaders && hasOrderAmount);
+}
+
+function isFixedProductionOrderDataRow(row) {
+  const machineName = String((row && row[2]) || "").trim();
+  const orderNo = String((row && row[3]) || "").trim();
+  const productName = String((row && row[4]) || "").trim();
+  const partNo = String((row && row[5]) || "").trim();
+  if (!machineName || /^machine\s*no\.?$/i.test(machineName)) return false;
+  if (!orderNo && !productName && !partNo) return false;
+  const machineKey = normalizeProductionOrderMachineKey(machineName);
+  if (/^(?:cnc\s*-?\s*)?c\s*\d+$/i.test(machineName) || /^cnc\s*-?\s*\d+$/i.test(machineName)) return true;
+  if (/^c\d+$/.test(machineKey) || /^cnc\d+$/.test(machineKey)) return true;
+  return /#|ocp|mhs|std|gtx|bending|sw|rv|rw|cnc|spot|tapping/i.test(machineName);
+}
+
+function findFixedProductionOrderTable(values) {
+  const scanRows = Math.min(values.length, 80);
+  for (let rowIndex = 0; rowIndex < scanRows; rowIndex++) {
+    if (isFixedProductionOrderHeaderRow(values[rowIndex])) {
+      return { rowIndex, columns: getFixedProductionOrderColumns(), source: "fixed" };
+    }
+  }
+  for (let rowIndex = 0; rowIndex < values.length; rowIndex++) {
+    if (isFixedProductionOrderDataRow(values[rowIndex])) {
+      return {
+        rowIndex: Math.max(0, rowIndex - 1),
+        columns: getFixedProductionOrderColumns(),
+        source: "fixed",
+      };
+    }
+  }
+  return null;
+}
+
+function getProductionOrderDisplayValue(row, columns, key) {
+  const column = columns[key];
+  return column >= 0 ? String(row[column] || "").trim() : "";
+}
+
+function cleanProductionOrderText(value) {
+  const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  return text === "-" ? "" : text;
+}
+
+function isExternalProductionOrderCompleted(status) {
+  const text = String(status || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!text) return false;
+  const activeTokens = [
+    "running",
+    "hold",
+    "waiting",
+    "awaiting",
+    "pending",
+    "wip",
+    "set machine",
+    "repair",
+    "rework",
+    "tooling",
+    "กำลัง",
+    "ค้าง",
+    "รอ",
+    "ปกติ",
+  ];
+  if (activeTokens.some(function(token) { return text.indexOf(token) >= 0; })) return false;
+  return ["complete", "completed", "done", "finished", "closed", "ผลิตเสร็จ", "เสร็จ", "จบ"].some(function(token) {
+    return text.indexOf(token) >= 0;
+  });
+}
+
+function parseProductionOrderSequence(status, fallback) {
+  const match = String(status || "").match(/(?:^|\s|#)(\d{1,3})(?=\s|\.|-|$)/);
+  return match ? Number(match[1]) : fallback;
+}
+
+function compareExternalProductionOrders(left, right) {
+  const leftNo = Number(left.no || 0);
+  const rightNo = Number(right.no || 0);
+  if (leftNo !== rightNo) return leftNo - rightNo;
+  return Number(left.rowNumber || 0) - Number(right.rowNumber || 0);
 }
 
 function getProductionOrderSheet(machineName, machineId) {
+  if (!PRODUCTION_ORDER_WRITEBACK_ENABLED) {
+    throw new Error("Production order writeback is disabled");
+  }
   const book = openProductionOrderWorkbook();
   const foundSheet = findProductionOrderSheet(book, machineName, machineId);
   if (foundSheet) return foundSheet;
@@ -1105,6 +1494,7 @@ function findProductionOrderSheet(book, machineName, machineId) {
 }
 
 function ensureProductionOrderLayout(sheet) {
+  if (!PRODUCTION_ORDER_WRITEBACK_ENABLED) return;
   ensureSheetSize(sheet, 3, Math.max(PRODUCTION_ORDER_HEADERS.length, 30));
   const current = sheet.getRange(1, 1, 1, PRODUCTION_ORDER_HEADERS.length).getValues()[0];
   const hasHeader = current.some(function(value) {
@@ -1119,11 +1509,93 @@ function ensureProductionOrderLayout(sheet) {
 }
 
 function getProductionOrders(params) {
-  const machineName = String(params.machineName || "");
-  const machineId = String(params.machineId || "");
-  const sheet = getProductionOrderSheet(machineName, machineId);
-  ensureProductionOrderLayout(sheet);
-  return readProductionOrdersFromSheet(sheet, machineId);
+  const book = openProductionOrderWorkbook();
+  return readProductionOrdersFromWorkbook(book, params || {});
+}
+
+function readProductionOrdersFromWorkbook(book, params) {
+  const expectedMachine = String((params && (params.machineName || params.machineId)) || "");
+  const shouldFilterMachine = !!normalizeOrderMachineName(expectedMachine);
+  const orders = [];
+  const sheets = getProductionOrderSourceSheets(book);
+  for (let sheetIndex = 0; sheetIndex < sheets.length; sheetIndex++) {
+    const sheet = sheets[sheetIndex];
+    if (!isReadableProductionOrderSheet(sheet)) continue;
+    const lastRow = Math.min(sheet.getLastRow(), PRODUCTION_ORDER_MAX_ROWS + 20);
+    const lastColumn = Math.min(sheet.getLastColumn(), PRODUCTION_ORDER_READ_MAX_COLUMNS);
+    if (lastRow < 2 || lastColumn < 4) continue;
+    const values = sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
+    const detected = findFixedProductionOrderTable(values);
+    if (!detected) continue;
+    const columns = detected.columns;
+    if (columns.machineName < 0 || columns.orderNo < 0 || (columns.productName < 0 && columns.partNo < 0)) continue;
+    let lastMachineName = "";
+    for (let rowIndex = detected.rowIndex + 1; rowIndex < values.length; rowIndex++) {
+      const row = values[rowIndex];
+      if (detected.source === "fixed") {
+        const hasOrderIdentity = ["orderNo", "productName", "partNo"].some(function(key) {
+          return String(getProductionOrderDisplayValue(row, columns, key) || "").trim();
+        });
+        if (!hasOrderIdentity) continue;
+        const fixedMachineName = getProductionOrderDisplayValue(row, columns, "machineName");
+        if (fixedMachineName && !isFixedProductionOrderDataRow(row)) continue;
+      }
+      const rawMachineName = getProductionOrderDisplayValue(row, columns, "machineName");
+      if (rawMachineName) lastMachineName = rawMachineName;
+      const machineName = rawMachineName || lastMachineName || sheet.getName();
+      if (shouldFilterMachine && !productionOrderMachineMatches(expectedMachine, machineName)) continue;
+      const orderNo = cleanProductionOrderText(getProductionOrderDisplayValue(row, columns, "orderNo"));
+      const productName = cleanProductionOrderText(getProductionOrderDisplayValue(row, columns, "productName"));
+      const partNo = cleanProductionOrderText(getProductionOrderDisplayValue(row, columns, "partNo"));
+      if (![orderNo, productName, partNo].some(function(value) { return String(value || "").trim(); })) continue;
+      const displayProductName = productName || partNo || orderNo;
+      const status = getProductionOrderDisplayValue(row, columns, "status");
+      if (isExternalProductionOrderCompleted(status)) continue;
+      const remainingQtyText = getProductionOrderDisplayValue(row, columns, "remainingQty");
+      const remainingQtyRaw = String(remainingQtyText || "").trim();
+      const hasRemainingQty = remainingQtyRaw !== "" && remainingQtyRaw !== "-";
+      const remainingQty = numberValue(remainingQtyRaw.replace(/,/g, ""));
+      const orderQtyValue = numberValue(String(getProductionOrderDisplayValue(row, columns, "orderQty") || "").replace(/,/g, ""));
+      const producedQty = numberValue(String(getProductionOrderDisplayValue(row, columns, "producedQty") || "").replace(/,/g, ""));
+      if (hasRemainingQty && remainingQty <= 0 && orderQtyValue > 0 && producedQty >= orderQtyValue) continue;
+      if (!hasRemainingQty && orderQtyValue > 0 && producedQty >= orderQtyValue) continue;
+      const displayOrderQty = hasRemainingQty && remainingQty > 0 ? remainingQty : orderQtyValue;
+      const sequence = parseProductionOrderSequence(status, orders.length + 1);
+      orders.push({
+        rowNumber: rowIndex + 1,
+        sourceSheetName: sheet.getName(),
+        machineId: machineName,
+        machineName,
+        no: String(sequence || ""),
+        openedDate: getProductionOrderDisplayValue(row, columns, "openedDate"),
+        orderNo,
+        productName: displayProductName,
+        partNo,
+        rmNo: getProductionOrderDisplayValue(row, columns, "rmNo"),
+        orderQty: displayOrderQty,
+        remainingQty: hasRemainingQty ? remainingQty : "",
+        unit: "PCS",
+        dueDate: "",
+        shift: "",
+        step: getProductionOrderDisplayValue(row, columns, "step") || "-",
+        kpi85: "",
+        dailyTarget: numberValue(String(getProductionOrderDisplayValue(row, columns, "dailyTarget") || "").replace(/,/g, "")),
+        expectedDoneDate: "",
+        expectedDoneTime: "",
+        startDate: getProductionOrderDisplayValue(row, columns, "startDate"),
+        endDate: getProductionOrderDisplayValue(row, columns, "endDate"),
+        producedQty,
+        readyForPainting: "",
+        backlogQty: "",
+        ngRework: numberValue(String(getProductionOrderDisplayValue(row, columns, "ngRework") || "").replace(/,/g, "")),
+        status,
+        progress: "",
+        stock: orderQtyValue,
+      });
+    }
+  }
+  orders.sort(compareExternalProductionOrders);
+  return orders.slice(0, PRODUCTION_ORDER_MAX_ROWS);
 }
 
 function readProductionOrdersFromSheet(sheet, machineId) {
@@ -1172,36 +1644,26 @@ function readProductionOrdersFromSheet(sheet, machineId) {
 
 function isCompletedProductionOrder(order) {
   const status = String(order && order.status || "").trim().toLowerCase();
-  const progress = String(order && order.progress || "").trim().toLowerCase();
   return status.indexOf("complete") >= 0 ||
     status.indexOf("done") >= 0 ||
     status.indexOf("finished") >= 0 ||
     status.indexOf("closed") >= 0 ||
+    status.indexOf("cancelled") >= 0 ||
+    status.indexOf("canceled") >= 0 ||
     status.indexOf("จบ") >= 0 ||
     status.indexOf("เสร็จ") >= 0 ||
-    progress === "100%" ||
-    progress === "100";
+    status.indexOf("ยกเลิก") >= 0;
 }
 
 function getProductionOrderSummaries() {
   const book = openProductionOrderWorkbook();
   const machines = getMachines();
+  const allOrders = readProductionOrdersFromWorkbook(book, {});
   const summaries = machines.map(function(machine) {
-    const sheet = findProductionOrderSheet(book, machine.name, machine.id);
-    if (!sheet) {
-      return {
-        machineId: machine.id,
-        machineName: machine.name,
-        pendingCount: 0,
-        pendingOrders: [],
-      };
-    }
-    ensureProductionOrderLayout(sheet);
-    const orders = readProductionOrdersFromSheet(sheet, machine.id)
+    const orders = allOrders
       .filter(function(order) {
-        return !isCompletedProductionOrder(order) && [order.orderNo, order.productName, order.partNo].some(function(value) {
-          return String(value || "").trim();
-        });
+        return productionOrderMachineMatches(machine.name, order.machineName) ||
+          productionOrderMachineMatches(machine.id, order.machineName);
       })
       .sort(function(left, right) {
         const leftNo = parseProductionOrderNumber(left.no);
@@ -1223,7 +1685,11 @@ function getProductionOrderSummaries() {
           productName: order.productName,
           partNo: order.partNo,
           orderQty: order.orderQty,
-          unit: order.unit,
+          remainingQty: order.remainingQty,
+          unit: order.unit || "PCS",
+          dueDate: order.dueDate,
+          sequence: parseProductionOrderNumber(order.no),
+          status: order.status,
         };
       }),
     };
@@ -1245,6 +1711,9 @@ function findNextProductionOrderRow(sheet) {
 }
 
 function upsertProductionOrder(payload) {
+  if (!PRODUCTION_ORDER_WRITEBACK_ENABLED) {
+    throw new Error("Production order writeback is disabled");
+  }
   const machineName = String(payload.machineName || "");
   const machineId = String(payload.machineId || "");
   const sheet = getProductionOrderSheet(machineName, machineId);
@@ -1295,6 +1764,9 @@ function upsertProductionOrder(payload) {
 }
 
 function reorderProductionOrder(payload) {
+  if (!PRODUCTION_ORDER_WRITEBACK_ENABLED) {
+    throw new Error("Production order writeback is disabled");
+  }
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
@@ -1386,6 +1858,7 @@ function findProductionOrderRowForLog(sheet, log) {
 
 function updateProductionOrderProgressFromLog(log) {
   try {
+    if (!PRODUCTION_ORDER_WRITEBACK_ENABLED) return null;
     if (!log || (!log.productionOrderRowNumber && !log.productionOrderNo)) return null;
     const goodQty = numberValue(log.goodQty);
     if (goodQty <= 0) return null;

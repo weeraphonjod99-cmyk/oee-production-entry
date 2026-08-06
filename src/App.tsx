@@ -349,7 +349,8 @@ const roleNotificationsRefreshMs = 15000;
 const remoteLogsRefreshMs = 120000;
 const remoteMachinesRefreshMs = 60000;
 const productionOrderRefreshMs = 30000;
-const PRODUCTION_ORDER_SHEET_ENABLED = false;
+const PRODUCTION_ORDER_SHEET_ENABLED = true;
+const PRODUCTION_ORDER_WRITEBACK_ENABLED = false;
 const EMPLOYEE_DRAFT_KEY = "oee-production-employee-draft-v1";
 const EMPLOYEE_SELECTED_MACHINE_KEY = "oee-production-selected-machine-v1";
 const EMPLOYEE_MACHINE_STATUS_CACHE_KEY = "oee-production-employee-machine-status-cache-v1";
@@ -1728,16 +1729,17 @@ const productionOrderKey = (order: ProductionOrder) =>
 
 const isCompletedProductionOrder = (order: ProductionOrder) => {
   const status = normalizeText(order.status);
-  const progress = Number(String(order.progress || "").replace(/[^\d.-]/g, "")) || 0;
   return (
     status.includes("จบ") ||
     status.includes("เสร็จ") ||
+    status.includes("ยกเลิก") ||
     status.includes("complete") ||
     status.includes("completed") ||
+    status.includes("cancelled") ||
+    status.includes("canceled") ||
     status.includes("closed") ||
     status.includes("finished") ||
-    status.includes("done") ||
-    progress >= 100
+    status.includes("done")
   );
 };
 
@@ -2490,7 +2492,7 @@ function App() {
     [machineNameById, machineOrderSummaries],
   );
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
-  const canManageProductionOrders = canManageProductionOrdersForRole(session?.role);
+  const canManageProductionOrders = PRODUCTION_ORDER_WRITEBACK_ENABLED && canManageProductionOrdersForRole(session?.role);
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs].map((log) => withCanonicalMachineName(log, machineNameById))),
     [localLogs, machineNameById, remoteLogs],
@@ -2517,9 +2519,11 @@ function App() {
     if (!PRODUCTION_ORDER_SHEET_ENABLED) return [];
     return productionOrders
       .filter((order) => !isCompletedProductionOrder(order) && (order.productName || order.partNo || order.orderNo))
-      .filter((order) => canManageProductionOrders || hasProductionOrderSequence(order))
+      .filter((order) =>
+        PRODUCTION_ORDER_WRITEBACK_ENABLED ? canManageProductionOrders || hasProductionOrderSequence(order) : true,
+      )
       .sort(compareProductionOrders)
-      .slice(0, 12);
+      .slice(0, 24);
   }, [canManageProductionOrders, productionOrders]);
   const filteredProducts = useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
@@ -3170,7 +3174,7 @@ function App() {
   };
 
   const selectProductionOrder = (order: ProductionOrder) => {
-    if (!canManageProductionOrders && !hasProductionOrderSequence(order)) {
+    if (PRODUCTION_ORDER_WRITEBACK_ENABLED && !canManageProductionOrders && !hasProductionOrderSequence(order)) {
       setProblemDialog({
         title: "ยังไม่ได้จัดลำดับผลิต",
         message: "กรุณาให้ Administrator หรือ Planing จัดลำดับออเดอร์ก่อน ฝ่ายผลิตจึงจะเลือกออเดอร์นี้ได้",
@@ -3191,7 +3195,7 @@ function App() {
         ...(matchedProduct ? applyProductToDraft(matchedProduct) : {}),
         productName: order.productName || matchedProduct?.productName || prev.productName,
         partNo: order.partNo || matchedProduct?.partNo || prev.partNo,
-        step: matchedProduct?.step || prev.step || "-",
+        step: order.step || matchedProduct?.step || prev.step || "-",
         materialOfProduction: order.rmNo || prev.materialOfProduction || "",
         productionOrderRowNumber: order.rowNumber,
         productionOrderNo: order.orderNo || "",
@@ -3211,6 +3215,11 @@ function App() {
       setProductionOrders([]);
       setProductionOrdersError("");
       setProductionOrderForm(emptyProductionOrderForm);
+      return;
+    }
+    if (!PRODUCTION_ORDER_WRITEBACK_ENABLED) {
+      setProductionOrdersError("");
+      setStatus("ออเดอร์อ่านจาก Google Sheet ต้นทางเท่านั้น กรุณาแก้ไขในไฟล์ออเดอร์โดยตรง");
       return;
     }
     if (!canManageProductionOrders) {
@@ -3893,7 +3902,14 @@ function App() {
     } = {},
   ) => {
     const shouldValidateBeforeSave = !options.autoSubmit;
-    if (PRODUCTION_ORDER_SHEET_ENABLED && shouldValidateBeforeSave && isEmployeeEntry && !canManageProductionOrders && !targetDraft.productionOrderRowNumber) {
+    if (
+      PRODUCTION_ORDER_SHEET_ENABLED &&
+      PRODUCTION_ORDER_WRITEBACK_ENABLED &&
+      shouldValidateBeforeSave &&
+      isEmployeeEntry &&
+      !canManageProductionOrders &&
+      !targetDraft.productionOrderRowNumber
+    ) {
       const message = "ฝ่ายผลิตต้องเลือกออเดอร์ที่ Planning/Admin จัดลำดับไว้แล้วก่อนส่งยอด";
       setStatus(message);
       setProblemDialog({ title: "ต้องเลือกออเดอร์ตามลำดับผลิต", message });
@@ -4756,7 +4772,7 @@ function App() {
                             <span className="pending-order-main">
                               <strong>{order.productName || "-"}</strong>
                               <b className="pending-order-number">Order No. {order.orderNo || "-"}</b>
-                              <small>Part No. {order.partNo || "-"} • Order {order.orderNo || "-"}</small>
+                              <small>Part No. {order.partNo || "-"} • Step {order.step || "-"} • Order {order.orderNo || "-"}</small>
                             </span>
                             <span className="pending-order-meta">
                               {order.orderQty ? `จำนวน ${formatNumber(order.orderQty)} ${order.unit || "pcs"}` : "ยังไม่ระบุจำนวน"}
