@@ -1281,14 +1281,15 @@ select:disabled {
 }
 
 .pending-order-panel {
-  background: #fff7ed;
-  border: 2px solid #f97316;
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(249, 115, 22, 0.14);
+  background: linear-gradient(180deg, #fff7ed 0%, #fffaf5 100%);
+  border: 2px solid #fb923c;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.12);
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-column: 1 / -1;
-  padding: 14px;
+  overflow: hidden;
+  padding: 12px;
 }
 
 .production-order-disabled {
@@ -1296,7 +1297,7 @@ select:disabled {
 }
 
 .pending-order-header {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   justify-content: space-between;
   gap: 14px;
@@ -1316,7 +1317,7 @@ select:disabled {
 
 .pending-order-header strong {
   color: #061635;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 1000;
 }
 
@@ -1339,12 +1340,17 @@ select:disabled {
 
 .pending-order-list {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  grid-auto-columns: minmax(250px, 310px);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
 }
 
 .pending-order-item {
-  align-items: center;
+  align-items: start;
   background: #ffffff;
   border: 1px solid #fed7aa;
   border-radius: 10px;
@@ -1353,8 +1359,9 @@ select:disabled {
   display: grid;
   gap: 8px;
   grid-template-columns: auto minmax(0, 1fr);
-  min-height: 76px;
+  min-height: 104px;
   padding: 10px;
+  scroll-snap-align: start;
   text-align: left;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
@@ -1410,11 +1417,15 @@ select:disabled {
 }
 
 .pending-order-main strong {
-  font-size: 17px;
+  display: -webkit-box;
+  font-size: 16px;
   font-weight: 1000;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
 }
 
 .pending-order-main small,
@@ -1431,7 +1442,7 @@ select:disabled {
   border-radius: 6px;
   color: #9a3412;
   display: inline-flex;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 1000;
   line-height: 1.2;
   padding: 4px 7px;

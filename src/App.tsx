@@ -347,6 +347,9 @@ const employeeLiveStatusPublishMs = 30000;
 const employeeStatusHeartbeatMs = 60000;
 const roleNotificationsRefreshMs = 15000;
 const remoteLogsRefreshMs = 120000;
+const postSaveRemoteRefreshMs = 1800;
+const postSaveRemoteLogsLimit = 600;
+const postSaveOrderRefreshMs = 2200;
 const remoteMachinesRefreshMs = 60000;
 const productionOrderRefreshMs = 30000;
 const PRODUCTION_ORDER_SHEET_ENABLED = true;
@@ -2105,6 +2108,8 @@ function App() {
   const employeeSelectedMachineRestoredRef = useRef(false);
   const machinesSignatureRef = useRef(getMachinesSignature(fallbackMachines));
   const remoteLogsSignatureRef = useRef("");
+  const postSaveRemoteRefreshTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const postSaveOrderRefreshTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const employeeStatusesSignatureRef = useRef("");
   const employeePublishedStatusSignatureRef = useRef("");
   const employeePublishedStatusAtRef = useRef(0);
@@ -2112,6 +2117,13 @@ function App() {
   const employeeSharedMachineStatusesRef = useRef<EmployeeMachineStatus[]>([]);
   const employeeClearedMachineAtRef = useRef<Record<string, string>>({});
   const roleNotificationLatestRef = useRef("");
+
+  useEffect(() => {
+    return () => {
+      if (postSaveRemoteRefreshTimerRef.current) window.clearTimeout(postSaveRemoteRefreshTimerRef.current);
+      if (postSaveOrderRefreshTimerRef.current) window.clearTimeout(postSaveOrderRefreshTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -2493,6 +2505,65 @@ function App() {
   );
   const currentMachine = machines.find((machine) => machine.id === draft.machineId) ?? defaultMachine;
   const canManageProductionOrders = PRODUCTION_ORDER_WRITEBACK_ENABLED && canManageProductionOrdersForRole(session?.role);
+  const mergeSavedRemoteLog = useCallback((saved: ProductionLog) => {
+    setRemoteLogs((current) => {
+      const next = uniqueLogs([saved, ...current]).filter(isVisibleLog);
+      remoteLogsSignatureRef.current = getRemoteLogsSignature(next);
+      return next;
+    });
+  }, []);
+  const queuePostSaveRemoteRefresh = useCallback(
+    (saved?: ProductionLog) => {
+      if (!remoteEnabled) return;
+      if (postSaveRemoteRefreshTimerRef.current) {
+        window.clearTimeout(postSaveRemoteRefreshTimerRef.current);
+      }
+      postSaveRemoteRefreshTimerRef.current = window.setTimeout(() => {
+        postSaveRemoteRefreshTimerRef.current = null;
+        if (document.hidden) return;
+        fetchRemoteLogs(postSaveRemoteLogsLimit)
+          .then((logs) => {
+            const visibleLogs = logs.filter(isVisibleLog);
+            setRemoteLogs((current) => {
+              const next = uniqueLogs(saved ? [saved, ...visibleLogs, ...current] : [...visibleLogs, ...current]).filter(
+                isVisibleLog,
+              );
+              const signature = getRemoteLogsSignature(next);
+              if (signature === remoteLogsSignatureRef.current) return current;
+              remoteLogsSignatureRef.current = signature;
+              return next;
+            });
+          })
+          .catch(() => {
+            if (saved) mergeSavedRemoteLog(saved);
+          });
+      }, postSaveRemoteRefreshMs);
+    },
+    [mergeSavedRemoteLog, remoteEnabled],
+  );
+  const queueProductionOrderRefresh = useCallback(
+    (saved: ProductionLog) => {
+      if (!PRODUCTION_ORDER_SHEET_ENABLED) return;
+      if (postSaveOrderRefreshTimerRef.current) {
+        window.clearTimeout(postSaveOrderRefreshTimerRef.current);
+      }
+      postSaveOrderRefreshTimerRef.current = window.setTimeout(() => {
+        postSaveOrderRefreshTimerRef.current = null;
+        if (document.hidden) return;
+        if (saved.productionOrderRowNumber && saved.machineId === currentMachine.id) {
+          fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
+            .then((orders) => setProductionOrders(orders))
+            .catch((error) =>
+              setProductionOrdersError(error instanceof Error ? error.message : "โหลด Order จาก Google Sheet ไม่สำเร็จ"),
+            );
+        }
+        fetchProductionOrderSummaries()
+          .then((summaries) => setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary)))
+          .catch(() => undefined);
+      }, postSaveOrderRefreshMs);
+    },
+    [currentMachine.id, currentMachine.name],
+  );
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs].map((log) => withCanonicalMachineName(log, machineNameById))),
     [localLogs, machineNameById, remoteLogs],
@@ -3999,19 +4070,9 @@ function App() {
           : `บันทึกยอดแล้ว: ${saved.machineName} วันที่ ${saved.date} (ลง Google Sheet และชีตเครื่องแล้ว)`;
       setLocalLogs(next);
       if (remoteEnabled) {
-        fetchRemoteLogs()
-          .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
-          .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
-        if (PRODUCTION_ORDER_SHEET_ENABLED && saved.productionOrderRowNumber && saved.machineId === currentMachine.id) {
-          fetchProductionOrders({ machineId: currentMachine.id, machineName: currentMachine.name })
-            .then((orders) => setProductionOrders(orders))
-            .catch((error) => setProductionOrdersError(error instanceof Error ? error.message : "โหลดออเดอร์การผลิตไม่สำเร็จ"));
-        }
-        if (PRODUCTION_ORDER_SHEET_ENABLED) {
-          fetchProductionOrderSummaries()
-            .then((summaries) => setMachineOrderSummaries(summaries.filter(isVisibleOrderSummary)))
-            .catch(() => undefined);
-        }
+        mergeSavedRemoteLog(saved);
+        queuePostSaveRemoteRefresh(saved);
+        queueProductionOrderRefresh(saved);
       }
       setStatus(successMessage);
       setSuccessDialog({ title: options.autoSubmit ? "ส่งยอดอัตโนมัติแล้ว" : "บันทึกเสร็จแล้ว", message: successMessage });
@@ -4031,9 +4092,9 @@ function App() {
             const saved = await updateRemoteLog(repairedLog);
             const next = upsertLocalLog(saved);
             setLocalLogs(next);
-            fetchRemoteLogs()
-              .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
-              .catch(() => setRemoteLogs((logs) => uniqueLogs([saved, ...logs])));
+            mergeSavedRemoteLog(saved);
+            queuePostSaveRemoteRefresh(saved);
+            queueProductionOrderRefresh(saved);
             if (!shouldUpdate) clearEmployeeStoredDraft(saved.machineId);
             if (options.resetAfterSave !== false) resetDraft({ clearProduct: !shouldUpdate && isEmployeeEntry });
             const successMessage = options.autoSubmit
@@ -4046,9 +4107,7 @@ function App() {
             // Keep the draft below so the operator can retry after checking Google Sheet.
           }
         }
-        fetchRemoteLogs()
-          .then((logs) => setRemoteLogs(logs.filter(isVisibleLog)))
-          .catch(() => undefined);
+        queuePostSaveRemoteRefresh();
         const message =
           "รายการนี้มีอยู่ใน Google Sheet แล้ว ระบบล้างร่างและสถานะเครื่องนี้ให้แล้ว สามารถเลือกงานใหม่หรือเริ่มลงเวลาใหม่ได้";
         setStatus(message);

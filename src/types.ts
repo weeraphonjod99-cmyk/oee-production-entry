@@ -30,6 +30,7 @@ export type ProductionOrder = {
   orderNo: string;
   productName: string;
   partNo: string;
+  step?: string;
   rmNo?: string;
   orderQty?: number;
   unit?: string;
