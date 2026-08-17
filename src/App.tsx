@@ -4003,8 +4003,32 @@ function App() {
     const savedDate = targetDraft.date || getTodayInputValue();
     const savedRecordDate = shouldUpdate ? getDraftRecordDate(options.editingLog) : getDraftRecordDate(targetDraft);
     const savedRecordTime = shouldUpdate ? getDraftRecordTime(options.editingLog) : getDraftRecordTime(targetDraft);
+    const submittedAt = options.submittedAt ?? new Date();
+    const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
+    const entryEventsForDetails = options.entryEvents ?? employeeDraftEventsRef.current;
+    const entryUser = options.entryUser || session?.displayName || session?.username || "";
     const savedMinutesPerSlot = targetDraft.minutesPerSlot || defaultMinutesPerSlot;
-    const savedWorkMinutes = clampWorkMinutes(targetDraft.workMinutes);
+    const workStartCandidates = new Set<string>();
+    const addWorkStartCandidate = (value?: string | null) => {
+      if (!value) return;
+      const parsed = parseStoredDateTime(value);
+      if (parsed) workStartCandidates.add(parsed.toISOString());
+    };
+    if (isEmployeeEntry && !shouldUpdate) {
+      addWorkStartCandidate(employeeWorkStartedAt);
+      addWorkStartCandidate(activeTimerForDetails?.originalStartedAt || activeTimerForDetails?.startedAt);
+      entryEventsForDetails.forEach((event) => {
+        addWorkStartCandidate(event.startedAt);
+        addWorkStartCandidate(event.at);
+      });
+    }
+    const savedWorkMinutes = clampWorkMinutes(
+      Array.from(workStartCandidates).reduce(
+        (maxMinutes, startedAt) =>
+          Math.max(maxMinutes, getElapsedShiftWorkMinutes(savedDate, targetDraft.shift, submittedAt, startedAt)),
+        clampWorkMinutes(targetDraft.workMinutes),
+      ),
+    );
     const savedTimeSlots = slotsFromMinutes(savedWorkMinutes, savedMinutesPerSlot);
     const savedMeetingMinutes = removeAutomaticBreakMinutes({
       meetingMinutes: Number(targetDraft.meetingMinutes || 0),
@@ -4036,10 +4060,6 @@ function App() {
       setProblemDialog({ title: "ตรวจสอบเวลาผลิต", message });
       return false;
     }
-    const submittedAt = options.submittedAt ?? new Date();
-    const activeTimerForDetails = options.activeTimer !== undefined ? options.activeTimer : employeeActiveTimerRef.current;
-    const entryEventsForDetails = options.entryEvents ?? employeeDraftEventsRef.current;
-    const entryUser = options.entryUser || session?.displayName || session?.username || "";
     const log: ProductionLog = {
       ...normalizedTargetDraft,
       buttonDetails: isEmployeeEntry && !shouldUpdate ? buildEmployeeButtonDetails(normalizedTargetDraft, entryEventsForDetails, submittedAt, activeTimerForDetails) : targetDraft.buttonDetails || options.editingLog?.buttonDetails || "",
