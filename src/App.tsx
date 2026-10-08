@@ -1,4 +1,3 @@
-import { FactoryOverview } from "./components/FactoryOverview";
 import {
   BarChart3,
   AlertTriangle,
@@ -5398,6 +5397,14 @@ function App() {
 
         {tab === "dashboard" && (
           <section className="dashboard-layout">
+            <div className="kpi-grid">
+              <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
+              <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
+              <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
+              <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
+              <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
+              <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
+            </div>
             <FiltersBar filters={dashboardFilters} machines={machines} setFilters={setDashboardFilters} />
             {dashboardEmptyMessage && (
               <FilterEmptyNotice
@@ -5407,8 +5414,6 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
-            <FactoryOverview logs={dashboardLogs} machines={machines.filter(machine => !getFilterMachineIds(dashboardFilters).length || getFilterMachineIds(dashboardFilters).includes(machine.id))} onSelect={machineId => setDashboardFilters({ ...dashboardFilters, machineId, machineIds: [machineId] })} />
-            <details className="fo-detail-reports"><summary>รายงานวิเคราะห์เพิ่มเติม • เป้าหมาย / OEE / ผลิตภัณฑ์</summary>
             <MachineComparisonPanel
               capacityContext={dashboardCapacityContext}
               logs={dashboardLogs}
@@ -5421,7 +5426,6 @@ function App() {
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
             <Trend logs={dashboardLogs} />
-            </details>
           </section>
         )}
 
