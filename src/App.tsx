@@ -1,3 +1,4 @@
+import { FactoryOverview } from "./components/FactoryOverview";
 import {
   BarChart3,
   AlertTriangle,
@@ -5397,14 +5398,6 @@ function App() {
 
         {tab === "dashboard" && (
           <section className="dashboard-layout">
-            <div className="kpi-grid">
-              <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
-              <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
-              <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
-              <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
-              <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
-              <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
-            </div>
             <FiltersBar filters={dashboardFilters} machines={machines} setFilters={setDashboardFilters} />
             {dashboardEmptyMessage && (
               <FilterEmptyNotice
@@ -5414,6 +5407,8 @@ function App() {
                 onUseLatest={useLatestDashboardDate}
               />
             )}
+            <FactoryOverview logs={dashboardLogs} machines={machines.filter(machine => !getFilterMachineIds(dashboardFilters).length || getFilterMachineIds(dashboardFilters).includes(machine.id))} onSelect={machineId => setDashboardFilters({ ...dashboardFilters, machineId, machineIds: [machineId] })} />
+            <details className="fo-detail-reports"><summary>รายงานวิเคราะห์เพิ่มเติม • เป้าหมาย / OEE / ผลิตภัณฑ์</summary>
             <MachineComparisonPanel
               capacityContext={dashboardCapacityContext}
               logs={dashboardLogs}
@@ -5426,6 +5421,7 @@ function App() {
             <PartNoSummary logs={dashboardLogs} />
             <MachineRanking logs={dashboardLogs} machines={machines} />
             <Trend logs={dashboardLogs} />
+            </details>
           </section>
         )}
 
@@ -6077,7 +6073,10 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           <span className="label-text">Username <RequiredMark /></span>
           <input
             autoComplete="username"
-            autoFocus
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
             onChange={(event) => setUsername(event.target.value)}
             placeholder="admin หรือ production"
             required
@@ -6089,6 +6088,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           <span className="label-text">Password <RequiredMark /></span>
           <input
             autoComplete="current-password"
+            enterKeyHint="go"
             onChange={(event) => setPassword(event.target.value)}
             placeholder="รหัสผ่าน"
             required
@@ -6101,8 +6101,13 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           {loading ? "กำลังตรวจสอบ" : "เข้าใช้งาน"}
         </button>
         <p className="login-note">
-          ใช้สำหรับกันหน้าจอเบื้องต้นบน GitHub Pages หากต้องการความปลอดภัยจริงควรต่อ backend authentication
+          เปิดใช้งานผ่าน Safari บน iPhone/iPad หรือ Chrome บน Android โดยเชื่อมต่ออินเทอร์เน็ตขณะใช้งาน
         </p>
+        <details className="mobile-install-help">
+          <summary>เพิ่มไอคอน OEE บนหน้าจอหลัก</summary>
+          <p><strong>iPhone / iPad:</strong> เปิดด้วย Safari → แชร์ → เพิ่มไปยังหน้าจอโฮม</p>
+          <p><strong>Android:</strong> เปิดด้วย Chrome → เมนู ⋮ → เพิ่มลงในหน้าจอหลัก หรือ ติดตั้งแอป</p>
+        </details>
       </form>
     </main>
   );
@@ -6888,7 +6893,7 @@ function MachineComparisonPanel({
   selectedMachineIds: string[];
 }) {
   const rows = useMemo(() => {
-    if (selectedMachineIds.length < 2) return [];
+    if (selectedMachineIds.length === 0) return [];
     const machineLookup = new Map(machines.map((machine) => [machine.id, machine]));
     return selectedMachineIds.map((machineId) => {
       const machine = machineLookup.get(machineId);
@@ -6904,24 +6909,39 @@ function MachineComparisonPanel({
               const productName = String(log.productName || "-").trim() || "-";
               const partNo = String(log.partNo || "-").trim() || "-";
               const step = String(log.step || "-").trim() || "-";
-              const key = [productName, partNo, step].join("::");
-              const current = map.get(key) ?? { logs: 0, partNo, productName, step, total: 0 };
+              const orderNo = String(log.productionOrderNo || "").trim();
+              const key = JSON.stringify([productName, partNo, step, orderNo]);
+              const current = map.get(key) ?? { logs: 0, partNo, productName, step, orderNo, total: 0, run: 0, downtime: 0, recorded: 0, target: 0, missingTarget: 0, capacityMatches: 0 };
+              const target = getCapacityTargetQtyForLog(log, capacityContext);
+              current.target += Number.isFinite(target.targetQty) && target.targetQty > 0 ? target.targetQty : 0;
+              if (!(Number.isFinite(target.targetQty) && target.targetQty > 0)) current.missingTarget += 1;
+              if (target.matched) current.capacityMatches += 1;
               current.logs += 1;
+              current.run += Number(log.normalMinutes || 0);
+              current.downtime += totalDowntime(log);
+              current.recorded += getLogWorkMinutes(log);
               current.total += Number(log.goodQty || 0) + Number(log.ngQty || 0) + Number(log.testQty || 0);
               map.set(key, current);
               return map;
             },
-            new Map<string, { logs: number; partNo: string; productName: string; step: string; total: number }>(),
+            new Map<string, { logs: number; partNo: string; productName: string; step: string; orderNo: string; total: number; run: number; downtime: number; recorded: number; target: number; missingTarget: number; capacityMatches: number }>(),
           )
           .values(),
       ]
-        .sort((a, b) => b.total - a.total || b.logs - a.logs || a.productName.localeCompare(b.productName))
-        .slice(0, 3);
+        .sort((a, b) => b.run - a.run || b.total - a.total || a.productName.localeCompare(b.productName));
       return {
         machineId,
         machineName: machine?.name ?? machineLogs[0]?.machineName ?? machineId,
         downtimeProblems,
         products: productRows,
+        dailyTimes: [...machineLogs.reduce((map, log) => {
+          const day = map.get(log.date) ?? { date: log.date, run: 0, downtime: 0, recorded: 0 };
+          day.run += Number(log.normalMinutes || 0);
+          day.downtime += totalDowntime(log);
+          day.recorded += getLogWorkMinutes(log);
+          map.set(log.date, day);
+          return map;
+        }, new Map<string, { date: string; run: number; downtime: number; recorded: number }>()).values()].sort((a, b) => a.date.localeCompare(b.date)),
         summary,
         logs: machineLogs.length,
       };
@@ -6955,16 +6975,35 @@ function MachineComparisonPanel({
                 <span>OEE {formatPercent(row.summary.oee)}</span>
               </div>
               <div className="machine-compare-products">
-                <small>ชิ้นงาน / Products stamped</small>
+                <small>เวลาทำงานแยกตามงาน • ทุกงาน</small>
+              <section className="machine-time-total" aria-label="เวลาทำงานรวม">
+                <small>เวลาผลิตจริงรวม • ตามช่วงและกะที่เลือก</small>
+                <strong>{formatNumber(row.summary.run)} นาที</strong>
+                <span>เวลาหยุด {formatNumber(row.summary.downtime)} นาที</span>
+                <span>เวลาบันทึกรวม {formatNumber(row.products.reduce((sum, product) => sum + product.recorded, 0))} นาที</span>
+              </section>
+
                 {row.products.length > 0 ? (
                   <div>
                     {row.products.map((product) => (
-                      <span key={`${product.productName}-${product.partNo}-${product.step}`}>
+                      <span key={JSON.stringify([product.productName, product.partNo, product.step, product.orderNo])}>
                         <b>{product.productName}</b>
                         <em>
-                          Part No. {product.partNo}
+                          Part No. {product.partNo}{product.orderNo ? ` · ใบสั่ง ${product.orderNo}` : ""}
                           {product.step && product.step !== "-" ? ` · Step ${product.step}` : ""} · Output {formatNumber(product.total)}
                         </em>
+                        <div className="product-kpi-grid">
+                          <div><small>Target (ชิ้น)</small><strong>{product.missingTarget === 0 ? formatNumber(product.target) : "—"}</strong></div>
+                          <div><small>Output (ชิ้น)</small><strong>{formatNumber(product.total)}</strong></div>
+                          <div><small>เป้าเฉลี่ย / นาที</small><strong>{product.recorded > 0 && product.missingTarget === 0 ? formatRate(product.target / product.recorded) : "—"}</strong></div>
+                          <div><small>ผลิตเฉลี่ย / นาที</small><strong>{product.recorded > 0 ? formatRate(product.total / product.recorded) : "—"}</strong></div>
+                          <div><small>KPI เทียบเป้า</small><strong>{product.missingTarget === 0 && product.target > 0 && product.recorded > 0 ? formatPercent(product.total / product.target) : "—"}</strong></div>
+                          <div><small>ส่วนต่าง (ชิ้น)</small><strong>{product.missingTarget === 0 ? formatNumber(product.total - product.target) : "—"}</strong></div>
+                        </div>
+                        <em>ค่าเฉลี่ยใช้เวลาบันทึกรวม {formatNumber(product.recorded)} นาที • Output รวม Good + NG + Test</em>
+                        <em>{product.missingTarget > 0 ? `ยังคำนวณ KPI ไม่ได้: ขาดเป้า ${product.missingTarget} รายการ` : `เป้าจากตารางกำลังผลิต ${product.capacityMatches}/${product.logs} รายการ ที่เหลือใช้สูตรเป้าเดิมของรายการ`} • KPI = Output ÷ Target × 100</em>
+                        <b className="product-work-time">ผลิตจริง {formatNumber(product.run)} นาที</b>
+                        <em>หยุด {formatNumber(product.downtime)} นาที · บันทึกรวม {formatNumber(product.recorded)} นาที</em>
                       </span>
                     ))}
                   </div>
@@ -6972,6 +7011,17 @@ function MachineComparisonPanel({
                   <p>ยังไม่มีชิ้นงานในช่วงนี้</p>
                 )}
               </div>
+              <section className="machine-daily-times" aria-label="เวลาทำงานแยกตามวัน">
+                <h3>เวลาทำงานของแต่ละวัน</h3>
+                <p>นาที • รวมเฉพาะกะและรายการที่เลือก</p>
+                {row.dailyTimes.length ? <div className="machine-daily-times-scroll"><table>
+                  <thead><tr><th>วันที่ทำงาน</th><th>ผลิตจริง</th><th>หยุด</th><th>บันทึกรวม</th></tr></thead>
+                  <tbody>{row.dailyTimes.map(day => <tr key={day.date}>
+                    <th scope="row">{day.date}</th><td>{formatNumber(day.run)}</td><td>{formatNumber(day.downtime)}</td><td>{formatNumber(day.recorded)}</td>
+                  </tr>)}</tbody>
+                </table></div> : <p>ไม่มีรายการในช่วงที่เลือก</p>}
+                <small>เวลาบันทึกไม่ใช่เวลาตามแผน ช่วงเวลาที่บันทึกซ้อนกันอาจถูกนับซ้ำ</small>
+              </section>
               <div className="machine-compare-visual">
                 <div
                   className="machine-compare-donut"
@@ -7635,8 +7685,8 @@ function DailyMachineCompactTrendChart({
   machines: Machine[];
 }) {
   const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
-  const latest = rows.at(-1);
-  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const latest = rows[rows.length - 1];
+  const previous = rows.length > 1 ? rows[rows.length - 2] : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
   const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
   const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
@@ -7680,7 +7730,7 @@ function DailyMachineCompactTrendChart({
   const trendPoints = chartDays.map((point) => `${point.x},${point.y}`).join(" ");
   const trendAreaPath =
     chartDays.length > 0
-      ? `M ${chartDays[0].x} ${plotTop + plotHeight} L ${chartDays.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${chartDays.at(-1)?.x ?? chartDays[0].x} ${plotTop + plotHeight} Z`
+      ? `M ${chartDays[0].x} ${plotTop + plotHeight} L ${chartDays.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${chartDays[chartDays.length - 1]?.x ?? chartDays[0].x} ${plotTop + plotHeight} Z`
       : "";
 
   return (
@@ -7788,8 +7838,8 @@ function DailyMachineProfessionalTrendChart({
   machines: Machine[];
 }) {
   const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
-  const latest = rows.at(-1);
-  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const latest = rows[rows.length - 1];
+  const previous = rows.length > 1 ? rows[rows.length - 2] : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
   const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
   const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
@@ -7833,7 +7883,7 @@ function DailyMachineProfessionalTrendChart({
   const trendPoints = chartDays.map((point) => `${point.x},${point.y}`).join(" ");
   const trendAreaPath =
     chartDays.length > 0
-      ? `M ${chartDays[0].x} ${plotTop + plotHeight} L ${chartDays.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${chartDays.at(-1)?.x ?? chartDays[0].x} ${plotTop + plotHeight} Z`
+      ? `M ${chartDays[0].x} ${plotTop + plotHeight} L ${chartDays.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${chartDays[chartDays.length - 1]?.x ?? chartDays[0].x} ${plotTop + plotHeight} Z`
       : "";
 
   return (
@@ -8016,8 +8066,8 @@ function DailyMachineProductionTrendChart({
   machines: Machine[];
 }) {
   const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
-  const latest = rows.at(-1);
-  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const latest = rows[rows.length - 1];
+  const previous = rows.length > 1 ? rows[rows.length - 2] : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
   const trendPoints = rows
     .map((row, index) => {
@@ -8145,8 +8195,8 @@ function DailyMachinePerformanceChart({
   machines: Machine[];
 }) {
   const rows = useMemo(() => buildDailyPerformanceRows(logs, machines, capacityContext).slice(-30), [capacityContext, logs, machines]);
-  const latest = rows.at(-1);
-  const previous = rows.length > 1 ? rows.at(-2) : undefined;
+  const latest = rows[rows.length - 1];
+  const previous = rows.length > 1 ? rows[rows.length - 2] : undefined;
   const maxOutput = Math.max(1, ...rows.map((row) => row.actualOutput));
   const latestOutputDelta = latest && previous ? latest.actualOutput - previous.actualOutput : 0;
   const latestOutputDeltaPercent = latest && previous && previous.actualOutput > 0 ? latestOutputDelta / previous.actualOutput : 0;
@@ -8298,7 +8348,7 @@ function buildMachineCapacityRows(
       ...row,
       availability: clampRatio(row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0),
       gapQty: row.actualOutput - row.targetQty,
-      utilization: clampRatio(row.targetQty > 0 ? row.actualOutput / row.targetQty : 0),
+      utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
     }))
     .sort(
       (a, b) =>
@@ -8321,7 +8371,7 @@ function MachineCapacityDashboard({
   return (
     <div className="analysis-panel capacity-panel">
       <div className="report-table-heading compact-heading">
-        <h2>อัตราใช้กำลังผลิตรายเครื่อง</h2>
+        <h2>ผลผลิตเทียบเป้าตามเวลาบันทึก</h2>
         <span>{formatNumber(rows.length)} เครื่อง</span>
       </div>
       <div className="data-table-wrap capacity-table">
@@ -8331,11 +8381,11 @@ function MachineCapacityDashboard({
               <th>Machine</th>
               <th>Dates</th>
               <th>Logs</th>
-              <th>Work min</th>
+              <th title="รวมเวลาจากรายการบันทึก ไม่ใช่เวลาตามแผน">เวลาบันทึก (นาที)</th>
               <th>Target</th>
               <th>Actual</th>
               <th>Gap</th>
-              <th>Utilization</th>
+              <th>ผลผลิตเทียบเป้า</th>
               <th>Availability</th>
             </tr>
           </thead>
