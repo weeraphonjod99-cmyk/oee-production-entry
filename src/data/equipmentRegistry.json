@@ -21,8 +21,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/90f28a824fb0ea3e.webp",
+          "width": 1200,
+          "height": 899,
+          "sourceColumn": "M",
+          "sourceDigest": "90f28a824fb0ea3e"
+        },
+        {
+          "src": "equipment-images/40f49641bfc7a276.webp",
+          "width": 1200,
+          "height": 923,
+          "sourceColumn": "N",
+          "sourceDigest": "40f49641bfc7a276"
+        }
       ]
     },
     {
@@ -44,8 +58,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/7388381b711eed2c.webp",
+          "width": 1200,
+          "height": 899,
+          "sourceColumn": "M",
+          "sourceDigest": "7388381b711eed2c"
+        },
+        {
+          "src": "equipment-images/18dea77d11b4a143.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "18dea77d11b4a143"
+        }
       ]
     },
     {
@@ -67,8 +95,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/21c6f2bccec065da.webp",
+          "width": 1200,
+          "height": 899,
+          "sourceColumn": "M",
+          "sourceDigest": "21c6f2bccec065da"
+        },
+        {
+          "src": "equipment-images/55426a778d5b2030.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "55426a778d5b2030"
+        }
       ]
     },
     {
@@ -90,8 +132,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/762b600dde0a97b6.webp",
+          "width": 1200,
+          "height": 899,
+          "sourceColumn": "M",
+          "sourceDigest": "762b600dde0a97b6"
+        },
+        {
+          "src": "equipment-images/4b67f15d4635585e.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "4b67f15d4635585e"
+        }
       ]
     },
     {
@@ -113,8 +169,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/8059c25dd4599dd1.webp",
+          "width": 1200,
+          "height": 899,
+          "sourceColumn": "M",
+          "sourceDigest": "8059c25dd4599dd1"
+        },
+        {
+          "src": "equipment-images/c0cfd3a57d037c45.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "c0cfd3a57d037c45"
+        }
       ]
     },
     {
@@ -136,8 +206,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/085265c72e0137e9.webp",
+          "width": 1200,
+          "height": 899,
+          "sourceColumn": "M",
+          "sourceDigest": "085265c72e0137e9"
+        },
+        {
+          "src": "equipment-images/bf9e4f2328627265.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "bf9e4f2328627265"
+        }
       ]
     },
     {
@@ -159,7 +243,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/e4403906ac6b0569.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "e4403906ac6b0569"
+        },
+        {
+          "src": "equipment-images/b6b6ab2a19a99d45.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "b6b6ab2a19a99d45"
+        }
+      ]
     },
     {
       "id": "equipment-0008",
@@ -180,7 +280,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/4622a17b1b30a7cf.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "4622a17b1b30a7cf"
+        },
+        {
+          "src": "equipment-images/61f9b3785ab28fe6.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "61f9b3785ab28fe6"
+        }
+      ]
     },
     {
       "id": "equipment-0009",
@@ -201,7 +317,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/c15f945fa759655e.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "c15f945fa759655e"
+        },
+        {
+          "src": "equipment-images/aa2c720dfbdc06c2.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "aa2c720dfbdc06c2"
+        }
+      ]
     },
     {
       "id": "equipment-0010",
@@ -222,7 +354,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/b3c22900264dedaa.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "b3c22900264dedaa"
+        },
+        {
+          "src": "equipment-images/ead81d1ee44f7e27.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "ead81d1ee44f7e27"
+        }
+      ]
     },
     {
       "id": "equipment-0011",
@@ -243,7 +391,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/535062078c449849.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "535062078c449849"
+        },
+        {
+          "src": "equipment-images/e141c971d91de1e9.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "e141c971d91de1e9"
+        }
+      ]
     },
     {
       "id": "equipment-0012",
@@ -264,7 +428,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/b56897a4cc01891a.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "b56897a4cc01891a"
+        },
+        {
+          "src": "equipment-images/5a84f695e8e6ade0.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "5a84f695e8e6ade0"
+        }
+      ]
     },
     {
       "id": "equipment-0013",
@@ -285,7 +465,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/8e57e6e1f95ba129.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "8e57e6e1f95ba129"
+        },
+        {
+          "src": "equipment-images/6221d444d89a7538.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6221d444d89a7538"
+        }
+      ]
     },
     {
       "id": "equipment-0014",
@@ -306,7 +502,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/c2f832a7c737960b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "c2f832a7c737960b"
+        },
+        {
+          "src": "equipment-images/83f7889dec9999de.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "83f7889dec9999de"
+        }
+      ]
     },
     {
       "id": "equipment-0015",
@@ -327,7 +539,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/726f1718ab03c450.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "726f1718ab03c450"
+        },
+        {
+          "src": "equipment-images/372760ba20bcd703.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "372760ba20bcd703"
+        }
+      ]
     },
     {
       "id": "equipment-0016",
@@ -348,7 +576,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/226d9fa5692db2fd.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "226d9fa5692db2fd"
+        },
+        {
+          "src": "equipment-images/f586b02d87c86ee5.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "f586b02d87c86ee5"
+        }
+      ]
     },
     {
       "id": "equipment-0017",
@@ -369,7 +613,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/9e613de8e4373afe.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "9e613de8e4373afe"
+        },
+        {
+          "src": "equipment-images/a3518e526bfddc3b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "a3518e526bfddc3b"
+        }
+      ]
     },
     {
       "id": "equipment-0018",
@@ -390,7 +650,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/555fef2c42c5a21b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "555fef2c42c5a21b"
+        },
+        {
+          "src": "equipment-images/5b2d319bbb388510.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "5b2d319bbb388510"
+        }
+      ]
     },
     {
       "id": "equipment-0019",
@@ -411,7 +687,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/7ff011f3a91859d7.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "7ff011f3a91859d7"
+        },
+        {
+          "src": "equipment-images/5b3140054e636a91.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "5b3140054e636a91"
+        }
+      ]
     },
     {
       "id": "equipment-0020",
@@ -432,7 +724,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/3870dab3828a78a7.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "3870dab3828a78a7"
+        },
+        {
+          "src": "equipment-images/0c3895cbc2c1480d.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "0c3895cbc2c1480d"
+        }
+      ]
     },
     {
       "id": "equipment-0021",
@@ -453,7 +761,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/b51c4926841e8d61.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "b51c4926841e8d61"
+        },
+        {
+          "src": "equipment-images/3482462454aa5f27.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "3482462454aa5f27"
+        }
+      ]
     },
     {
       "id": "equipment-0022",
@@ -474,7 +798,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/8f8368e46428f2d1.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "8f8368e46428f2d1"
+        },
+        {
+          "src": "equipment-images/84b885f5d43f8b53.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "84b885f5d43f8b53"
+        }
+      ]
     },
     {
       "id": "equipment-0023",
@@ -495,7 +835,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/0508bf7ed9433720.webp",
+          "width": 195,
+          "height": 260,
+          "sourceColumn": "M",
+          "sourceDigest": "0508bf7ed9433720"
+        },
+        {
+          "src": "equipment-images/11d730c62e0952fb.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "11d730c62e0952fb"
+        }
+      ]
     },
     {
       "id": "equipment-0024",
@@ -516,7 +872,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/1f82d2322516fd13.webp",
+          "width": 209,
+          "height": 279,
+          "sourceColumn": "M",
+          "sourceDigest": "1f82d2322516fd13"
+        },
+        {
+          "src": "equipment-images/994c0f0983de860b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "994c0f0983de860b"
+        }
+      ]
     },
     {
       "id": "equipment-0025",
@@ -537,7 +909,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/bbfe6e22e157fb2a.webp",
+          "width": 184,
+          "height": 245,
+          "sourceColumn": "M",
+          "sourceDigest": "bbfe6e22e157fb2a"
+        },
+        {
+          "src": "equipment-images/6e829edac6d07046.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6e829edac6d07046"
+        }
+      ]
     },
     {
       "id": "equipment-0026",
@@ -558,7 +946,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/96b787f17a537d2a.webp",
+          "width": 185,
+          "height": 246,
+          "sourceColumn": "M",
+          "sourceDigest": "96b787f17a537d2a"
+        },
+        {
+          "src": "equipment-images/403f522b5da4e61e.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "403f522b5da4e61e"
+        }
+      ]
     },
     {
       "id": "equipment-0027",
@@ -579,7 +983,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/147710b766c3e7ea.webp",
+          "width": 189,
+          "height": 252,
+          "sourceColumn": "M",
+          "sourceDigest": "147710b766c3e7ea"
+        },
+        {
+          "src": "equipment-images/2083d6d6e4202431.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "2083d6d6e4202431"
+        }
+      ]
     },
     {
       "id": "equipment-0028",
@@ -600,7 +1020,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/ccac0f0e26611fb1.webp",
+          "width": 179,
+          "height": 238,
+          "sourceColumn": "M",
+          "sourceDigest": "ccac0f0e26611fb1"
+        },
+        {
+          "src": "equipment-images/ace47e4b8e788888.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "ace47e4b8e788888"
+        }
+      ]
     },
     {
       "id": "equipment-0029",
@@ -621,7 +1057,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/495987f04153b981.webp",
+          "width": 169,
+          "height": 214,
+          "sourceColumn": "M",
+          "sourceDigest": "495987f04153b981"
+        },
+        {
+          "src": "equipment-images/4999b431c9b2d90f.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "4999b431c9b2d90f"
+        }
+      ]
     },
     {
       "id": "equipment-0030",
@@ -642,7 +1094,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/75653f9ce22081bd.webp",
+          "width": 190,
+          "height": 254,
+          "sourceColumn": "M",
+          "sourceDigest": "75653f9ce22081bd"
+        },
+        {
+          "src": "equipment-images/2844bb71ffce97a5.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "2844bb71ffce97a5"
+        }
+      ]
     },
     {
       "id": "equipment-0031",
@@ -663,7 +1131,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/13142991466e9ad5.webp",
+          "width": 181,
+          "height": 242,
+          "sourceColumn": "M",
+          "sourceDigest": "13142991466e9ad5"
+        },
+        {
+          "src": "equipment-images/6aa7f9ebd084c9fd.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6aa7f9ebd084c9fd"
+        }
+      ]
     },
     {
       "id": "equipment-0032",
@@ -684,7 +1168,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/ac7684ddf29f6b92.webp",
+          "width": 181,
+          "height": 242,
+          "sourceColumn": "M",
+          "sourceDigest": "ac7684ddf29f6b92"
+        },
+        {
+          "src": "equipment-images/6929ef2627ab26f5.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6929ef2627ab26f5"
+        }
+      ]
     },
     {
       "id": "equipment-0033",
@@ -705,7 +1205,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/9261b9d05204efb4.webp",
+          "width": 188,
+          "height": 251,
+          "sourceColumn": "M",
+          "sourceDigest": "9261b9d05204efb4"
+        },
+        {
+          "src": "equipment-images/1d58e61277586776.webp",
+          "width": 168,
+          "height": 224,
+          "sourceColumn": "N",
+          "sourceDigest": "1d58e61277586776"
+        }
+      ]
     },
     {
       "id": "equipment-0034",
@@ -726,7 +1242,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/bf0a288f02402f0c.webp",
+          "width": 176,
+          "height": 235,
+          "sourceColumn": "M",
+          "sourceDigest": "bf0a288f02402f0c"
+        },
+        {
+          "src": "equipment-images/95c1542b1bd14164.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "95c1542b1bd14164"
+        }
+      ]
     },
     {
       "id": "equipment-0035",
@@ -747,7 +1279,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/23ad9016cddee0af.webp",
+          "width": 183,
+          "height": 244,
+          "sourceColumn": "M",
+          "sourceDigest": "23ad9016cddee0af"
+        },
+        {
+          "src": "equipment-images/4f52ce7d2945dfd8.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "4f52ce7d2945dfd8"
+        }
+      ]
     },
     {
       "id": "equipment-0036",
@@ -770,6 +1318,22 @@
       "placeholder": false,
       "issues": [
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
+      ],
+      "images": [
+        {
+          "src": "equipment-images/ee695e86ef1b863c.webp",
+          "width": 298,
+          "height": 398,
+          "sourceColumn": "M",
+          "sourceDigest": "ee695e86ef1b863c"
+        },
+        {
+          "src": "equipment-images/48d05cb8cddbba61.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "48d05cb8cddbba61"
+        }
       ]
     },
     {
@@ -791,7 +1355,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/fb57e0302dd8cade.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "fb57e0302dd8cade"
+        },
+        {
+          "src": "equipment-images/9900f3666f0f02e1.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "9900f3666f0f02e1"
+        }
+      ]
     },
     {
       "id": "equipment-0038",
@@ -812,7 +1392,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/5af30fd6224b59c4.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "5af30fd6224b59c4"
+        },
+        {
+          "src": "equipment-images/f836feea3089dcd5.webp",
+          "width": 192,
+          "height": 256,
+          "sourceColumn": "N",
+          "sourceDigest": "f836feea3089dcd5"
+        }
+      ]
     },
     {
       "id": "equipment-0039",
@@ -833,7 +1429,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/e885c3f721e7083a.webp",
+          "width": 202,
+          "height": 270,
+          "sourceColumn": "M",
+          "sourceDigest": "e885c3f721e7083a"
+        },
+        {
+          "src": "equipment-images/7c2a4c75b0d0e086.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "7c2a4c75b0d0e086"
+        }
+      ]
     },
     {
       "id": "equipment-0040",
@@ -854,7 +1466,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/32e59a89ffdaa189.webp",
+          "width": 264,
+          "height": 352,
+          "sourceColumn": "M",
+          "sourceDigest": "32e59a89ffdaa189"
+        },
+        {
+          "src": "equipment-images/f5052a3327e64414.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "f5052a3327e64414"
+        }
+      ]
     },
     {
       "id": "equipment-0041",
@@ -875,7 +1503,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/ec94b40f8b6ab67d.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "ec94b40f8b6ab67d"
+        },
+        {
+          "src": "equipment-images/869397d9eff29dc3.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "869397d9eff29dc3"
+        }
+      ]
     },
     {
       "id": "equipment-0042",
@@ -898,6 +1542,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/34b6fb41e532e4ac.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "34b6fb41e532e4ac"
+        }
       ]
     },
     {
@@ -919,7 +1572,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/24559c507a1bc982.webp",
+          "width": 182,
+          "height": 243,
+          "sourceColumn": "M",
+          "sourceDigest": "24559c507a1bc982"
+        },
+        {
+          "src": "equipment-images/3e1a956a5aa9cda1.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "3e1a956a5aa9cda1"
+        }
+      ]
     },
     {
       "id": "equipment-0044",
@@ -940,7 +1609,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/e0f98d03f137d7a7.webp",
+          "width": 268,
+          "height": 357,
+          "sourceColumn": "M",
+          "sourceDigest": "e0f98d03f137d7a7"
+        },
+        {
+          "src": "equipment-images/0e25bef6e4693c00.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "0e25bef6e4693c00"
+        }
+      ]
     },
     {
       "id": "equipment-0045",
@@ -961,7 +1646,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/3e8f2ebecb28324c.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "3e8f2ebecb28324c"
+        },
+        {
+          "src": "equipment-images/bf2539443837867b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "bf2539443837867b"
+        }
+      ]
     },
     {
       "id": "equipment-0046",
@@ -982,7 +1683,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/7a26e8d70ff9a508.webp",
+          "width": 264,
+          "height": 352,
+          "sourceColumn": "M",
+          "sourceDigest": "7a26e8d70ff9a508"
+        },
+        {
+          "src": "equipment-images/409b3866ee09e86d.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "409b3866ee09e86d"
+        }
+      ]
     },
     {
       "id": "equipment-0047",
@@ -1003,7 +1720,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/0ba1386af950ffc2.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "0ba1386af950ffc2"
+        },
+        {
+          "src": "equipment-images/6e2e92fafb3d3f70.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6e2e92fafb3d3f70"
+        }
+      ]
     },
     {
       "id": "equipment-0048",
@@ -1024,7 +1757,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/a1824f27b9382c45.webp",
+          "width": 278,
+          "height": 371,
+          "sourceColumn": "M",
+          "sourceDigest": "a1824f27b9382c45"
+        },
+        {
+          "src": "equipment-images/2535a4df6089e975.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "2535a4df6089e975"
+        }
+      ]
     },
     {
       "id": "equipment-0049",
@@ -1047,7 +1796,8 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0050",
@@ -1070,6 +1820,22 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/46e743204ec669b9.webp",
+          "width": 217,
+          "height": 289,
+          "sourceColumn": "M",
+          "sourceDigest": "46e743204ec669b9"
+        },
+        {
+          "src": "equipment-images/514986604621859a.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "514986604621859a"
+        }
       ]
     },
     {
@@ -1091,7 +1857,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/565c5f0adeebf076.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "565c5f0adeebf076"
+        },
+        {
+          "src": "equipment-images/b0ca95a002a33c1e.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "b0ca95a002a33c1e"
+        }
+      ]
     },
     {
       "id": "equipment-0052",
@@ -1112,7 +1894,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/f7472f648bcebf6b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "f7472f648bcebf6b"
+        },
+        {
+          "src": "equipment-images/04b172ef6d1a51a2.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "04b172ef6d1a51a2"
+        }
+      ]
     },
     {
       "id": "equipment-0053",
@@ -1135,7 +1933,8 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0054",
@@ -1158,6 +1957,22 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/93b791a63dd79362.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "93b791a63dd79362"
+        },
+        {
+          "src": "equipment-images/56431081fa67b662.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "56431081fa67b662"
+        }
       ]
     },
     {
@@ -1179,7 +1994,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/ba260aaaff8162fe.webp",
+          "width": 162,
+          "height": 215,
+          "sourceColumn": "M",
+          "sourceDigest": "ba260aaaff8162fe"
+        },
+        {
+          "src": "equipment-images/254c52c91b3c35ee.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "254c52c91b3c35ee"
+        }
+      ]
     },
     {
       "id": "equipment-0056",
@@ -1200,7 +2031,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/2f4c979f271c5daa.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "2f4c979f271c5daa"
+        },
+        {
+          "src": "equipment-images/83ebf85d7dad3d08.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "83ebf85d7dad3d08"
+        }
+      ]
     },
     {
       "id": "equipment-0057",
@@ -1221,7 +2068,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/1a748c7146c266fb.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "1a748c7146c266fb"
+        },
+        {
+          "src": "equipment-images/f3625bb023ec435e.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "f3625bb023ec435e"
+        }
+      ]
     },
     {
       "id": "equipment-0058",
@@ -1242,7 +2105,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/ce8cf9011c40e127.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "ce8cf9011c40e127"
+        },
+        {
+          "src": "equipment-images/fe4c51bd9ee10f45.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "fe4c51bd9ee10f45"
+        }
+      ]
     },
     {
       "id": "equipment-0059",
@@ -1263,7 +2142,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/725f67390b8ef7c8.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "725f67390b8ef7c8"
+        },
+        {
+          "src": "equipment-images/0064aaba9e653e55.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "0064aaba9e653e55"
+        }
+      ]
     },
     {
       "id": "equipment-0060",
@@ -1284,7 +2179,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/8efed0649e077245.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "8efed0649e077245"
+        },
+        {
+          "src": "equipment-images/a0c4d4f53639614c.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "a0c4d4f53639614c"
+        }
+      ]
     },
     {
       "id": "equipment-0061",
@@ -1305,7 +2216,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/dc43d26493ab06c9.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "dc43d26493ab06c9"
+        },
+        {
+          "src": "equipment-images/237a41cfbbde2e05.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "237a41cfbbde2e05"
+        }
+      ]
     },
     {
       "id": "equipment-0062",
@@ -1326,7 +2253,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/59d1c50b02af2500.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "59d1c50b02af2500"
+        },
+        {
+          "src": "equipment-images/a7a42884f4958c86.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "a7a42884f4958c86"
+        }
+      ]
     },
     {
       "id": "equipment-0063",
@@ -1347,7 +2290,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/23187095cff105a4.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "23187095cff105a4"
+        },
+        {
+          "src": "equipment-images/15453c471a4e7368.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "15453c471a4e7368"
+        }
+      ]
     },
     {
       "id": "equipment-0064",
@@ -1368,7 +2327,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/87299f29580ebada.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "87299f29580ebada"
+        },
+        {
+          "src": "equipment-images/8eef8cd2739da64e.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "8eef8cd2739da64e"
+        }
+      ]
     },
     {
       "id": "equipment-0065",
@@ -1389,7 +2364,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/7978b5d9dd47314a.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "7978b5d9dd47314a"
+        },
+        {
+          "src": "equipment-images/d3b30faf37632815.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "d3b30faf37632815"
+        }
+      ]
     },
     {
       "id": "equipment-0066",
@@ -1410,7 +2401,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/76307a689979266b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "76307a689979266b"
+        },
+        {
+          "src": "equipment-images/5da938b051ba08aa.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "5da938b051ba08aa"
+        }
+      ]
     },
     {
       "id": "equipment-0067",
@@ -1431,7 +2438,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/ba2c189dec2d1016.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "ba2c189dec2d1016"
+        },
+        {
+          "src": "equipment-images/356f132c03e0a87d.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "356f132c03e0a87d"
+        }
+      ]
     },
     {
       "id": "equipment-0068",
@@ -1452,7 +2475,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/b61e1e96715482eb.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "b61e1e96715482eb"
+        },
+        {
+          "src": "equipment-images/7772d001a688247e.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "7772d001a688247e"
+        }
+      ]
     },
     {
       "id": "equipment-0069",
@@ -1473,7 +2512,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/be6f673f8d73ad7b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "be6f673f8d73ad7b"
+        },
+        {
+          "src": "equipment-images/6e6d85a4d80776d7.webp",
+          "width": 181,
+          "height": 241,
+          "sourceColumn": "N",
+          "sourceDigest": "6e6d85a4d80776d7"
+        }
+      ]
     },
     {
       "id": "equipment-0070",
@@ -1494,7 +2549,8 @@
       "remark": "Cancel",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": []
     },
     {
       "id": "equipment-0071",
@@ -1515,7 +2571,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/e31f1fd850b797bf.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "e31f1fd850b797bf"
+        },
+        {
+          "src": "equipment-images/92239133a972370c.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "92239133a972370c"
+        }
+      ]
     },
     {
       "id": "equipment-0072",
@@ -1536,7 +2608,8 @@
       "remark": "Cancel",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": []
     },
     {
       "id": "equipment-0073",
@@ -1557,8 +2630,22 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!"
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/3eb40813530c91d2.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "3eb40813530c91d2"
+        },
+        {
+          "src": "equipment-images/70c200d42e45f31b.webp",
+          "width": 88,
+          "height": 121,
+          "sourceColumn": "N",
+          "sourceDigest": "70c200d42e45f31b"
+        }
       ]
     },
     {
@@ -1582,6 +2669,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/0977fe98fe5b1db5.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "0977fe98fe5b1db5"
+        }
       ]
     },
     {
@@ -1605,6 +2701,22 @@
       "placeholder": false,
       "issues": [
         "หมายเลขอุปกรณ์ไม่ตรง Factory Number"
+      ],
+      "images": [
+        {
+          "src": "equipment-images/ad0ef6ffc132b4e0.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "ad0ef6ffc132b4e0"
+        },
+        {
+          "src": "equipment-images/6d6cbcab85f6e27c.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6d6cbcab85f6e27c"
+        }
       ]
     },
     {
@@ -1626,7 +2738,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/0afe8ac7fcc6c533.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "0afe8ac7fcc6c533"
+        },
+        {
+          "src": "equipment-images/04020c3e7f4e1304.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "04020c3e7f4e1304"
+        }
+      ]
     },
     {
       "id": "equipment-0077",
@@ -1647,7 +2775,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/57c0b4ac2c333142.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "57c0b4ac2c333142"
+        },
+        {
+          "src": "equipment-images/e9ee36a7d90b2cb7.webp",
+          "width": 164,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "e9ee36a7d90b2cb7"
+        }
+      ]
     },
     {
       "id": "equipment-0078",
@@ -1670,6 +2814,22 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/d4babe3a5a66c780.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "d4babe3a5a66c780"
+        },
+        {
+          "src": "equipment-images/850d22d74940721b.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "850d22d74940721b"
+        }
       ]
     },
     {
@@ -1691,7 +2851,16 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/581a75674df0ad58.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "581a75674df0ad58"
+        }
+      ]
     },
     {
       "id": "equipment-0080",
@@ -1712,7 +2881,16 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/7bd8f32ae2ee9762.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "7bd8f32ae2ee9762"
+        }
+      ]
     },
     {
       "id": "equipment-0081",
@@ -1736,7 +2914,8 @@
       "issues": [
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0082",
@@ -1759,6 +2938,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/3288b326b422aadb.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "3288b326b422aadb"
+        }
       ]
     },
     {
@@ -1782,6 +2970,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/0329eef99a7b502e.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "0329eef99a7b502e"
+        }
       ]
     },
     {
@@ -1805,6 +3002,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/9a1b719c808c8109.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "9a1b719c808c8109"
+        }
       ]
     },
     {
@@ -1828,6 +3034,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/8f8dd995dc2285ba.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "8f8dd995dc2285ba"
+        }
       ]
     },
     {
@@ -1851,6 +3066,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/9950757e815471b2.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "9950757e815471b2"
+        }
       ]
     },
     {
@@ -1874,6 +3098,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/4bb9c401e8d370a1.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "4bb9c401e8d370a1"
+        }
       ]
     },
     {
@@ -1898,7 +3131,8 @@
       "issues": [
         "ไม่ระบุสถานะ USE / Cancel",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0089",
@@ -1922,7 +3156,8 @@
       "issues": [
         "ไม่ระบุสถานะ USE / Cancel",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0090",
@@ -1946,7 +3181,8 @@
       "issues": [
         "ไม่ระบุสถานะ USE / Cancel",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0091",
@@ -1970,7 +3206,8 @@
       "issues": [
         "ไม่ระบุสถานะ USE / Cancel",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0092",
@@ -1995,7 +3232,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0093",
@@ -2020,7 +3258,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0094",
@@ -2044,7 +3283,8 @@
       "issues": [
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0095",
@@ -2068,7 +3308,8 @@
       "issues": [
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0096",
@@ -2091,8 +3332,16 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No.",
-        "ช่องรูปภาพต้นทางแสดง #VALUE!",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
+      ],
+      "images": [
+        {
+          "src": "equipment-images/8b4121fb75ce0349.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "8b4121fb75ce0349"
+        }
       ]
     },
     {
@@ -2115,8 +3364,23 @@
       "keyEquipment": false,
       "placeholder": false,
       "issues": [
-        "ช่องรูปภาพต้นทางแสดง #VALUE!",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
+      ],
+      "images": [
+        {
+          "src": "equipment-images/198052a230e4f62e.webp",
+          "width": 865,
+          "height": 1200,
+          "sourceColumn": "M",
+          "sourceDigest": "198052a230e4f62e"
+        },
+        {
+          "src": "equipment-images/bfe7b5e2406d03ee.webp",
+          "width": 901,
+          "height": 1200,
+          "sourceColumn": "N",
+          "sourceDigest": "bfe7b5e2406d03ee"
+        }
       ]
     },
     {
@@ -2140,6 +3404,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/097a39997885babf.webp",
+          "width": 288,
+          "height": 217,
+          "sourceColumn": "N",
+          "sourceDigest": "097a39997885babf"
+        }
       ]
     },
     {
@@ -2163,6 +3436,15 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/fbe05bb893682be8.webp",
+          "width": 288,
+          "height": 217,
+          "sourceColumn": "N",
+          "sourceDigest": "fbe05bb893682be8"
+        }
       ]
     },
     {
@@ -2187,6 +3469,15 @@
       "issues": [
         "ไม่ระบุ Serial No.",
         "รหัสซ้ำในทะเบียน ต้องใช้หมวดและ Serial ประกอบ"
+      ],
+      "images": [
+        {
+          "src": "equipment-images/65a4f5e37212fc8e.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "65a4f5e37212fc8e"
+        }
       ]
     },
     {
@@ -2208,7 +3499,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/13dca6a7a36bf8a9.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "13dca6a7a36bf8a9"
+        },
+        {
+          "src": "equipment-images/e45d751b705dcf06.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "e45d751b705dcf06"
+        }
+      ]
     },
     {
       "id": "equipment-0102",
@@ -2229,7 +3536,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/cb10d06f5826120b.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "cb10d06f5826120b"
+        },
+        {
+          "src": "equipment-images/5294c14914b4b1fb.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "5294c14914b4b1fb"
+        }
+      ]
     },
     {
       "id": "equipment-0103",
@@ -2250,7 +3573,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/5ef85d60f38ff8e2.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "5ef85d60f38ff8e2"
+        },
+        {
+          "src": "equipment-images/3d77e592b039404d.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "3d77e592b039404d"
+        }
+      ]
     },
     {
       "id": "equipment-0104",
@@ -2271,7 +3610,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/be4dd578f87f47e5.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "be4dd578f87f47e5"
+        },
+        {
+          "src": "equipment-images/6aa2ebaf0f116121.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "6aa2ebaf0f116121"
+        }
+      ]
     },
     {
       "id": "equipment-0105",
@@ -2292,7 +3647,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/41d35c69eec47959.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "41d35c69eec47959"
+        },
+        {
+          "src": "equipment-images/31c35ba52fef31ae.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "31c35ba52fef31ae"
+        }
+      ]
     },
     {
       "id": "equipment-0106",
@@ -2313,7 +3684,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/4ee04aa80a319f54.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "4ee04aa80a319f54"
+        },
+        {
+          "src": "equipment-images/97ba4b17fde5f1f2.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "97ba4b17fde5f1f2"
+        }
+      ]
     },
     {
       "id": "equipment-0107",
@@ -2334,7 +3721,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/a38d0a286b774121.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "a38d0a286b774121"
+        },
+        {
+          "src": "equipment-images/97860107ad66cbec.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "97860107ad66cbec"
+        }
+      ]
     },
     {
       "id": "equipment-0108",
@@ -2355,7 +3758,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/fcc805d84148b3bc.webp",
+          "width": 122,
+          "height": 217,
+          "sourceColumn": "M",
+          "sourceDigest": "fcc805d84148b3bc"
+        },
+        {
+          "src": "equipment-images/604478e8a1cdaaf6.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "604478e8a1cdaaf6"
+        }
+      ]
     },
     {
       "id": "equipment-0109",
@@ -2378,7 +3797,8 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0110",
@@ -2401,7 +3821,8 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0111",
@@ -2422,7 +3843,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/0e51541ad5e4ff2d.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "0e51541ad5e4ff2d"
+        },
+        {
+          "src": "equipment-images/050384c40687d0f3.webp",
+          "width": 1200,
+          "height": 900,
+          "sourceColumn": "N",
+          "sourceDigest": "050384c40687d0f3"
+        }
+      ]
     },
     {
       "id": "equipment-0112",
@@ -2443,7 +3880,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/08de5f2e74a4f3e7.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "08de5f2e74a4f3e7"
+        },
+        {
+          "src": "equipment-images/e409c096f7b6ed2b.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "e409c096f7b6ed2b"
+        }
+      ]
     },
     {
       "id": "equipment-0113",
@@ -2464,7 +3917,23 @@
       "remark": "USE",
       "keyEquipment": true,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/e52c50b26152ac43.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "e52c50b26152ac43"
+        },
+        {
+          "src": "equipment-images/43c7688c25889aae.webp",
+          "width": 289,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "43c7688c25889aae"
+        }
+      ]
     },
     {
       "id": "equipment-0114",
@@ -2489,7 +3958,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0115",
@@ -2514,7 +3984,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0116",
@@ -2540,7 +4011,8 @@
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No.",
         "มีเฉพาะชื่อ ต้องยืนยันว่าเป็นเครื่องจริง"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0117",
@@ -2565,7 +4037,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0118",
@@ -2590,7 +4063,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0119",
@@ -2615,7 +4089,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0120",
@@ -2640,7 +4115,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0121",
@@ -2666,7 +4142,8 @@
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No.",
         "มีเฉพาะชื่อ ต้องยืนยันว่าเป็นเครื่องจริง"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0122",
@@ -2692,7 +4169,8 @@
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No.",
         "มีเฉพาะชื่อ ต้องยืนยันว่าเป็นเครื่องจริง"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0123",
@@ -2717,7 +4195,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0124",
@@ -2742,7 +4221,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0125",
@@ -2768,7 +4248,8 @@
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No.",
         "มีเฉพาะชื่อ ต้องยืนยันว่าเป็นเครื่องจริง"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0126",
@@ -2793,7 +4274,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0127",
@@ -2818,7 +4300,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0128",
@@ -2844,7 +4327,8 @@
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No.",
         "มีเฉพาะชื่อ ต้องยืนยันว่าเป็นเครื่องจริง"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0129",
@@ -2867,6 +4351,22 @@
       "placeholder": false,
       "issues": [
         "ไม่ระบุ Serial No."
+      ],
+      "images": [
+        {
+          "src": "equipment-images/0306c0dfba399fe0.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "0306c0dfba399fe0"
+        },
+        {
+          "src": "equipment-images/93acfaa9f604dd4d.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "93acfaa9f604dd4d"
+        }
       ]
     },
     {
@@ -2892,7 +4392,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0131",
@@ -2917,7 +4418,8 @@
         "ไม่ระบุหมายเลขอุปกรณ์",
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0132",
@@ -2943,7 +4445,8 @@
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No.",
         "มีเฉพาะชื่อ ต้องยืนยันว่าเป็นเครื่องจริง"
-      ]
+      ],
+      "images": []
     },
     {
       "id": "equipment-0133",
@@ -2964,7 +4467,23 @@
       "remark": "USE",
       "keyEquipment": false,
       "placeholder": false,
-      "issues": []
+      "issues": [],
+      "images": [
+        {
+          "src": "equipment-images/eff71b8ff9ce53c4.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "M",
+          "sourceDigest": "eff71b8ff9ce53c4"
+        },
+        {
+          "src": "equipment-images/d96dc87c47678438.webp",
+          "width": 162,
+          "height": 216,
+          "sourceColumn": "N",
+          "sourceDigest": "d96dc87c47678438"
+        }
+      ]
     },
     {
       "id": "equipment-0134",
@@ -2988,7 +4507,8 @@
       "issues": [
         "ไม่ระบุสถานะ USE / Cancel",
         "ไม่ระบุ Serial No."
-      ]
+      ],
+      "images": []
     }
   ]
 }
