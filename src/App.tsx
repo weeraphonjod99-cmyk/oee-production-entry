@@ -1,3 +1,4 @@
+import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import {
   BarChart3,
   AlertTriangle,
@@ -5500,6 +5501,7 @@ function App() {
 
         {tab === "master" && (
           <section className="table-view">
+            <EquipmentRegistry machines={machines} />
             <div className="master-stats">
               <Kpi label="Machines" value={formatNumber(machines.length)} tone="green" />
               <Kpi label="Products" value={formatNumber(canonicalProducts.length)} tone="blue" />
