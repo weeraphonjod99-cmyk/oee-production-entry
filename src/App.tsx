@@ -1,4 +1,5 @@
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
+import { ProductionReport } from "./components/ProductionReport";
 import {
   BarChart3,
   AlertTriangle,
@@ -2046,6 +2047,10 @@ function App() {
   const [onlineUserUpdatedAt, setOnlineUserUpdatedAt] = useState("");
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
   const [remoteLogs, setRemoteLogs] = useState<ProductionLog[]>([]);
+  const [reportRemoteLogs, setReportRemoteLogs] = useState<ProductionLog[] | null>(null);
+  const [reportDataError, setReportDataError] = useState("");
+  const [reportDataLoading, setReportDataLoading] = useState(false);
+  const [reportRefresh, setReportRefresh] = useState(0);
   const [status, setStatus] = useState(remoteEnabled ? "พร้อมเชื่อมต่อ Google Sheet" : "โหมดทดลองในเครื่อง");
   const [remoteLoaded, setRemoteLoaded] = useState(!remoteEnabled);
   const [saving, setSaving] = useState(false);
@@ -2567,7 +2572,7 @@ function App() {
   );
   const allLogs = useMemo(
     () => uniqueLogs([...localLogs, ...remoteLogs, ...seedLogs].map((log) => withCanonicalMachineName(log, machineNameById))),
-    [localLogs, machineNameById, remoteLogs],
+    [localLogs, machineNameById, remoteLogs, seedLogs],
   );
   const duplicateLogsByKey = useMemo(() => {
     const map = new Map<string, ProductionLog[]>();
@@ -2691,10 +2696,21 @@ function App() {
     ],
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
-  const reportLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters), [allLogs, reportFilters]);
+  useEffect(() => {
+    if (tab !== "reports" || !remoteEnabled) return;
+    let cancelled = false;
+    setReportDataLoading(true); setReportDataError("");
+    fetchRemoteLogs(100000).then(logs => {
+      if (!cancelled) {setReportRemoteLogs(logs.filter(isVisibleLog)); if (logs.length >= 100000) setReportDataError("รายการถึงขีดจำกัด 100,000 รายการ ประวัติเก่าอาจไม่ครบ");}
+    }).catch(error => {if (!cancelled) setReportDataError(`โหลดประวัติเต็มไม่สำเร็จ แสดงเฉพาะข้อมูลที่มี: ${error instanceof Error ? error.message : String(error)}`);})
+      .finally(() => {if (!cancelled) setReportDataLoading(false);});
+    return () => {cancelled=true;};
+  }, [tab, reportRefresh]);
+  const reportAllLogs = useMemo(() => reportRemoteLogs === null ? allLogs : uniqueLogs([...localLogs, ...reportRemoteLogs, ...seedLogs].map(log => withCanonicalMachineName(log, machineNameById))), [allLogs,localLogs,reportRemoteLogs,seedLogs,machineNameById]);
+  const reportLogs = useMemo(() => filterLogsByFilters(reportAllLogs, reportFilters), [reportAllLogs, reportFilters]);
   const historyLogs = useMemo(() => filterLogsByFilters(allLogs, historyFilters), [allLogs, historyFilters]);
   const dashboardScopeLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters, false), [allLogs, dashboardFilters]);
-  const reportScopeLogs = useMemo(() => filterLogsByFilters(allLogs, reportFilters, false), [allLogs, reportFilters]);
+  const reportScopeLogs = useMemo(() => filterLogsByFilters(reportAllLogs, reportFilters, false), [reportAllLogs, reportFilters]);
   const historyScopeLogs = useMemo(() => filterLogsByFilters(allLogs, historyFilters, false), [allLogs, historyFilters]);
   const dashboardAvailableDateRange = useMemo(() => getFilterAvailableDateRange(dashboardScopeLogs), [dashboardScopeLogs]);
   const reportAvailableDateRange = useMemo(() => getFilterAvailableDateRange(reportScopeLogs), [reportScopeLogs]);
@@ -4603,6 +4619,11 @@ function App() {
               <BarChart3 size={18} /> Dashboard
             </button>
           )}
+          {canAccessTab(session, "reports") && (
+            <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")} type="button">
+              <FileText size={18} /> รายงานการผลิต
+            </button>
+          )}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ
           </button>
@@ -5457,17 +5478,12 @@ function App() {
         )}
 
         {tab === "reports" && (
-          <ReportsView
-            emptyMessage={reportEmptyMessage}
-            latestDate={reportAvailableDateRange?.lastDate}
-            filters={reportFilters}
-            logs={reportLogs}
-            machines={machines}
-            onClearDates={clearReportDates}
-            onDownloadPdf={downloadPdfReport}
-            onUseLatest={useLatestReportDate}
-            setFilters={setReportFilters}
-          />
+          <section className="reports-layout">
+            <FiltersBar filters={reportFilters} machines={machines} setFilters={setReportFilters} />
+            <div className="analysis-panel"><button type="button" className="ghost-button" disabled={reportDataLoading} onClick={() => setReportRefresh(v => v+1)}>{reportDataLoading ? "กำลังโหลดประวัติการผลิต…" : "โหลดประวัติการผลิตใหม่"}</button><p>รายงานใช้ประวัติจากชีตสูงสุด 100,000 รายการ รวมรายการในระบบตามตัวกรอง</p>{reportDataError && <p role="alert">{reportDataError}</p>}</div>
+            {reportEmptyMessage && <FilterEmptyNotice latestDate={reportAvailableDateRange?.lastDate} message={reportEmptyMessage} onClearDates={clearReportDates} onUseLatest={useLatestReportDate} />}
+            <ProductionReport logs={reportDataLoading ? [] : reportLogs} machines={machines} products={canonicalProducts} />
+          </section>
         )}
 
         {tab === "history" && (

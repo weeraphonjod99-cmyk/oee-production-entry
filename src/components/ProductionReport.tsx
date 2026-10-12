@@ -1,0 +1,62 @@
+import { useEffect, useMemo, useState } from 'react';
+import { fetchProductionCapacity, type ProductionCapacityData } from '../lib/api';
+import { buildProductionReport, capacityMatcher, reportPart, reportPerson, reportValues, type ReportMode, type ReportRow } from '../lib/productionReport';
+import type { Machine, ProductMaster, ProductionLog } from '../types';
+import './production-report.css';
+
+const number = (v: number | null, digits = 1) => v === null ? '—' : v.toLocaleString('th-TH', {maximumFractionDigits:digits});
+const modes: [ReportMode,string][] = [['detail','เครื่อง × ผู้บันทึก × ชิ้นงาน'],['machine','รายเครื่อง'],['person','รายคน (ผู้บันทึก)'],['part','รายชิ้นงาน / Step']];
+const status = (row: ReportRow) => {
+  const v = reportValues(row);
+  return v.kpi === null ? 'ตรวจสอบข้อมูล' : v.kpi < 100 - 1e-8 ? 'ต่ำกว่าเป้า' : v.kpi > 100 + 1e-8 ? 'เกินเป้า' : 'ถึงเป้า';
+};
+const tone = (row: ReportRow) => reportValues(row).kpi === null ? 'pending' : reportValues(row).kpi! < 100 - 1e-8 ? 'below' : 'met';
+
+export function ProductionReport({logs,machines,products}:{logs:ProductionLog[];machines:Machine[];products:ProductMaster[]}) {
+  const [capacity,setCapacity] = useState<ProductionCapacityData|null>(null);
+  const [loading,setLoading] = useState(true); const [error,setError] = useState(''); const [reload,setReload] = useState(0);
+  const [percent,setPercent] = useState(85); const [mode,setMode] = useState<ReportMode>('detail');
+  const [person,setPerson] = useState(''); const [part,setPart] = useState(''); const [onlyBelow,setOnlyBelow] = useState(false); const [page,setPage] = useState(0);
+  useEffect(() => {
+    let cancelled = false; setLoading(true); setError('');
+    fetchProductionCapacity('').then(data => {
+      if (!cancelled) {setCapacity(data); if (!data) setError('ยังไม่ได้เชื่อมต่อข้อมูลกำลังผลิต');}
+    }).catch(e => {if (!cancelled) {setCapacity(null);setError(e instanceof Error ? e.message : 'โหลดเป้าหมายไม่สำเร็จ');}})
+      .finally(() => {if (!cancelled) setLoading(false);});
+    return () => {cancelled=true;};
+  },[reload]);
+  const people = useMemo(() => [...new Set(logs.map(reportPerson))].sort((a,b)=>a.localeCompare(b,'th')), [logs]);
+  const parts = useMemo(() => [...new Map(logs.map(l=>[reportPart(l),`${l.partNo || l.productName} · ${l.productName} · Step ${l.step || '—'}`])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'th')), [logs]);
+  const selected = useMemo(()=>logs.filter(l=>(!person || reportPerson(l)===person)&&(!part || reportPart(l)===part)),[logs,person,part]);
+  const match = useMemo(()=>capacityMatcher(capacity,machines,percent),[capacity,machines,percent]);
+  const report = useMemo(()=>buildProductionReport(selected,mode,match),[selected,mode,match]);
+  const values = reportValues(report.total);
+  const rows = useMemo(()=>report.rows.filter(r=>!onlyBelow || (reportValues(r).gap !== null && reportValues(r).gap! < -1e-8)).sort((a,b)=>{
+    const av=reportValues(a).gap,bv=reportValues(b).gap;
+    return av===null ? (bv===null ? b.output-a.output : 1) : bv===null ? -1 : av-bv;
+  }),[report,onlyBelow]);
+  useEffect(()=>setPage(0),[logs,person,part,mode,onlyBelow,percent]);
+  const maxPage=Math.max(0,Math.ceil(rows.length/50)-1); const currentPage=Math.min(page,maxPage);
+  const masterKeys = useMemo(()=>new Set(products.map(p=>JSON.stringify([p.machineId,reportPart(p)]))),[products]);
+  const masterMatched = selected.filter(l=>masterKeys.has(JSON.stringify([l.machineId,reportPart(l)]))).length;
+  const download = () => {
+    const heading=['รูปแบบ','เครื่อง','ผู้บันทึก','ชิ้นงาน','Part No.','Step','รายการ','Good','NG','Test','Output','เวลารายการที่ผ่านตรวจ (นาที)','เดินเครื่อง (นาที)','หยุด (นาที)','เป้าหมายมาตรฐาน %','เป้าหมายเฉลี่ย/นาที','ผลิตเฉลี่ย/นาที','Target','Gap','KPI %','จับคู่ครบ/รายการ','สถานะ','เหตุผล'];
+    const csv=[heading,...rows.map(r=>{const v=reportValues(r);return [modes.find(m=>m[0]===mode)?.[1],mode==='machine'||mode==='detail'?r.machine:'',mode==='person'||mode==='detail'?r.person:'',mode==='part'||mode==='detail'?r.product:'',mode==='part'||mode==='detail'?r.partNo:'',mode==='part'||mode==='detail'?r.step:'',r.count,r.good,r.ng,r.test,r.output,r.minutes,r.run,r.downtime,percent,v.rate,v.actualRate,v.target,v.gap,v.kpi,`${r.eligible}/${r.count}`,status(r),Object.keys(r.reasons).join('; ')];})].map(r=>r.map(v=>'"'+(typeof v === 'string' ? v.replace(/^[=+@-]/,"'$&") : String(v??'')).replaceAll('"','""')+'"').join(',')).join('\r\n');
+    const url=URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`production-report-${mode}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  return <section className="production-report">
+    <header className="pr-header"><div><p className="eyebrow">Production performance</p><h2>รายงานยอดการผลิต</h2><p>วิเคราะห์เครื่องจักร · ผู้บันทึก · ชิ้นงาน · เป้าหมายต่อนาที</p></div><button type="button" className="ghost-button" onClick={download} disabled={!rows.length}>ส่งออก CSV ตามตัวกรอง</button></header>
+    <div className="pr-source"><span>{loading?'กำลังโหลดเป้าหมายการผลิต…':capacity?`เป้าหมาย: ${capacity.sourceName} • ${capacity.totalRows} รายการ • ดึงข้อมูล ${new Date(capacity.fetchedAt).toLocaleString('th-TH')}`:'ยังไม่มีเป้าหมายการผลิต'}</span><button type="button" className="ghost-button" onClick={()=>setReload(v=>v+1)} disabled={loading}>โหลดเป้าหมายใหม่</button></div>
+    {error && <p role="alert" className="pr-warning">{error} — แสดงยอดจริงได้ แต่ยังไม่คำนวณ KPI ที่ไม่มีเป้าหมาย</p>}
+    <div className="pr-filters"><label>ผู้บันทึก<select value={person} onChange={e=>setPerson(e.target.value)}><option value="">ทุกคน</option>{people.map(p=><option key={p}>{p}</option>)}</select></label><label>ชิ้นงาน / Step<select value={part} onChange={e=>setPart(e.target.value)}><option value="">ทุกชิ้นงาน</option>{parts.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><label>มาตรฐานเป้าหมาย<select value={percent} onChange={e=>setPercent(Number(e.target.value))}>{[85,90,95,100].map(p=><option key={p} value={p}>{p}% ของกำลังผลิตมาตรฐาน</option>)}</select></label></div>
+    <p className="pr-note">รายคนอ้างอิงชื่อผู้บันทึกยอด ยังไม่ใช่เวลาทำงานเฉพาะบุคคล หากใช้บัญชีร่วมจะรวมเป็นคนเดียวกัน เวลาเป็นผลรวมรายการเครื่องจักรและอาจซ้อนกัน จึงไม่ใช่ชั่วโมงแรงงาน</p>
+    <div className="pr-kpis"><div><span>Output รวม</span><strong>{number(report.total.output,0)}</strong><small>Good + NG + Test</small></div><div><span>Good / NG / Test</span><strong>{number(report.total.good,0)} / {number(report.total.ng,0)} / {number(report.total.test,0)}</strong></div><div><span>เวลารายการที่ผ่านตรวจ (นาที)</span><strong>{number(report.total.minutes)}</strong><small>เวลาไม่ครบ {report.total.missingTime} รายการ</small></div><div className={tone(report.total)}><span>Target / KPI</span><strong>{number(values.target)} / {number(values.kpi)}{values.kpi!==null?'%':''}</strong><small>ข้อมูลครบ {report.total.eligible} / {report.total.count} รายการ</small></div></div>
+    <p className="pr-note">ขอบเขต: ข้อมูลที่ระบบโหลดและผ่านตัวกรอง {selected.length.toLocaleString()} รายการ • เครื่องใน OEE {machines.length} เครื่อง • ตรง Master ชิ้นงาน {masterMatched}/{selected.length} รายการ • {selected.filter(l=>!l.entryUser?.trim()).length} รายการไม่ระบุผู้บันทึก</p>
+    <details className="pr-formula"><summary>สูตรและข้อจำกัดของรายงาน</summary><p>ใช้ค่า KPI 85%/นาทีจากไฟล์เป็นฐาน (หรือ Target 8 ชั่วโมง ÷ 480) แล้วปรับสัดส่วนตามเปอร์เซ็นต์ที่เลือก ไม่ใช้ค่าประมาณจากยอดจริง • Target ของแต่ละรายการ = เป้าหมายชิ้น/นาที × เวลาทำงานรวมของรายการ (รวมเวลาหยุดตามระบบ) • Output = Good + NG + Test • Gap = Output − Target • KPI = Output ÷ Target × 100</p><p>เป้าหมายเฉลี่ย/นาที = ผลรวม Target ÷ ผลรวมเวลารายการ ไม่ใช่ค่าเฉลี่ยอัตราแบบเท่ากันทุกงาน ค่าเฉลี่ยผลิต/นาทีใช้เวลาฐานเดียวกัน ทั้งสองค่าเป็นค่าเฉลี่ยของช่วงที่เลือก ไม่ใช่ข้อมูลแยกทุกนาที</p><p>รายการรายวันซึ่งเวลาเกิน 24 ชั่วโมงจะถูกแยกให้ตรวจสอบ หากมีรายการขาดเวลา เป้าหมาย หรือยอดผลิต จะแสดง — ใน KPI/Gap ของกลุ่มนั้น พร้อมจำนวนข้อมูลที่ครบ ไม่ใช้ยอดผลิตจริงย้อนกลับไปเดาเป้าหมาย และไม่จำกัด KPI สูงสุดที่ 100%</p></details>
+    <div className="pr-tabs" role="group" aria-label="รูปแบบรายงาน">{modes.map(([id,label])=><button key={id} type="button" aria-pressed={mode===id} onClick={()=>setMode(id)}>{label}</button>)}</div>
+    <div className="pr-table-heading"><h3>{modes.find(m=>m[0]===mode)?.[1]}</h3><label><input type="checkbox" checked={onlyBelow} onChange={e=>setOnlyBelow(e.target.checked)} /> เฉพาะต่ำกว่าเป้า</label><span>{rows.length.toLocaleString()} กลุ่ม • เรียงส่วนต่างจากต่ำสุด</span></div>
+    <div className="pr-scroll" tabIndex={0} aria-label="ตารางรายงานการผลิต เลื่อนแนวนอนได้"><table><thead><tr>{(mode==='machine'||mode==='detail')&&<th>เครื่อง</th>}{(mode==='person'||mode==='detail')&&<th>ผู้บันทึก</th>}{(mode==='part'||mode==='detail')&&<th>ชิ้นงาน / Part / Step</th>}<th>รายการ</th><th>Good</th><th>NG</th><th>Test</th><th>Output</th><th>เวลารวม<br/>นาที</th><th>เป้าเฉลี่ย<br/>ชิ้น/นาที</th><th>ผลิตเฉลี่ย<br/>ชิ้น/นาที</th><th>Target</th><th>Gap</th><th>KPI</th><th>สถานะ / ข้อมูลครบ</th></tr></thead><tbody>{rows.slice(currentPage*50,currentPage*50+50).map(row=>{const v=reportValues(row);return <tr key={row.key}>{(mode==='machine'||mode==='detail')&&<th scope="row">{row.machine}</th>}{(mode==='person'||mode==='detail')&&<td>{row.person}</td>}{(mode==='part'||mode==='detail')&&<td className="pr-product"><b>{row.product || 'ไม่ระบุชิ้นงาน'}</b><small>{row.partNo || 'ไม่มี Part'} · Step {row.step || '—'}</small></td>}<td>{row.count}</td><td>{number(row.good,0)}</td><td>{number(row.ng,0)}</td><td>{number(row.test,0)}</td><td><b>{number(row.output,0)}</b></td><td>{number(row.minutes)}<small>เดิน {number(row.run)} / หยุด {number(row.downtime)}</small></td><td>{number(v.rate,3)}</td><td>{number(v.actualRate,3)}</td><td>{number(v.target)}</td><td className={tone(row)}>{v.gap!==null&&v.gap>0?'+':''}{number(v.gap)}</td><td className={tone(row)}>{number(v.kpi)}{v.kpi!==null?'%':''}</td><td><b className={`pr-status ${tone(row)}`}>{status(row)}</b><small>{row.eligible}/{row.count} รายการ</small>{Object.entries(row.reasons).map(([reason,count])=><small key={reason}>{reason} ({count})</small>)}</td></tr>;})}</tbody></table></div>
+    {!rows.length && <p className="pr-empty">ไม่พบข้อมูลตามตัวกรองนี้ ลองเปลี่ยนช่วงวันที่ ผู้บันทึก หรือชิ้นงาน</p>}
+    {rows.length>50 && <div className="pr-pagination"><button type="button" disabled={currentPage===0} onClick={()=>setPage(v=>v-1)}>ก่อนหน้า</button><span>หน้า {currentPage+1} / {maxPage+1}</span><button type="button" disabled={currentPage===maxPage} onClick={()=>setPage(v=>v+1)}>ถัดไป</button></div>}
+  </section>;
+}
