@@ -2706,7 +2706,9 @@ function App() {
       .finally(() => {if (!cancelled) setReportDataLoading(false);});
     return () => {cancelled=true;};
   }, [tab, reportRefresh]);
-  const reportAllLogs = useMemo(() => reportRemoteLogs === null ? allLogs : uniqueLogs([...localLogs, ...reportRemoteLogs, ...seedLogs].map(log => withCanonicalMachineName(log, machineNameById))), [allLogs,localLogs,reportRemoteLogs,seedLogs,machineNameById]);
+  // The full remote response already includes legacy workbook history. Do not
+  // append the bundled seed snapshot again: its older IDs can count the same work twice.
+  const reportAllLogs = useMemo(() => reportRemoteLogs === null ? allLogs : uniqueLogs([...localLogs, ...reportRemoteLogs].map(log => withCanonicalMachineName(log, machineNameById))), [allLogs,localLogs,reportRemoteLogs,machineNameById]);
   const reportLogs = useMemo(() => filterLogsByFilters(reportAllLogs, reportFilters), [reportAllLogs, reportFilters]);
   const historyLogs = useMemo(() => filterLogsByFilters(allLogs, historyFilters), [allLogs, historyFilters]);
   const dashboardScopeLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters, false), [allLogs, dashboardFilters]);
