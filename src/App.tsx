@@ -1,4 +1,5 @@
 import { ProductionSearch } from "./components/ProductionSearch";
+import { StampingMachinePhoto } from "./components/StampingMachinePhoto";
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import { ProductionReport } from "./components/ProductionReport";
 import {
@@ -1839,6 +1840,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
           <span>{liveStatusTitle.replace(/^[A-Z]\s*/, "")}</span>
         </span>
       )}
+      <StampingMachinePhoto name={machine.name} />
       {!isLiveActive && <span className="machine-live-idle">ไม่มีการกรอกสด</span>}
       <span className="machine-card-main">
         <small>
