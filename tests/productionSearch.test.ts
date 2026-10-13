@@ -14,3 +14,9 @@ assert.equal(sums.reduce((s,r)=>s+r.run,0),500);
 assert.equal(sums.reduce((s,r)=>s+r.stop,0),280);
 assert.equal(productionSearchSummary([a,b],'part').length,2);
 console.log('Production search filters and reconciliation passed');
+
+const weighted=productionSearchSummary([a,{...a,id:'c',normalMinutes:60,meetingMinutes:0,changeoverMinutes:0}], 'machine', l=>({rate:l.id==='a'?2:4}))[0];
+assert.equal(weighted.target,920);
+assert.equal(weighted.minutes,400);
+assert.equal(weighted.target/weighted.minutes,2.3);
+assert.equal(productionSearchSummary([a,b],'machine',()=>({rate:null}))[0].eligible,0);
