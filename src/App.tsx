@@ -1,4 +1,5 @@
 import { ProductionSearch } from "./components/ProductionSearch";
+import { ReliabilitySummary } from "./components/ReliabilitySummary";
 import { StampingMachinePhoto } from "./components/StampingMachinePhoto";
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import { ProductionReport } from "./components/ProductionReport";
@@ -5451,6 +5452,7 @@ function App() {
               selectedMachineIds={getFilterMachineIds(dashboardFilters)}
             />
             <OeeSummaryChart downtimeItems={downtime} summary={summary} />
+            <ReliabilitySummary logs={dashboardLogs} />
             <DailyMachineProfessionalTrendChart capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <MachineCapacityDashboard capacityContext={dashboardCapacityContext} logs={dashboardLogs} machines={machines} />
             <PartNoSummary logs={dashboardLogs} />

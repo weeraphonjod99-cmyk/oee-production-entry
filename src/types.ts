@@ -82,6 +82,8 @@ export type ProductionLog = {
   inspectionMinutes: number;
   equipmentRepairMinutes: number;
   moldRepairMinutes: number;
+  moldRepairCount?: number;
+  equipmentRepairCount?: number;
   materialChangeMinutes: number;
   emergencyStopMinutes: number;
   meetingMinutes: number;
