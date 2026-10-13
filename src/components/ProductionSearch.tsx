@@ -5,12 +5,14 @@ import type {ProductionLog} from '../types';
 import {downtimeFields} from '../lib/metrics';
 import {productionSearchSummary,recordedStop,searchPartKey,searchProduction,sheetNumber, type SearchFilters} from '../lib/productionSearch';
 import './production-search.css';
+import {useCapacityRefreshTick} from './CapacitySourceStatus';
 const empty:SearchFilters={machine:'',part:'',from:'',to:'',shift:'',query:''};
 const n=(v:number)=>v.toLocaleString('th-TH',{maximumFractionDigits:2});
 export function ProductionSearch({logs,loading,error,onRefresh}:{logs:ProductionLog[];loading:boolean;error:string;onRefresh:()=>void}){
+ const autoRefresh=useCapacityRefreshTick();
  const [filter,setFilter]=useState(empty),[group,setGroup]=useState<'date'|'machine'|'part'>('date'),[page,setPage]=useState(0);
  const [capacity,setCapacity]=useState<ProductionCapacityData|null>(null),[capacityLoading,setCapacityLoading]=useState(true),[capacityError,setCapacityError]=useState(''),[capacityRefresh,setCapacityRefresh]=useState(0);
- useEffect(()=>{let cancelled=false;setCapacityLoading(true);setCapacity(null);setCapacityError('');fetchProductionCapacity('').then(data=>{if(!cancelled){setCapacity(data);if(!data)setCapacityError('ยังไม่มีข้อมูลกำลังผลิต');}}).catch(()=>{if(!cancelled)setCapacityError('โหลดเป้าหมายไม่สำเร็จ กรุณาลองใหม่');}).finally(()=>{if(!cancelled)setCapacityLoading(false);});return()=>{cancelled=true;};},[capacityRefresh]);
+ useEffect(()=>{let cancelled=false;setCapacityLoading(true);setCapacityError('');fetchProductionCapacity('').then(data=>{if(!cancelled){setCapacity(data);if(!data)setCapacityError('ยังไม่มีข้อมูลกำลังผลิต');}}).catch(()=>{if(!cancelled)setCapacityError('โหลดเป้าหมายไม่สำเร็จ กรุณาลองใหม่');}).finally(()=>{if(!cancelled)setCapacityLoading(false);});return()=>{cancelled=true;};},[capacityRefresh,autoRefresh]);
  const match=useMemo(()=>capacityMatcher(capacity,[...new Map(logs.map(l=>[l.machineId,{id:l.machineId,name:l.machineName,capacityUnits:0,capacityMinutes:0,hasStep:true,rowCount:0}])).values()],85),[capacity,logs]);
  const change=(key:keyof SearchFilters,value:string)=>{setFilter(f=>({...f,[key]:value,...(key==='machine'?{part:''}:{})}));setPage(0);};
  const machines=useMemo(()=>[...new Map(logs.map(l=>[l.machineId,l.machineName])).entries()].sort((a,b)=>a[1].localeCompare(b[1])),[logs]);

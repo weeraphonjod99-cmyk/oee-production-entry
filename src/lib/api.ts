@@ -1,4 +1,5 @@
 import type { Machine, ProductionLog, ProductionOrder } from "../types";
+import {fetchCurrentCapacity} from './capacitySource';
 
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL?.trim() ?? "";
 
@@ -165,7 +166,6 @@ async function parseJsonResponse(response: Response) {
 }
 
 const requestTimeoutMs = 12000;
-const productionCapacityTimeoutMs = 45000;
 
 const sleep = (ms: number) => new Promise((resolve) => globalThis.setTimeout(resolve, ms));
 
@@ -397,19 +397,8 @@ export async function fetchPdSheets(): Promise<PdWorkbook[]> {
   return [];
 }
 
-export async function fetchProductionCapacity(group = ""): Promise<ProductionCapacityData | null> {
-  if (!remoteEnabled) return null;
-  const normalizedGroup = group.toUpperCase() === "OTHER" ? "" : group;
-  const url = new URL(APPS_SCRIPT_URL);
-  url.searchParams.set("action", "productionCapacity");
-  if (normalizedGroup && normalizedGroup !== "ทั้งหมด") url.searchParams.set("group", normalizedGroup);
-  url.searchParams.set("_", String(Date.now()));
-  const response = await fetchWithRetry(url.toString(), { cache: "no-store" }, 1, productionCapacityTimeoutMs);
-  const data = await parseJsonResponse(response);
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || "โหลดข้อมูลกำลังผลิตจาก Google Sheet ไม่สำเร็จ");
-  }
-  return data.capacity ?? null;
+export async function fetchProductionCapacity(_group = ""): Promise<ProductionCapacityData | null> {
+  return fetchCurrentCapacity();
 }
 
 export async function appendRemoteLog(log: ProductionLog): Promise<ProductionLog> {

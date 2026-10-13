@@ -95,14 +95,17 @@ export function groupDowntime(logs: ProductionLog[]) {
 }
 
 export function formatNumber(value: number) {
+  if (!Number.isFinite(value)) return '—';
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatRate(value: number) {
+  if (!Number.isFinite(value)) return '—';
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(value);
 }
 
 export function formatPercent(value: number) {
+  if (!Number.isFinite(value)) return '—';
   return new Intl.NumberFormat("th-TH", {
     style: "percent",
     maximumFractionDigits: 1,

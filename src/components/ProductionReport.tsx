@@ -3,6 +3,7 @@ import { fetchProductionCapacity, type ProductionCapacityData } from '../lib/api
 import { buildProductionReport, capacityMatcher, reportPart, reportPerson, reportValues, type ReportMode, type ReportRow } from '../lib/productionReport';
 import type { Machine, ProductMaster, ProductionLog } from '../types';
 import './production-report.css';
+import {useCapacityRefreshTick} from './CapacitySourceStatus';
 
 const number = (v: number | null, digits = 1) => v === null ? '—' : v.toLocaleString('th-TH', {maximumFractionDigits:digits});
 const modes: [ReportMode,string][] = [['detail',"เครื่อง × ผู้บันทึก × ชิ้นงาน / Machine × Recorder × Part"],['machine',"รายเครื่อง / By Machine"],['person',"รายคน (ผู้บันทึก) / By Recorder"],['part',"รายชิ้นงาน / Step / By Part / Step"]];
@@ -13,6 +14,7 @@ const status = (row: ReportRow) => {
 const tone = (row: ReportRow) => reportValues(row).kpi === null ? 'pending' : reportValues(row).kpi! < 100 - 1e-8 ? 'below' : 'met';
 
 export function ProductionReport({logs,machines,products}:{logs:ProductionLog[];machines:Machine[];products:ProductMaster[]}) {
+  const autoRefresh=useCapacityRefreshTick();
   const [capacity,setCapacity] = useState<ProductionCapacityData|null>(null);
   const [loading,setLoading] = useState(true); const [error,setError] = useState(''); const [reload,setReload] = useState(0);
   const [percent,setPercent] = useState(85); const [mode,setMode] = useState<ReportMode>('detail');
@@ -21,10 +23,10 @@ export function ProductionReport({logs,machines,products}:{logs:ProductionLog[];
     let cancelled = false; setLoading(true); setError('');
     fetchProductionCapacity('').then(data => {
       if (!cancelled) {setCapacity(data); if (!data) setError('ยังไม่ได้เชื่อมต่อข้อมูลกำลังผลิต');}
-    }).catch(e => {if (!cancelled) {setCapacity(null);setError(e instanceof Error ? e.message : 'โหลดเป้าหมายไม่สำเร็จ');}})
+    }).catch(e => {if (!cancelled) {setError(e instanceof Error ? e.message : 'โหลดเป้าหมายไม่สำเร็จ');}})
       .finally(() => {if (!cancelled) setLoading(false);});
     return () => {cancelled=true;};
-  },[reload]);
+  },[reload,autoRefresh]);
   const people = useMemo(() => [...new Set(logs.map(reportPerson))].sort((a,b)=>a.localeCompare(b,'th')), [logs]);
   const parts = useMemo(() => [...new Map(logs.map(l=>[reportPart(l),`${l.partNo || l.productName} · ${l.productName} · Step ${l.step || '—'}`])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'th')), [logs]);
   const selected = useMemo(()=>logs.filter(l=>(!person || reportPerson(l)===person)&&(!part || reportPart(l)===part)),[logs,person,part]);

@@ -10,14 +10,18 @@ const positive = (v: unknown) => finite(v) && Number(v) > 0;
 const capacityMachineAliases:Record<string,string> = {
   'sw#1 spot':'sw1# spot',
   'sw4 nms/cu box':'sw4 nms',
+  'sw4 nmscu box':'sw4 nms',
   'sw5 cu cover':'sw5 cu',
   'sw6 nlc door':'sw6 nlc',
   'sw7 lc /nlc box':'sw7 lc 600',
+  'sw7 lc nlc box':'sw7 lc 600',
   'sw8 lc door':'sw8 door lc',
   'tapping lc/nlc box':'tapping',
+  'tapping lcnlc box':'tapping',
+  '13#-110t':'13# 110t',
   'riveting pdb':'riveting',
 };
-const capacityMachineKey=(value:string)=>capacityMachineAliases[reportText(value)]||reportText(value);
+export const capacityMachineKey=(value:string)=>capacityMachineAliases[reportText(value)]||reportText(value);
 export const reportPerson = (log: ProductionLog) => log.entryUser?.trim() || 'ไม่ระบุผู้บันทึก';
 export const reportPart = (log: Pick<ProductionLog, 'partNo' | 'productName' | 'step'>) => JSON.stringify([reportText(log.partNo), reportText(log.productName), stepKey(log.step)]);
 

@@ -1,5 +1,7 @@
 import { ProductionSearch } from "./components/ProductionSearch";
 import { ReliabilitySummary } from "./components/ReliabilitySummary";
+import {CapacitySourceStatus,useCapacityRefreshTick} from './components/CapacitySourceStatus';
+import {capacityMachineKey} from './lib/productionReport';
 import { StampingMachinePhoto } from "./components/StampingMachinePhoto";
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import { ProductionReport } from "./components/ProductionReport";
@@ -1555,13 +1557,16 @@ const normalizeCapacityLookupText = (value: unknown) =>
     .replace(/\s+/g, " ")
     .replace(/[‐‑‒–—]/g, "-");
 
-const capacityKey = (...parts: unknown[]) => parts.map(normalizeCapacityLookupText).join("::");
+const capacityKey = (machine: unknown, ...parts: unknown[]) => [capacityMachineKey(String(machine ?? '')), ...parts.map(normalizeCapacityLookupText)].join("::");
 
 function buildDashboardCapacityContext(data: ProductionCapacityData | null, percent: number): DashboardCapacityContext | null {
   if (!data || !data.machines.length) return null;
   const exact = new Map<string, ProductionCapacityRecord>();
   const machinePartStep = new Map<string, ProductionCapacityRecord>();
   const machinePart = new Map<string, ProductionCapacityRecord>();
+  const ambiguousParts = new Set<string>();
+  const ambiguousSteps = new Set<string>();
+  const ambiguousExact = new Set<string>();
 
   data.machines.forEach((machine) => {
     machine.records.forEach((record) => {
@@ -1571,12 +1576,19 @@ function buildDashboardCapacityContext(data: ProductionCapacityData | null, perc
       const exactKey = capacityKey(machineName, record.productName, record.partNo, step);
       const partStepKey = capacityKey(machineName, record.partNo, step);
       const partKey = capacityKey(machineName, record.partNo);
+      const conflicts = (old: ProductionCapacityRecord | undefined) => old && (old.step !== record.step || old.kpi85PerMinute !== record.kpi85PerMinute);
+      if (conflicts(exact.get(exactKey))) ambiguousExact.add(exactKey);
+      if (conflicts(machinePartStep.get(partStepKey))) ambiguousSteps.add(partStepKey);
+      if (conflicts(machinePart.get(partKey))) ambiguousParts.add(partKey);
       if (!exact.has(exactKey)) exact.set(exactKey, recordWithMachine);
       if (!machinePartStep.has(partStepKey)) machinePartStep.set(partStepKey, recordWithMachine);
       if (!machinePart.has(partKey)) machinePart.set(partKey, recordWithMachine);
     });
   });
 
+  ambiguousExact.forEach(k => exact.delete(k));
+  ambiguousSteps.forEach(k => machinePartStep.delete(k));
+  ambiguousParts.forEach(k => machinePart.delete(k));
   return {
     exact,
     machinePart,
@@ -1591,19 +1603,20 @@ function findCapacityRecordForLog(log: ProductionLog, context: DashboardCapacity
   return (
     context.exact.get(capacityKey(log.machineName, log.productName, log.partNo, step)) ??
     context.machinePartStep.get(capacityKey(log.machineName, log.partNo, step)) ??
-    context.machinePart.get(capacityKey(log.machineName, log.partNo)) ??
+    (step === '-' ? context.machinePart.get(capacityKey(log.machineName, log.partNo)) : undefined) ??
     null
   );
 }
 
 function getCapacityTargetQtyForLog(log: ProductionLog, context: DashboardCapacityContext | null) {
   const record = findCapacityRecordForLog(log, context);
-  if (!record) return { matched: false, targetQty: getLogTargetQty(log) };
+  // Unavailable targets propagate to aggregate displays as “—”; never reuse old logged speeds.
+  if (!record) return { matched: false, targetQty: Number.NaN };
   const perMinute = capacityKpiPerMinute(record, context?.percent ?? MIN_CAPACITY_PERCENT);
   const workMinutes = getLogWorkMinutes(log);
   return {
     matched: perMinute > 0,
-    targetQty: perMinute > 0 ? roundNumber(perMinute * workMinutes) : getLogTargetQty(log),
+    targetQty: perMinute > 0 ? roundNumber(perMinute * workMinutes) : Number.NaN,
   };
 }
 
@@ -1618,7 +1631,7 @@ function summarizeDashboardOee(logs: ProductionLog[], context: DashboardCapacity
     },
     { matched: 0, targetQty: 0 },
   );
-  const kpi = clampRatio(target.targetQty > 0 ? base.total / target.targetQty : 1);
+  const kpi = Number.isFinite(target.targetQty) ? clampRatio(target.targetQty > 0 ? base.total / target.targetQty : 0) : Number.NaN;
   // Match the Google Sheet OEE formula: time utilization x pass rate.
   // Keep capacity target as a separate KPI so it does not pull OEE away from the sheet.
   const oee = clampRatio(base.availability) * clampRatio(base.quality);
@@ -2046,6 +2059,7 @@ function useFactoryGeofence(active: boolean): FactoryGeofenceAccess {
 
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
+  const capacityRefreshTick=useCapacityRefreshTick(tab==='capacity');
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const factoryAccess = useFactoryGeofence(Boolean(session));
   const [onlineUserCount, setOnlineUserCount] = useState(1);
@@ -2224,11 +2238,6 @@ function App() {
   }, [session]);
 
   const loadProductionCapacity = useCallback(async () => {
-    if (!remoteEnabled) {
-      setProductionCapacity(null);
-      setProductionCapacityError("ยังไม่ได้เชื่อมต่อ Google Sheet");
-      return;
-    }
     setProductionCapacityLoading(true);
     try {
       const capacityGroup = !productionCapacityGroup || productionCapacityGroup.toUpperCase() === "OTHER" || productionCapacityGroup === "ทั้งหมด" ? "80T" : productionCapacityGroup;
@@ -2245,13 +2254,9 @@ function App() {
   useEffect(() => {
     if (tab !== "capacity") return;
     void loadProductionCapacity();
-  }, [loadProductionCapacity, tab]);
+  }, [loadProductionCapacity, tab, capacityRefreshTick]);
 
   const loadDashboardProductionCapacity = useCallback(async () => {
-    if (!remoteEnabled) {
-      setDashboardProductionCapacity(null);
-      return;
-    }
     try {
       const data = await fetchProductionCapacity("");
       setDashboardProductionCapacity(data);
@@ -2274,7 +2279,7 @@ function App() {
       }
     };
     void refreshCapacity();
-    const timer = window.setInterval(refreshCapacity, 120000);
+    const timer = window.setInterval(refreshCapacity, 60000);
     const refreshWhenVisible = () => {
       if (!document.hidden) void refreshCapacity();
     };
@@ -4687,6 +4692,7 @@ function App() {
           </div>
         </header>
 
+        {['capacity','dashboard','reports','productionSearch'].includes(tab) && <CapacitySourceStatus />}
         {roleNotifications.length > 0 && (
           <section className="role-notification-strip" aria-live="polite">
             {roleNotifications.map((notification) => (
@@ -5437,6 +5443,7 @@ function App() {
               <Kpi label="รายการบันทึก / Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
             </div>
             <FiltersBar filters={dashboardFilters} machines={machines} setFilters={setDashboardFilters} />
+            {summary.capacityMatchedLogs < dashboardLogs.length && <p className="capacity-target-warning">เป้าหมายจากชีตใหม่ยังจับคู่ไม่ครบ {dashboardLogs.length-summary.capacityMatchedLogs} รายการ — แสดง “—” เมื่อเป้ารวมไม่ครบ และไม่ใช้เป้าหมายเก่าแทน / Some new-sheet targets are missing; incomplete totals show “—” without old-target fallback.</p>}
             {dashboardEmptyMessage && (
               <FilterEmptyNotice
                 latestDate={dashboardAvailableDateRange?.lastDate}
@@ -7670,7 +7677,7 @@ function buildDailyPerformanceRows(
     .map(({ machineIds, machineNames, productNames, ...row }) => {
       const availability = clampRatio(row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0);
       const quality = clampRatio(row.good + row.ng > 0 ? row.good / (row.good + row.ng) : 0);
-      const utilization = clampRatio(row.targetQty > 0 ? row.actualOutput / row.targetQty : 0);
+      const utilization = Number.isFinite(row.targetQty) ? clampRatio(row.targetQty > 0 ? row.actualOutput / row.targetQty : 0) : Number.NaN;
       const sortedMachineNames = [...machineNames].sort((a, b) => a.localeCompare(b, "en"));
       const sortedProductNames = [...productNames].sort((a, b) => a.localeCompare(b, "en"));
       return {
@@ -8387,7 +8394,7 @@ function buildMachineCapacityRows(
       ...row,
       availability: clampRatio(row.workMinutes > 0 ? row.normalMinutes / row.workMinutes : 0),
       gapQty: row.actualOutput - row.targetQty,
-      utilization: row.targetQty > 0 ? row.actualOutput / row.targetQty : 0,
+      utilization: Number.isFinite(row.targetQty) ? (row.targetQty > 0 ? row.actualOutput / row.targetQty : 0) : Number.NaN,
     }))
     .sort(
       (a, b) =>
