@@ -7,6 +7,17 @@ export const reportText = (v: unknown) => String(v ?? '').trim().replace(/\s+/g,
 const stepKey = (v: unknown) => ['-', ''].includes(reportText(v)) ? '' : reportText(v);
 const finite = (v: unknown) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
 const positive = (v: unknown) => finite(v) && Number(v) > 0;
+const capacityMachineAliases:Record<string,string> = {
+  'sw#1 spot':'sw1# spot',
+  'sw4 nms/cu box':'sw4 nms',
+  'sw5 cu cover':'sw5 cu',
+  'sw6 nlc door':'sw6 nlc',
+  'sw7 lc /nlc box':'sw7 lc 600',
+  'sw8 lc door':'sw8 door lc',
+  'tapping lc/nlc box':'tapping',
+  'riveting pdb':'riveting',
+};
+const capacityMachineKey=(value:string)=>capacityMachineAliases[reportText(value)]||reportText(value);
 export const reportPerson = (log: ProductionLog) => log.entryUser?.trim() || 'ไม่ระบุผู้บันทึก';
 export const reportPart = (log: Pick<ProductionLog, 'partNo' | 'productName' | 'step'>) => JSON.stringify([reportText(log.partNo), reportText(log.productName), stepKey(log.step)]);
 
@@ -23,14 +34,14 @@ export function reportRate(record: ProductionCapacityRecord, percent: number) {
 
 export function capacityMatcher(data: ProductionCapacityData | null, machines: Machine[], percent: number) {
   const aliases = new Map<string, string>();
-  machines.forEach(m => { aliases.set(reportText(m.id), reportText(m.name)); aliases.set(reportText(m.name), reportText(m.name)); });
-  const machineKey = (s: string) => aliases.get(reportText(s)) || reportText(s);
+  machines.forEach(m => { aliases.set(capacityMachineKey(m.id), capacityMachineKey(m.name)); aliases.set(capacityMachineKey(m.name), capacityMachineKey(m.name)); });
+  const machineKey = (s: string) => aliases.get(capacityMachineKey(s)) || capacityMachineKey(s);
   const index = new Map<string, ProductionCapacityRecord[]>();
   data?.machines.forEach(m => m.records.forEach(r => {
     // Exports sometimes put the group (e.g. CNC or 80T) in machineName.
     // Prefer the worksheet's exact registered machine, never join an entire group.
     const candidates = [r.sheetName,m.sheetName,r.machineName,m.machineName];
-    const machine = machineKey(candidates.find(n => aliases.has(reportText(n))) || r.sheetName || m.sheetName || r.machineName);
+    const machine = machineKey(candidates.find(n => aliases.has(capacityMachineKey(n))) || r.sheetName || m.sheetName || r.machineName);
     const part = r.partNo ? 'part:' + reportText(r.partNo) : 'name:' + reportText(r.productName);
     const key = JSON.stringify([machine, part]);
     index.set(key, [...(index.get(key) || []), r]);
@@ -40,8 +51,9 @@ export function capacityMatcher(data: ProductionCapacityData | null, machines: M
     const machine = machineKey(log.machineName || log.machineId);
     const part = log.partNo ? 'part:' + reportText(log.partNo) : 'name:' + reportText(log.productName);
     let rows = index.get(JSON.stringify([machine, part])) || [];
+    if (!rows.length) return {rate: null, reason: 'ไม่พบเป้าของชิ้นงานนี้ในเครื่องที่เลือก'};
     if (stepKey(log.step)) rows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
-    if (!rows.length) return {rate: null, reason: 'ไม่พบเครื่อง / ชิ้นงาน / Step ในกำลังผลิต'};
+    if (!rows.length) return {rate: null, reason: `ไม่พบเป้าสำหรับ Step ${log.step} ของชิ้นงานนี้`};
     if (!stepKey(log.step) && new Set(rows.map(r => stepKey(r.step))).size > 1) return {rate: null, reason: 'ไม่ระบุ Step และพบหลาย Step'};
     const named = rows.filter(r => reportText(r.productName) === reportText(log.productName));
     if (named.length) rows = named;

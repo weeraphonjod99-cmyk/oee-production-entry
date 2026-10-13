@@ -21,3 +21,10 @@ assert.equal(capacityMatcher({machines:[{...data.machines[0],records:[rec,{...re
 assert.ok(Math.abs(reportRate(rec,100)!-1/.85)<1e-10);
 assert.equal(reportValues(buildProductionReport([{...base,workMinutes:1500}],'machine',matcher).total).kpi,null);
 console.log('Production report calculation tests passed');
+for(const [sheet,name] of [['SW#1 Spot','SW1# spot'],['SW4 NMS/CU Box','SW4 NMS'],['SW5 CU Cover','SW5 CU'],['SW6 NLC Door','SW6 NLC'],['SW7 LC /NLC Box','SW7 LC 600'],['SW8 LC Door','SW8 Door LC'],['Tapping LC/NLC Box','Tapping'],['Riveting PDB','Riveting']]){
+ const source:any={machines:[{sheetName:sheet,machineName:'group',records:[{...rec,sheetName:sheet,machineName:'group'}]}]};
+ const match=capacityMatcher(source,[{...mm[0],name}],85);
+ assert.equal(match({...base,machineName:name}).rate,1);
+ assert.equal(match({...base,machineName:name,step:'2'}).rate,null);
+ assert.equal(match({...base,machineName:'Other machine'}).rate,null);
+}
