@@ -9,6 +9,10 @@ const normalize=(name:string)=>name.replace(/\s/g,'').toUpperCase();
 export function StampingMachinePhoto({name}:{name:string}) {
  const index=pressNames.findIndex(n=>normalize(n)===normalize(name));
  const otherMachines:Record<string,[string,string,string]>={
+  'RV1':['Rivet','RV1','เครื่องย้ำรีเวท'],
+  'RV2':['Rivet','RV2','เครื่องย้ำรีเวท'],
+  'TAPPING':['Bending','TP1','เครื่องต๊าป'],
+  'RIVETING':['Tapping machine','G7','เครื่องย้ำรีเวท'],
   'BENDING#1':['Bending','BD1','เครื่องพับ'], 'BENDING#2':['Bending','BD2','เครื่องพับ'],
   'SW1#SPOT':['Spot welding machine','SW1','เครื่องเชื่อม'],
   'SW#2SPOT':['Spot welding machine','SW2','เครื่องเชื่อม'],
@@ -32,6 +36,6 @@ export function StampingMachinePhoto({name}:{name:string}) {
  return <span className="press-photo-block">
   {photo&&<img src={`${import.meta.env.BASE_URL}${photo.src}`} alt={`${label} ${name} · ${equipment.equipmentNumber} · ${equipment.model}`} loading="lazy" decoding="async" width={photo.width} height={photo.height}/>}
   <span className="press-full-name">{label} {equipment.equipmentNumber} · {equipment.manufacturer}</span>
-  <span className="press-model">รุ่น {equipment.model}</span>
+  <span className="press-model">รุ่น {equipment.model || 'ไม่ระบุในทะเบียน'}</span>
  </span>;
 }
