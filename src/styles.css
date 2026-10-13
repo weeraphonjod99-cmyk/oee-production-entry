@@ -279,8 +279,15 @@ textarea:disabled {
   background: transparent;
   color: #dce8e2;
   justify-content: flex-start;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+  padding-top: 8px;
+  padding-bottom: 8px;
   width: 100%;
 }
+
+.side-nav button svg { flex-shrink: 0; }
 
 .side-nav button.active,
 .side-nav button:hover {

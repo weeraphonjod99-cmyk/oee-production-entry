@@ -12,14 +12,14 @@ export type DowntimeKey =
   | "newModelMinutes";
 
 export const downtimeFields: Array<{ key: DowntimeKey; label: string; shortLabel: string }> = [
-  { key: "changeoverMinutes", label: "เปลี่ยนรุ่น", shortLabel: "Change" },
-  { key: "inspectionMinutes", label: "ตรวจสอบ", shortLabel: "Inspect" },
-  { key: "equipmentRepairMinutes", label: "ซ่อมเครื่อง", shortLabel: "Equip" },
-  { key: "moldRepairMinutes", label: "ซ่อมแม่พิมพ์", shortLabel: "Mold" },
-  { key: "materialChangeMinutes", label: "เปลี่ยนวัตถุดิบ", shortLabel: "Material" },
-  { key: "emergencyStopMinutes", label: "หยุดไม่ทราบสาเหตุ", shortLabel: "Stop" },
-  { key: "meetingMinutes", label: "ประชุม/5S/เปลี่ยนกะ", shortLabel: "Meeting" },
-  { key: "plannedStopMinutes", label: "หยุดตามแผน", shortLabel: "Plan" },
+  { key: "changeoverMinutes", label: "เปลี่ยนรุ่น / Changeover", shortLabel: "Change" },
+  { key: "inspectionMinutes", label: "ตรวจสอบ / Inspection", shortLabel: "Inspect" },
+  { key: "equipmentRepairMinutes", label: "ซ่อมเครื่อง / Machine Repair", shortLabel: "Equip" },
+  { key: "moldRepairMinutes", label: "ซ่อมแม่พิมพ์ / Mold Repair", shortLabel: "Mold" },
+  { key: "materialChangeMinutes", label: "เปลี่ยนวัตถุดิบ / Material Change", shortLabel: "Material" },
+  { key: "emergencyStopMinutes", label: "หยุดไม่ทราบสาเหตุ / Unplanned Stop", shortLabel: "Stop" },
+  { key: "meetingMinutes", label: "ประชุม/5S/เปลี่ยนกะ / Meeting / 5S / Shift Change", shortLabel: "Meeting" },
+  { key: "plannedStopMinutes", label: "หยุดตามแผน / Planned Stop", shortLabel: "Plan" },
   { key: "newModelMinutes", label: "ทดลองงานใหม่ / New model", shortLabel: "New model" },
 ];
 

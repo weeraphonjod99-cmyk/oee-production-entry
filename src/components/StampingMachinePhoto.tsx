@@ -36,6 +36,6 @@ export function StampingMachinePhoto({name}:{name:string}) {
  return <span className="press-photo-block">
   {photo&&<img src={`${import.meta.env.BASE_URL}${photo.src}`} alt={`${label} ${name} · ${equipment.equipmentNumber} · ${equipment.model}`} loading="lazy" decoding="async" width={photo.width} height={photo.height}/>}
   <span className="press-full-name">{label} {equipment.equipmentNumber} · {equipment.manufacturer}</span>
-  <span className="press-model">รุ่น {equipment.model || 'ไม่ระบุในทะเบียน'}</span>
+  <span className="press-model">รุ่น / Model {equipment.model || 'ไม่ระบุในทะเบียน'}</span>
  </span>;
 }

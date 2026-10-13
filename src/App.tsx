@@ -1332,7 +1332,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters, machin
         <header>
           <div>
             <p class="muted">OEE PRODUCTION ENTRY</p>
-            <h1>รายงานสรุปการกรอกยอดผลิต</h1>
+            <h1>รายงานสรุปการกรอกยอดผลิต / Production Summary Report</h1>
             <p>ช่วงวันที่ผลิต: ${escapeHtml(reportRangeLabel(filters))} | เครื่อง: ${escapeHtml(reportMachineLabel(filters, machineItems))} | กะ: ${escapeHtml(reportShiftLabel(filters))}</p>
             <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
           </div>
@@ -1344,49 +1344,49 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters, machin
         </header>
 
         <section class="kpis">
-          <div class="kpi"><span>Good quantity</span><strong>${formatNumber(summary.good)}</strong></div>
-          <div class="kpi red"><span>NG quantity</span><strong>${formatNumber(summary.ng)}</strong></div>
-          <div class="kpi amber"><span>Test quantity</span><strong>${formatNumber(summary.test)}</strong></div>
-          <div class="kpi blue"><span>Total quantity</span><strong>${formatNumber(summary.total)}</strong></div>
-          <div class="kpi red"><span>Downtime</span><strong>${formatNumber(summary.downtime)} นาที</strong></div>
-          <div class="kpi"><span>Quality</span><strong>${formatPercent(summary.quality)}</strong></div>
-          <div class="kpi"><span>OEE</span><strong>${formatPercent(oee)}</strong></div>
-          <div class="kpi amber"><span>Availability</span><strong>${formatPercent(summary.availability)}</strong></div>
+          <div class="kpi"><span>จำนวนงานดี / Good quantity</span><strong>${formatNumber(summary.good)}</strong></div>
+          <div class="kpi red"><span>จำนวนงานเสีย / NG quantity</span><strong>${formatNumber(summary.ng)}</strong></div>
+          <div class="kpi amber"><span>จำนวนงานทดลอง / Test quantity</span><strong>${formatNumber(summary.test)}</strong></div>
+          <div class="kpi blue"><span>จำนวนรวม / Total quantity</span><strong>${formatNumber(summary.total)}</strong></div>
+          <div class="kpi red"><span>เวลาหยุด / Downtime</span><strong>${formatNumber(summary.downtime)} นาที</strong></div>
+          <div class="kpi"><span>คุณภาพ / Quality</span><strong>${formatPercent(summary.quality)}</strong></div>
+          <div class="kpi"><span>ประสิทธิผลเครื่องจักร / OEE</span><strong>${formatPercent(oee)}</strong></div>
+          <div class="kpi amber"><span>ความพร้อมเดินเครื่อง / Availability</span><strong>${formatPercent(summary.availability)}</strong></div>
         </section>
 
-        <h2>สรุปตามกะและช่วงเวลาทำงาน</h2>
+        <h2>สรุปตามกะและช่วงเวลาทำงาน / Summary by Shift and Time</h2>
         <table>
-          <thead><tr><th>No.</th><th>Shift / Time window</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
+          <thead><tr><th>ลำดับ / No.</th><th>กะ / ช่วงเวลา / Shift / Time window</th><th>งานดี / Good</th><th>งานเสีย / NG</th><th>งานทดลอง / Test</th><th>รวม / Total</th><th>หยุด (นาที) / Downtime (min)</th><th>ผลิต (นาที) / Normal (min)</th><th>รายการ / Records</th></tr></thead>
           <tbody>${tableRowsHtml(shiftRows)}</tbody>
         </table>
 
-        <h2>สรุปตามเครื่องจักร</h2>
+        <h2>สรุปตามเครื่องจักร / Summary by Machine</h2>
         <table>
-          <thead><tr><th>No.</th><th>Machine</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
+          <thead><tr><th>ลำดับ / No.</th><th>เครื่องจักร / Machine</th><th>งานดี / Good</th><th>งานเสีย / NG</th><th>งานทดลอง / Test</th><th>รวม / Total</th><th>หยุด (นาที) / Downtime (min)</th><th>ผลิต (นาที) / Normal (min)</th><th>รายการ / Records</th></tr></thead>
           <tbody>${tableRowsHtml(machineRows)}</tbody>
         </table>
 
-        <h2>สรุปตามรุ่น / Part No.</h2>
+        <h2>สรุปตามรุ่น / Part No. / Summary by Part</h2>
         <table>
-          <thead><tr><th>No.</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Total</th><th>Downtime (min)</th><th>Normal (min)</th><th>Records</th></tr></thead>
+          <thead><tr><th>ลำดับ / No.</th><th>ชิ้นงาน / รหัสชิ้นงาน / Product / Part No.</th><th>งานดี / Good</th><th>งานเสีย / NG</th><th>งานทดลอง / Test</th><th>รวม / Total</th><th>หยุด (นาที) / Downtime (min)</th><th>ผลิต (นาที) / Normal (min)</th><th>รายการ / Records</th></tr></thead>
           <tbody>${tableRowsHtml(partRows.slice(0, 40))}</tbody>
         </table>
 
-        <h2>Downtime แยกตามหัวข้อ</h2>
+        <h2>Downtime แยกตามหัวข้อ / Downtime by Cause</h2>
         <div class="downtime-grid">
           ${downtimeRows
             .map((item) => `<div class="downtime-item"><span>${escapeHtml(item.shortLabel)}</span><b>${formatNumber(item.minutes)} นาที</b></div>`)
             .join("")}
         </div>
 
-        <h2>สถิติการหยุดเครื่อง</h2>
+        <h2>สถิติการหยุดเครื่อง / Downtime Statistics</h2>
         <table>
-          <thead><tr><th>No.</th><th>Downtime issue</th><th>Total stop time</th><th>Count</th><th>Share</th></tr></thead>
+          <thead><tr><th>ลำดับ / No.</th><th>สาเหตุหยุด / Downtime issue</th><th>เวลาหยุดรวม / Total stop time</th><th>จำนวนครั้ง / Count</th><th>แบ่งปัน / Share</th></tr></thead>
           <tbody>${downtimeStatsRowsHtml(downtimeStats)}</tbody>
         </table>
-        <h2>รายละเอียดรายการผลิต</h2>
+        <h2>รายละเอียดรายการผลิต / Production Details</h2>
         <table>
-          <thead><tr><th>No.</th><th>Entry date</th><th>Entry time</th><th>Production date</th><th>Shift time</th><th>Machine</th><th>Product / Part No.</th><th>Good</th><th>NG</th><th>Test</th><th>Downtime</th></tr></thead>
+          <thead><tr><th>ลำดับ / No.</th><th>วันที่บันทึก / Entry date</th><th>เวลาบันทึก / Entry time</th><th>วันที่ผลิต / Production date</th><th>เวลากะ / Shift time</th><th>เครื่องจักร / Machine</th><th>ชิ้นงาน / รหัสชิ้นงาน / Product / Part No.</th><th>งานดี / Good</th><th>งานเสีย / NG</th><th>งานทดลอง / Test</th><th>เวลาหยุด / Downtime</th></tr></thead>
           <tbody>${detailRowsHtml(logs)}</tbody>
         </table>
         <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ OEE Production Entry</footer>
@@ -1841,10 +1841,10 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
         </span>
       )}
       <StampingMachinePhoto name={machine.name} />
-      {!isLiveActive && <span className="machine-live-idle">ไม่มีการกรอกสด</span>}
+      {!isLiveActive && <span className="machine-live-idle">ไม่มีการกรอกสด / No Live Entry</span>}
       <span className="machine-card-main">
         <small>
-          {formatNumber(productCount)} รุ่น / {formatNumber(logCount)} รายการ
+          {formatNumber(productCount)} รุ่น / {formatNumber(logCount)}  รายการ / Items
         </small>
       </span>
       <span className={`machine-order-status ${(orderSummary?.pendingCount || 0) > 0 ? "has-orders" : "no-orders"}`}>
@@ -1854,7 +1854,7 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
           <strong>โหลดออเดอร์ไม่ได้</strong>
         ) : (orderSummary?.pendingCount || 0) > 0 ? (
           <>
-            <strong>มีออเดอร์รอผลิต {formatNumber(orderSummary?.pendingCount || 0)} รายการ</strong>
+            <strong>มีออเดอร์รอผลิต {formatNumber(orderSummary?.pendingCount || 0)}  รายการ / Items</strong>
             {(orderSummary?.pendingOrders || []).slice(0, 2).map((order, orderIndex) => (
               <small key={`${machine.id}-order-${order.rowNumber || orderIndex}`}>
                 #{getProductionOrderSequence(order) || orderIndex + 1} Order {order.orderNo || "-"} / {order.productName || "-"} / {order.partNo || "-"}
@@ -1876,17 +1876,17 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
               : `อัปเดตล่าสุด: ${formatSharedStatusTime(sharedStatus.entryUpdatedAt || sharedStatus.updatedAt)}`}
           </small>
           <small>
-            Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT{" "}
+            งานดี / Good {formatNumber(sharedStatus.goodQty || 0)} · NG {formatNumber(sharedStatus.ngQty || 0)} · DT{" "}
             {formatRate(sharedLiveDowntimeMinutes || sharedStatus.downtimeMinutes || 0)} นาที
           </small>
           {sharedStatus.activeTimerLabel && sharedLiveMinutes !== null && <small>ใช้เวลา {formatDurationMinutes(sharedLiveMinutes)}</small>}
           <small>
-            Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
+            ความเร็ว / Speed {formatRate(sharedStatus.machineSpeed || 0)} · Cavity {formatNumber(sharedStatus.cavityQty || 0)} · Material{" "}
             {sharedStatus.materialOfProduction || "-"}
           </small>
           {false && (
             <span className="machine-status-details">
-              <span className="machine-status-details-title">รายละเอียดการกดล่าสุด</span>
+              <span className="machine-status-details-title">รายละเอียดการกดล่าสุด / Latest Action Details</span>
               <span className="machine-status-detail-list">
                 {buttonDetailLines.map((detail, detailIndex) => (
                   <span className="machine-status-detail-item" key={`${machine.id}-detail-${detailIndex}`}>
@@ -1904,11 +1904,12 @@ const EmployeeMachineCard = memo(function EmployeeMachineCard({
           <b>{hiddenLocalDraft.activeTimer ? "กำลังนับเวลาในเครื่องนี้" : "มีร่างการกรอกอยู่ในเครื่องนี้"}</b>
           <small>{hiddenLocalDraft.draft.productName || "-"} / {hiddenLocalDraft.draft.partNo || "-"}</small>
           <small>
-            Good {formatNumber(hiddenLocalDraft.draft.goodQty || 0)} · NG {formatNumber(hiddenLocalDraft.draft.ngQty || 0)} · DT{" "}
+            งานดี / Good {formatNumber(hiddenLocalDraft.draft.goodQty || 0)} · NG {formatNumber(hiddenLocalDraft.draft.ngQty || 0)} · DT{" "}
             {formatRate(totalDowntime(hiddenLocalDraft.draft))} นาที
           </small>
           <small>
-            อัปเดตล่าสุด {formatSharedStatusTime(hiddenLocalDraft.entryUpdatedAt || hiddenLocalDraft.savedAt)}
+            
+            อัปเดตล่าสุด / Last Updated {formatSharedStatusTime(hiddenLocalDraft.entryUpdatedAt || hiddenLocalDraft.savedAt)}
           </small>
         </span>
       )}
@@ -4597,7 +4598,7 @@ function App() {
           <img alt="JR logo" className="brand-logo" src={brandLogoSrc} />
           <div>
             <strong>OEE Entry</strong>
-            <span>Production</span>
+            <span>การผลิต / Production</span>
           </div>
         </div>
         <nav>
@@ -4612,35 +4613,35 @@ function App() {
             <span className="nav-icon-badge">
               <ClipboardCheck size={18} />
             </span>
-            กรอกยอดสำหรับพนักงาน
+            กรอกยอดสำหรับพนักงาน / Employee Entry
           </button>
           {canAccessTab(session, "capacity") && (
             <button className={tab === "capacity" ? "active" : ""} onClick={() => setTab("capacity")} type="button">
-              <TableProperties size={18} /> ดูกำลังผลิต
+              <TableProperties size={18} /> ดูกำลังผลิต / Production Capacity
             </button>
           )}
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
-              <BarChart3 size={18} /> Dashboard
+              <BarChart3 size={18} /> ภาพรวม / Dashboard
             </button>
           )}
           {canAccessTab(session, "reports") && (
             <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")} type="button">
-              <FileText size={18} /> รายงานการผลิต
+              <FileText size={18} /> รายงานการผลิต / Production Report
             </button>
           )}
-          {canAccessTab(session, "productionSearch") && <button className={tab === "productionSearch" ? "active" : ""} onClick={() => setTab("productionSearch")} type="button"><FileText size={18} /> ค้นหาการผลิต</button>}
+          {canAccessTab(session, "productionSearch") && <button className={tab === "productionSearch" ? "active" : ""} onClick={() => setTab("productionSearch")} type="button"><FileText size={18} /> ค้นหาการผลิต / Production Search</button>}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
-            <History size={18} /> ประวัติ
+            <History size={18} /> ประวัติ / History
           </button>
           {canAccessTab(session, "master") && (
             <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
-              <Database size={18} /> Master
+              <Database size={18} /> ข้อมูลหลัก / Master
             </button>
           )}
           {canAccessTab(session, "users") && (
             <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")} type="button">
-              <UserPlus size={18} /> Users
+              <UserPlus size={18} /> ผู้ใช้งาน / Users
             </button>
           )}
         </nav>
@@ -4660,8 +4661,8 @@ function App() {
       <main className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Production quantity entry</p>
-            <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel</h1>
+            <p className="eyebrow">บันทึกยอดผลิต / Production quantity entry</p>
+            <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel / Production Entry</h1>
           </div>
           <div className="topbar-actions">
             <div className="online-users-badge" title={onlineUserUpdatedAt ? `อัปเดตล่าสุด ${formatSharedStatusTime(onlineUserUpdatedAt)}` : "กำลังนับผู้ใช้งานออนไลน์"}>
@@ -4671,7 +4672,7 @@ function App() {
               <small>คน</small>
             </div>
             <button className="ghost-button" onClick={shareApp} type="button">
-              <Share2 size={17} /> Share
+              <Share2 size={17} /> แบ่งปัน / Share
             </button>
             <button className="ghost-button" onClick={downloadCsv} type="button">
               <Download size={17} /> CSV
@@ -4680,7 +4681,7 @@ function App() {
               <FileText size={17} /> PDF
             </button>
             <button className="ghost-button" onClick={signOut} type="button">
-              <LogOut size={17} /> Logout
+              <LogOut size={17} /> ออกจากระบบ / Logout
             </button>
           </div>
         </header>
@@ -4708,10 +4709,10 @@ function App() {
           <section className="employee-machine-menu">
             <div className="machine-menu-heading">
               <div>
-                <p className="eyebrow">Employee entry</p>
-                <h2>เลือกเครื่องจักรสำหรับกรอกยอด</h2>
+                <p className="eyebrow">พนักงานบันทึกยอด / Employee entry</p>
+                <h2>เลือกเครื่องจักรสำหรับกรอกยอด / Select Machine for Production Entry</h2>
               </div>
-              <span>{formatNumber(machines.length)} เครื่อง</span>
+              <span>{formatNumber(machines.length)}  เครื่อง / Machine</span>
             </div>
             <div className="machine-icon-grid">
               {employeeMachineCards.map((card) => (
@@ -4733,7 +4734,7 @@ function App() {
             <form className={`entry-form ${readOnlyEntry ? "read-only-entry" : ""}`} onSubmit={submit}>
               <div className="section-title">
                 <Gauge size={20} />
-                <h2>{editingLog ? "แก้ไขยอดผลิต" : "กรอกยอดผลิต"}</h2>
+                <h2>{editingLog ? "แก้ไขยอดผลิต / Edit Production" : "กรอกยอดผลิต / Production Entry"}</h2>
                 {isEmployeeEntry && !editingLog && (
                   <button className="ghost-button machine-menu-back" onClick={returnToEmployeeMachineMenu} type="button">
                     <ArrowLeft size={16} /> เลือกเครื่อง
@@ -4749,17 +4750,17 @@ function App() {
                     <small>ล็อกเครื่องนี้แล้ว หากต้องการเปลี่ยนให้กดปุ่มเลือกเครื่อง</small>
                   </div>
                   <div className="selected-machine-production">
-                    <span>วันที่ผลิต</span>
+                    <span>วันที่ผลิต / Production Date</span>
                     <strong>{draft.date || getTodayInputValue()}</strong>
                   </div>
                   <div className="selected-machine-production shift">
-                    <span>กะผลิต</span>
+                    <span>กะผลิต / Production Shift</span>
                     <strong>{shiftLabel(draft.shift)}</strong>
                     <small>{shiftWindowLabel(draft.date, draft.shift)}</small>
                     <small>พัก H: {getShiftBreakLabel(draft.shift)}</small>
                   </div>
                   <div className="runtime-current-clock selected-machine-clock">
-                    <span>เวลาปัจจุบัน</span>
+                    <span>เวลาปัจจุบัน / Current Time</span>
                     <strong>{formatClock(employeeReportNow)}</strong>
                   </div>
                 </div>
@@ -4775,17 +4776,17 @@ function App() {
               <fieldset className="entry-readonly-fieldset" disabled={readOnlyEntry}>
               <div className="form-grid entry-main-grid">
                 <label>
-                  <span className="label-text">วันที่กรอกยอด</span>
+                  <span className="label-text">วันที่กรอกยอด / Entry Date</span>
                   <input readOnly value={draft.recordDate || getTodayInputValue()} type="date" />
                 </label>
                 <label>
-                  <span className="label-text">เวลากรอก</span>
+                  <span className="label-text">เวลากรอก / Entry Time</span>
                   <input readOnly step="1" value={draft.recordTime || getCurrentTimeInputValue()} type="time" />
                 </label>
                 {!isEmployeeEntry && (
                   <>
                     <label>
-                      <span className="label-text">วันที่ผลิตงาน <RequiredMark /></span>
+                      <span className="label-text">วันที่ผลิตงาน / Production Date <RequiredMark /></span>
                       <input
                         aria-readonly="true"
                         readOnly
@@ -4795,7 +4796,7 @@ function App() {
                       />
                     </label>
                     <label>
-                      <span className="label-text">กะ <RequiredMark /></span>
+                      <span className="label-text">กะ / Shift <RequiredMark /></span>
                       <select
                         disabled
                         required
@@ -4846,7 +4847,7 @@ function App() {
                 <div className={PRODUCTION_ORDER_SHEET_ENABLED ? "pending-order-panel" : "pending-order-panel production-order-disabled"} role="status" aria-live="polite">
                   <div className="pending-order-header">
                     <div>
-                      <span>ORDER QUEUE</span>
+                      <span>คิวงาน / ORDER QUEUE</span>
                       <strong>Order ที่รอผลิต / งานที่ต้องผลิต</strong>
                       <small>อ้างอิง Google Sheet ของเครื่อง {currentMachine.name}</small>
                     </div>
@@ -4879,7 +4880,7 @@ function App() {
                             <span className="pending-order-main">
                               <strong>{order.productName || "-"}</strong>
                               <b className="pending-order-number">Order No. {order.orderNo || "-"}</b>
-                              <small>Part No. {order.partNo || "-"} • Step {order.step || "-"} • Order {order.orderNo || "-"}</small>
+                              <small>รหัสชิ้นงาน / Part No. {order.partNo || "-"} • Step {order.step || "-"} • Order {order.orderNo || "-"}</small>
                             </span>
                             <span className="pending-order-meta">
                               {order.orderQty ? `จำนวน ${formatNumber(order.orderQty)} ${order.unit || "pcs"}` : "ยังไม่ระบุจำนวน"}
@@ -4933,7 +4934,7 @@ function App() {
                       />
                       <input
                         onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, partNo: event.target.value }))}
-                        placeholder="Part No."
+                        placeholder="รหัสชิ้นงาน / Part No."
                         value={productionOrderForm.partNo}
                       />
                       <input
@@ -4954,7 +4955,7 @@ function App() {
                       />
                       <input
                         onChange={(event) => setProductionOrderForm((prev) => ({ ...prev, shift: event.target.value }))}
-                        placeholder="กะ"
+                        placeholder="กะ / Shift"
                         value={productionOrderForm.shift}
                       />
                       <input
@@ -4969,19 +4970,20 @@ function App() {
                   )}
                 </div>
                 <label>
-                  ค้นหารุ่น
+                  
+                  ค้นหารุ่น / Search Part
                   <div className="input-with-icon">
                     <Search size={16} />
                     <input
                       value={productSearch}
                       onChange={(event) => setProductSearch(event.target.value)}
-                      placeholder="Product / Part No."
+                      placeholder="ชิ้นงาน / รหัสชิ้นงาน / Product / Part No."
                       type="search"
                     />
                   </div>
                 </label>
                 <label>
-                  <span className="label-text">รุ่น <RequiredMark /></span>
+                  <span className="label-text">รุ่น / Model <RequiredMark /></span>
                   <input
                     className="production-main-input"
                     onChange={(event) => updateProductField("productName", event.target.value)}
@@ -5007,7 +5009,7 @@ function App() {
                   </select>
                 </label>
                 <label>
-                  <span className="label-text">Part No. <RequiredMark /></span>
+                  <span className="label-text">รหัสชิ้นงาน / Part No. <RequiredMark /></span>
                   <input
                     className="production-main-input"
                     onChange={(event) => updateProductField("partNo", event.target.value)}
@@ -5033,7 +5035,7 @@ function App() {
                   </select>
                 </label>
                 <label>
-                  <span className="label-text">Step <RequiredMark /></span>
+                  <span className="label-text">ขั้นตอน / Step <RequiredMark /></span>
                   <input
                     className="production-main-input"
                     onChange={(event) => updateProductField("step", event.target.value)}
@@ -5060,14 +5062,14 @@ function App() {
                   </select>
                 </label>
                 <label className="production-material-field">
-                  <span className="label-text">Material of production</span>
+                  <span className="label-text">วัตถุดิบผลิต / Material of Production</span>
                   <input
                     className="production-main-input"
                     onChange={(event) => {
                       recordEmployeeDraftEvent("แก้ Material of production", event.target.value || "-");
                       setDraft({ ...draft, materialOfProduction: event.target.value });
                     }}
-                    placeholder="Material of production"
+                    placeholder="วัตถุดิบผลิต / Material of Production"
                     type="text"
                     value={draft.materialOfProduction || ""}
                   />
@@ -5083,12 +5085,12 @@ function App() {
               <div className="runtime-panel">
                 {!isEmployeeEntry && (
                   <div className="runtime-current-clock">
-                    <span>เวลาปัจจุบัน</span>
+                    <span>เวลาปัจจุบัน / Current Time</span>
                     <strong>{formatClock(employeeReportNow)}</strong>
                   </div>
                 )}
                 <label className="runtime-input-block">
-                  <span>เวลาตามกะ <RequiredMark /></span>
+                  <span>เวลาตามกะ / Shift Time <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       max={maxShiftWorkMinutes}
@@ -5108,7 +5110,7 @@ function App() {
                   )}
                 </label>
                 <label className="runtime-input-block">
-                  <span>ความเร็วเครื่องจักร <RequiredMark /></span>
+                  <span>ความเร็วเครื่องจักร / Machine Speed <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -5121,7 +5123,7 @@ function App() {
                   </div>
                 </label>
                 <label className="runtime-input-block">
-                  <span>จำนวนคาวิตี้ <RequiredMark /></span>
+                  <span>จำนวนคาวิตี้ / Cavity Count <RequiredMark /></span>
                   <div className="runtime-input-row">
                     <input
                       min="0"
@@ -5134,11 +5136,11 @@ function App() {
                   </div>
                 </label>
                 <div>
-                  <span>Downtime</span>
+                  <span>เวลาหยุด / Downtime</span>
                   <strong>{formatRate(visibleDowntimeMinutes)} นาที</strong>
                 </div>
                 <div>
-                  <span>เวลาตามจริง (เวลาโลก)</span>
+                  <span>เวลาตามจริง (เวลาโลก) / Actual Clock Time</span>
                   <strong>{formatRate(liveClockWorkMinutes)} นาที</strong>
                   {isEmployeeEntry && visibleWorkStartedDate && (
                     <small className="runtime-live-start">
@@ -5151,15 +5153,15 @@ function App() {
 
               <div className="section-title compact">
                 <TableProperties size={19} />
-                <h2>ยอดผลิต</h2>
+                <h2>ยอดผลิต / Production Output</h2>
               </div>
               <div className="form-grid three output-quantity-grid">
                 <label className="good-quantity-field">
-                  <span className="label-text">Good quantity <RequiredMark /></span>
+                  <span className="label-text">จำนวนงานดี / Good quantity <RequiredMark /></span>
                   <input className="good-quantity-input" value={numberInputValue(draft.goodQty)} onChange={(event) => handleNumber("goodQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label className="ng-quantity-field">
-                  <span className="label-text">NG quantity</span>
+                  <span className="label-text">จำนวนงานเสีย / NG quantity</span>
                   <input className="ng-quantity-input" value={numberInputValue(draft.ngQty)} onChange={(event) => handleNumber("ngQty", event.target.value)} min="0" type="number" />
                 </label>
                 <label>
@@ -5170,7 +5172,7 @@ function App() {
 
               <div className="section-title compact">
                 <History size={19} />
-                <h2>เวลาหยุด</h2>
+                <h2>เวลาหยุด / Downtime</h2>
               </div>
               <p className="slot-help">
                 {isEmployeeEntry
@@ -5180,7 +5182,7 @@ function App() {
               {isEmployeeEntry && currentMachineSharedStatus && (
                 <div className="employee-shared-entry-status" aria-live="polite">
                   <div>
-                    <span>สถานะสดเครื่องนี้</span>
+                    <span>สถานะสดเครื่องนี้ / Live Machine Status</span>
                     <strong>{currentMachineSharedActivity || "กำลังกรอกอยู่"}</strong>
                   </div>
                   <p>
@@ -5284,7 +5286,7 @@ function App() {
               </div>
 
               <label>
-                หมายเหตุ
+                หมายเหตุ / Notes
                 <textarea value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} rows={3} />
               </label>
 
@@ -5292,8 +5294,8 @@ function App() {
                 <section className="employee-live-report" aria-live="polite">
                   <div className="employee-live-report-heading">
                     <div>
-                      <span>Realtime employee report</span>
-                      <h3>รายงานสดการกรอกยอดพนักงาน</h3>
+                      <span>รายงานสดพนักงาน / Realtime employee report</span>
+                      <h3>รายงานสดการกรอกยอดพนักงาน / Live Employee Report</h3>
                     </div>
                     <strong>{formatClock(employeeReportNow)}</strong>
                   </div>
@@ -5304,12 +5306,12 @@ function App() {
                       <small>{employeeWorkStartedAt ? `นับเวลางานจริง ${employeeWorkElapsed}` : "ยังไม่กดหัวข้อแรก ระบบยังไม่นับเวลาผลิต"}</small>
                     </div>
                     <div>
-                      <span>อัปเดตล่าสุด</span>
+                      <span>อัปเดตล่าสุด / Last Updated</span>
                       <b>{employeeDraftUpdatedLabel}</b>
                       <small>รวมเวลาการกรอกอัตโนมัติ {employeeEntryElapsed}</small>
                     </div>
                     <div>
-                      <span>ช่วงเวลาการกรอก</span>
+                      <span>ช่วงเวลาการกรอก / Entry Period</span>
                       <b>
                         {draft.recordDate || getTodayInputValue()} {draft.recordTime || getCurrentTimeInputValue()} - {formatClock(employeeReportNow)}
                       </b>
@@ -5328,27 +5330,27 @@ function App() {
                       <small>{draft.productName || "-"}</small>
                     </div>
                     <div>
-                      <span>Part No. / Step</span>
+                      <span>รหัสชิ้นงาน / ขั้นตอน / Part No. / Step</span>
                       <b>{draft.partNo || "-"}</b>
-                      <small>Step {draft.step || "-"}</small>
+                      <small>ขั้นตอน / Step {draft.step || "-"}</small>
                     </div>
                     <div>
-                      <span>ยอดผลิต</span>
-                      <b>Good {formatNumber(draft.goodQty || 0)}</b>
+                      <span>ยอดผลิต / Production Output</span>
+                      <b>งานดี / Good {formatNumber(draft.goodQty || 0)}</b>
                       <small>
-                        NG {formatNumber(draft.ngQty || 0)} / Test {formatNumber(draft.testQty || 0)}
+                        งานเสีย / NG {formatNumber(draft.ngQty || 0)} / Test {formatNumber(draft.testQty || 0)}
                       </small>
                     </div>
                     <div>
-                      <span>เวลาผลิต</span>
+                      <span>เวลาผลิต / Run Time</span>
                       <b>{formatNumber(visibleWorkMinutes)} นาที</b>
                       <small>
-                        Downtime {formatRate(visibleDowntimeMinutes)} / Normal {formatRate(liveNormalMinutes)}
+                        เวลาหยุด / Downtime {formatRate(visibleDowntimeMinutes)} / Normal {formatRate(liveNormalMinutes)}
                       </small>
                     </div>
                   </div>
                   <div className="employee-live-downtime">
-                    <span>รายละเอียดเวลาหยุด</span>
+                    <span>รายละเอียดเวลาหยุด / Downtime Details</span>
                     {employeeDowntimeDetails.length > 0 ? (
                       <div>
                         {employeeDowntimeDetails.map((item) => (
@@ -5362,7 +5364,7 @@ function App() {
                     )}
                   </div>
                   <div className="employee-live-timeline">
-                    <span>ประวัติการกรอกล่าสุด</span>
+                    <span>ประวัติการกรอกล่าสุด / Recent Entry History</span>
                     {employeeDraftTimeline.length > 0 ? (
                       <ol>
                         {employeeDraftTimeline.map((item) => (
@@ -5398,17 +5400,17 @@ function App() {
 
             <aside className="entry-summary">
               <div className="summary-block">
-                <span>เครื่องที่เลือก</span>
+                <span>เครื่องที่เลือก / Selected Machine</span>
                 <strong>{currentMachine.name}</strong>
                 <p>{currentMachine.hasStep ? "มี Step ใน Excel" : "ไม่มี Step ใน Excel"}</p>
               </div>
               <div className="summary-block">
-                <span>รุ่นในเครื่องนี้</span>
+                <span>รุ่นในเครื่องนี้ / Machine Parts</span>
                 <strong>{formatNumber(machineProducts.length)}</strong>
                 <p>อิงจาก OEE-2026.xlsx</p>
               </div>
               <div className="recent-list">
-                <h3>รายการล่าสุด</h3>
+                <h3>รายการล่าสุด / Recent Entries</h3>
                 {entryDateLogs.map((log) => (
                   <div className="recent-item" key={log.id}>
                     <b>{log.machineName}</b>
@@ -5426,12 +5428,12 @@ function App() {
         {tab === "dashboard" && (
           <section className="dashboard-layout">
             <div className="kpi-grid">
-              <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
-              <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
-              <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
-              <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
-              <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
-              <Kpi label="Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
+              <Kpi label="งานดี / Good" value={formatNumber(summary.good)} tone="green" />
+              <Kpi label="งานเสีย / NG" value={formatNumber(summary.ng)} tone="red" />
+              <Kpi label="คุณภาพ / Quality" value={formatPercent(summary.quality)} tone="blue" />
+              <Kpi label="ความพร้อมเดินเครื่อง / Availability" value={formatPercent(summary.availability)} tone="amber" />
+              <Kpi label="เวลาหยุด / Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
+              <Kpi label="รายการบันทึก / Logs" value={formatNumber(dashboardLogs.length)} tone="neutral" />
             </div>
             <FiltersBar filters={dashboardFilters} machines={machines} setFilters={setDashboardFilters} />
             {dashboardEmptyMessage && (
@@ -5531,9 +5533,9 @@ function App() {
           <section className="table-view">
             <EquipmentRegistry machines={machines} />
             <div className="master-stats">
-              <Kpi label="Machines" value={formatNumber(machines.length)} tone="green" />
-              <Kpi label="Products" value={formatNumber(canonicalProducts.length)} tone="blue" />
-              <Kpi label="Seed logs" value={formatNumber(seedLogs.length)} tone="amber" />
+              <Kpi label="เครื่องจักร / Machines" value={formatNumber(machines.length)} tone="green" />
+              <Kpi label="ชิ้นงาน / Products" value={formatNumber(canonicalProducts.length)} tone="blue" />
+              <Kpi label="ประวัติต้นทาง / Seed logs" value={formatNumber(seedLogs.length)} tone="amber" />
             </div>
             <MasterTable products={canonicalProducts} />
           </section>
@@ -5575,7 +5577,7 @@ function App() {
             <div className="confirm-modal-icon">
               <AlertTriangle size={30} />
             </div>
-            <h2 id="confirm-entry-dialog-title">ยืนยันการกรอก</h2>
+            <h2 id="confirm-entry-dialog-title">ยืนยันการกรอก / Confirm Entry</h2>
             <p>
               ต้องการบันทึกเวลา {pendingEmployeeTimer.label} เวลา {pendingEmployeeTimer.pressedTime} ใช่หรือไม่
             </p>
@@ -5653,7 +5655,7 @@ const emptyUserForm = {
 };
 
 const userRoleOptions: Array<{ value: AppRole; label: string }> = [
-  { value: "production", label: "Production" },
+  { value: "production", label: "การผลิต / Production" },
   { value: "qc", label: "QC" },
   { value: "tooling_repair", label: "Tooling repair" },
   { value: "technician", label: "Technician" },
@@ -5785,11 +5787,11 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       <form className="user-form" onSubmit={submitUser}>
         <div className="section-title">
           <UserPlus size={20} />
-          <h2>สร้างผู้ใช้งาน</h2>
+          <h2>สร้างผู้ใช้งาน / Create User</h2>
         </div>
         <div className="form-grid">
           <label>
-            <span className="label-text">Username <RequiredMark /></span>
+            <span className="label-text">ชื่อเข้าใช้ / Username <RequiredMark /></span>
             <input
               autoComplete="off"
               onChange={(event) => setForm({ ...form, username: event.target.value })}
@@ -5800,7 +5802,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             />
           </label>
           <label>
-            <span className="label-text">ชื่อแสดงผล <RequiredMark /></span>
+            <span className="label-text">ชื่อแสดงผล / Display Name <RequiredMark /></span>
             <input
               autoComplete="off"
               onChange={(event) => setForm({ ...form, displayName: event.target.value })}
@@ -5811,7 +5813,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             />
           </label>
           <label>
-            <span className="label-text">Role <RequiredMark /></span>
+            <span className="label-text">สิทธิ์ผู้ใช้ / Role <RequiredMark /></span>
             <select
               onChange={(event) => setForm({ ...form, role: event.target.value as AppRole })}
               required
@@ -5825,7 +5827,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            <span className="label-text">Password <RequiredMark /></span>
+            <span className="label-text">รหัสผ่าน / Password <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setForm({ ...form, password: event.target.value })}
@@ -5848,11 +5850,11 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       <form className="user-form" onSubmit={submitEditUser}>
         <div className="section-title">
           <Pencil size={20} />
-          <h2>แก้ไขชื่อและ Role ผู้ใช้งาน</h2>
+          <h2>แก้ไขชื่อและ Role ผู้ใช้งาน / Edit User Profile and Role</h2>
         </div>
         <div className="form-grid">
           <label>
-            <span className="label-text">บัญชี <RequiredMark /></span>
+            <span className="label-text">บัญชี / Account <RequiredMark /></span>
             <select
               onChange={(event) => {
                 const selectedUser = users.find((user) => user.username === event.target.value);
@@ -5870,7 +5872,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            <span className="label-text">ชื่อแสดงผล <RequiredMark /></span>
+            <span className="label-text">ชื่อแสดงผล / Display Name <RequiredMark /></span>
             <input
               autoComplete="off"
               onChange={(event) => setEditUserForm({ ...editUserForm, displayName: event.target.value })}
@@ -5881,7 +5883,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             />
           </label>
           <label>
-            <span className="label-text">Role <RequiredMark /></span>
+            <span className="label-text">สิทธิ์ผู้ใช้ / Role <RequiredMark /></span>
             <select
               disabled={!editUserForm.username}
               onChange={(event) => setEditUserForm({ ...editUserForm, role: event.target.value as AppRole })}
@@ -5896,7 +5898,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            <span className="label-text">Username</span>
+            <span className="label-text">ชื่อเข้าใช้ / Username</span>
             <input readOnly value={editUserForm.username || "-"} type="text" />
           </label>
         </div>
@@ -5910,11 +5912,11 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
       <form className="user-form" onSubmit={submitPassword}>
         <div className="section-title">
           <KeyRound size={20} />
-          <h2>เปลี่ยนรหัสผ่าน</h2>
+          <h2>เปลี่ยนรหัสผ่าน / Change Password</h2>
         </div>
         <div className="form-grid three">
           <label>
-            <span className="label-text">บัญชี <RequiredMark /></span>
+            <span className="label-text">บัญชี / Account <RequiredMark /></span>
             <select
               onChange={(event) => setPasswordForm(createEmptyPasswordForm(event.target.value))}
               required
@@ -5928,7 +5930,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             </select>
           </label>
           <label>
-            <span className="label-text">รหัสผ่านใหม่ <RequiredMark /></span>
+            <span className="label-text">รหัสผ่านใหม่ / New Password <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })}
@@ -5939,7 +5941,7 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
             />
           </label>
           <label>
-            <span className="label-text">ยืนยันรหัสผ่าน <RequiredMark /></span>
+            <span className="label-text">ยืนยันรหัสผ่าน / Confirm Password <RequiredMark /></span>
             <input
               autoComplete="new-password"
               onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
@@ -5961,12 +5963,12 @@ function UsersAdmin({ currentUsername }: { currentUsername: string }) {
         <table>
           <thead>
             <tr>
-              <th>Username</th>
-              <th>Display name</th>
-              <th>Role</th>
-              <th>Type</th>
-              <th>Created</th>
-              <th>Action</th>
+              <th>ชื่อเข้าใช้ / Username</th>
+              <th>ชื่อแสดง / Display name</th>
+              <th>สิทธิ์ผู้ใช้ / Role</th>
+              <th>ประเภท / Type</th>
+              <th>วันที่สร้าง / Created</th>
+              <th>การจัดการ / Action</th>
             </tr>
           </thead>
           <tbody>
@@ -6024,21 +6026,21 @@ function FactoryGeofenceGate({ access, onLogout }: { access: FactoryGeofenceAcce
           <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
             <strong>OEE Entry</strong>
-            <span>Factory zone access</span>
+            <span>พื้นที่ใช้งานโรงงาน / Factory zone access</span>
           </div>
         </div>
         <div className="login-heading">
           <MapPin size={24} />
-          <h1>ใช้งานได้เฉพาะในโซนโรงงาน</h1>
+          <h1>ใช้งานได้เฉพาะในโซนโรงงาน / Factory Zone Access Only</h1>
         </div>
         <p className="geofence-message">{statusMessage}</p>
         <div className="geofence-status-grid">
           <div>
-            <span>รัศมีที่อนุญาต</span>
+            <span>รัศมีที่อนุญาต / Allowed Radius</span>
             <strong>{formatNumber(Math.round(factoryGeofenceRadiusM))} เมตร</strong>
           </div>
           <div>
-            <span>ระยะจากโรงงาน</span>
+            <span>ระยะจากโรงงาน / Distance from Factory</span>
             <strong>{distanceText}</strong>
           </div>
           <div>
@@ -6046,7 +6048,7 @@ function FactoryGeofenceGate({ access, onLogout }: { access: FactoryGeofenceAcce
             <strong>{accuracyText}</strong>
           </div>
           <div>
-            <span>ตรวจล่าสุด</span>
+            <span>ตรวจล่าสุด / Last Checked</span>
             <strong>{access.lastCheckedAt || "-"}</strong>
           </div>
         </div>
@@ -6058,7 +6060,7 @@ function FactoryGeofenceGate({ access, onLogout }: { access: FactoryGeofenceAcce
             <RefreshCw size={16} /> {access.checking ? "กำลังตรวจ..." : "ตรวจตำแหน่งอีกครั้ง"}
           </button>
           <button className="ghost-button" onClick={onLogout} type="button">
-            <LogOut size={16} /> Logout
+            <LogOut size={16} /> ออกจากระบบ / Logout
           </button>
         </div>
         <p className="login-note">
@@ -6096,15 +6098,15 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
             <strong>OEE Entry</strong>
-            <span>Production access</span>
+            <span>เข้าใช้งานการผลิต / Production access</span>
           </div>
         </div>
         <div className="login-heading">
           <LockKeyhole size={22} />
-          <h1>เข้าสู่ระบบ</h1>
+          <h1>เข้าสู่ระบบ / Sign In</h1>
         </div>
         <label>
-          <span className="label-text">Username <RequiredMark /></span>
+          <span className="label-text">ชื่อเข้าใช้ / Username <RequiredMark /></span>
           <input
             autoComplete="username"
             autoCapitalize="none"
@@ -6119,12 +6121,12 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
           />
         </label>
         <label>
-          <span className="label-text">Password <RequiredMark /></span>
+          <span className="label-text">รหัสผ่าน / Password <RequiredMark /></span>
           <input
             autoComplete="current-password"
             enterKeyHint="go"
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="รหัสผ่าน"
+            placeholder="รหัสผ่าน / Password"
             required
             type="password"
             value={password}
@@ -6247,7 +6249,7 @@ function PdSheetsView({
       <div className="report-toolbar analysis-panel">
         <div>
           <p className="eyebrow">PD Google Sheets</p>
-          <h2>ข้อมูล PD จาก Google Sheet</h2>
+          <h2>ข้อมูล PD จาก Google Sheet / PD Data from Google Sheet</h2>
           <p>ระบบจะรีเฟรชอัตโนมัติทุก 60 วินาทีเมื่อเปิดหน้านี้</p>
           {updatedAt && <p>อัปเดตล่าสุด: {updatedAt}</p>}
         </div>
@@ -6283,19 +6285,19 @@ function PdSheetsView({
       )}
 
       <div className="kpi-grid">
-        <Kpi label="Files" value={formatNumber(allSources.length)} tone="blue" />
-        <Kpi label="Worksheets" value={formatNumber(totalSheets)} tone="green" />
-        <Kpi label="Rows" value={formatNumber(totalAllRows)} tone="amber" />
-        <Kpi label="Auto refresh" value="60 วินาที" tone="neutral" />
+        <Kpi label="ไฟล์ / Files" value={formatNumber(allSources.length)} tone="blue" />
+        <Kpi label="แผ่นงาน / Worksheets" value={formatNumber(totalSheets)} tone="green" />
+        <Kpi label="แถว / Rows" value={formatNumber(totalAllRows)} tone="amber" />
+        <Kpi label="รีเฟรชอัตโนมัติ / Auto refresh" value="60 วินาที" tone="neutral" />
       </div>
 
       {allSources.length === 0 && !loading && <p className="empty-text">ยังไม่มีข้อมูล PD ให้แสดง</p>}
 
       <div className="pd-view-tabs">
         {[
-          { id: "summary", label: "สรุป" },
-          { id: "search", label: "ค้นหา" },
-          { id: "tables", label: "ตารางข้อมูล" },
+          { id: "summary", label: "สรุป / Summary" },
+          { id: "search", label: "ค้นหา / Search" },
+          { id: "tables", label: "ตารางข้อมูล / Data Tables" },
         ].map((item) => (
           <button
             className={pdView === item.id ? "active" : ""}
@@ -6312,41 +6314,41 @@ function PdSheetsView({
         <div className="pd-summary-grid">
           <div className="analysis-panel pd-analysis-card">
             <p className="eyebrow">PD Analysis</p>
-            <h2>ภาพรวมข้อมูล</h2>
+            <h2>ภาพรวมข้อมูล / Data Overview</h2>
             <div className="pd-mini-stats">
               <div>
                 <span>พร้อมใช้</span>
-                <strong>{formatNumber(readySources.length)} ไฟล์</strong>
+                <strong>{formatNumber(readySources.length)}  ไฟล์ / Files</strong>
               </div>
               <div>
                 <span>ต้องแก้สิทธิ์</span>
-                <strong>{formatNumber(blockedSources.length)} ไฟล์</strong>
+                <strong>{formatNumber(blockedSources.length)}  ไฟล์ / Files</strong>
               </div>
               <div>
-                <span>คอลัมน์</span>
+                <span>คอลัมน์ / Columns</span>
                 <strong>{formatNumber(totalColumns)}</strong>
               </div>
               <div>
-                <span>Part No.</span>
+                <span>รหัสชิ้นงาน / Part No.</span>
                 <strong>{formatNumber(capacitySummary.partCount)}</strong>
               </div>
               <div>
-                <span>M/C</span>
+                <span>เครื่องจักร / M/C</span>
                 <strong>{formatNumber(capacitySummary.machineCount)}</strong>
               </div>
               <div>
-                <span>Avg target</span>
+                <span>เป้าหมายเฉลี่ย / Avg target</span>
                 <strong>{formatNumber(capacitySummary.targetAverage)}</strong>
               </div>
             </div>
             <div className="pd-target-summary">
               <div>
-                <span>Target รวม</span>
+                <span>เป้าหมายรวม / Target รวม</span>
                 <strong>{formatNumber(capacitySummary.targetTotal)}</strong>
                 <small>{formatNumber(capacitySummary.targetCount)} รายการที่มี target</small>
               </div>
               <div>
-                <span>Top target</span>
+                <span>เป้าหมายสูงสุด / Top target</span>
                 {capacitySummary.topTargets.length ? (
                   capacitySummary.topTargets.map((item) => (
                     <p key={`${item.label}-${item.target}`}>
@@ -6364,8 +6366,8 @@ function PdSheetsView({
           </div>
           <div className="analysis-panel pd-source-menu">
             <div className="report-table-heading compact-heading">
-              <h2>เมนูไฟล์ PD</h2>
-              <span>{formatNumber(allSources.length)} ไฟล์</span>
+              <h2>เมนูไฟล์ PD / PD Files</h2>
+              <span>{formatNumber(allSources.length)}  ไฟล์ / Files</span>
             </div>
             {allSources.map((source) => (
               <PdSourceCard key={source.id} source={source} onOpenTables={() => setPdView("tables")} />
@@ -6377,8 +6379,8 @@ function PdSheetsView({
       {pdView === "search" && (
         <div className="analysis-panel pd-search-panel">
           <div className="report-table-heading compact-heading">
-            <h2>ค้นหาข้อมูล PD</h2>
-            <span>{formatNumber(visibleSearchRows.length)} รายการ</span>
+            <h2>ค้นหาข้อมูล PD / Search PD Data</h2>
+            <span>{formatNumber(visibleSearchRows.length)}  รายการ / Items</span>
           </div>
           <div className="pd-search-controls">
             <div className="input-with-icon">
@@ -6475,7 +6477,7 @@ function PdSearchResults({
             <strong>
               {item.source.label} / {item.sheet.name}
             </strong>
-            <span>แถว {formatNumber(item.rowIndex + 2)}</span>
+            <span>แถว / Row {formatNumber(item.rowIndex + 2)}</span>
           </div>
           <dl>
             {item.sheet.headers.slice(0, 8).map((header, index) => (
@@ -6589,7 +6591,7 @@ function ReportsView({
       <div className="report-toolbar analysis-panel">
         <div>
           <p className="eyebrow">Production document</p>
-          <h2>สรุปการกรอกยอดสำหรับดาวน์โหลด PDF</h2>
+          <h2>สรุปการกรอกยอดสำหรับดาวน์โหลด PDF / Production Summary for PDF</h2>
           <p>ช่วงวันที่ผลิต: {reportRangeLabel(filters)} | เครื่อง: {reportMachineLabel(filters, machines)} | กะ: {reportShiftLabel(filters)}</p>
           <p>กะเช้า 08:00-20:00 ของวันที่ผลิต | กะดึก 20:00-08:00 ของวันถัดไป</p>
         </div>
@@ -6609,28 +6611,28 @@ function ReportsView({
       )}
 
       <div className="kpi-grid">
-        <Kpi label="Good" value={formatNumber(summary.good)} tone="green" />
-        <Kpi label="NG" value={formatNumber(summary.ng)} tone="red" />
-        <Kpi label="Test" value={formatNumber(summary.test)} tone="amber" />
-        <Kpi label="Total" value={formatNumber(summary.total)} tone="blue" />
-        <Kpi label="Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
-        <Kpi label="Records" value={formatNumber(logs.length)} tone="neutral" />
+        <Kpi label="งานดี / Good" value={formatNumber(summary.good)} tone="green" />
+        <Kpi label="งานเสีย / NG" value={formatNumber(summary.ng)} tone="red" />
+        <Kpi label="งานทดลอง / Test" value={formatNumber(summary.test)} tone="amber" />
+        <Kpi label="รวม / Total" value={formatNumber(summary.total)} tone="blue" />
+        <Kpi label="เวลาหยุด / Downtime" value={`${formatNumber(summary.downtime)} นาที`} tone="red" />
+        <Kpi label="รายการ / Records" value={formatNumber(logs.length)} tone="neutral" />
       </div>
 
       <div className="kpi-grid report-oee-kpis">
-        <Kpi label="OEE" value={formatPercent(oee)} tone="green" />
-        <Kpi label="Availability" value={formatPercent(summary.availability)} tone="amber" />
-        <Kpi label="Quality" value={formatPercent(summary.quality)} tone="blue" />
-        <Kpi label="Run Time" value={`${formatNumber(summary.run)} นาที`} tone="neutral" />
+        <Kpi label="ประสิทธิผลเครื่องจักร / OEE" value={formatPercent(oee)} tone="green" />
+        <Kpi label="ความพร้อมเดินเครื่อง / Availability" value={formatPercent(summary.availability)} tone="amber" />
+        <Kpi label="คุณภาพ / Quality" value={formatPercent(summary.quality)} tone="blue" />
+        <Kpi label="เวลาเดินเครื่อง / Run Time" value={`${formatNumber(summary.run)} นาที`} tone="neutral" />
       </div>
       <OeeSummaryChart downtimeItems={downtimeRows} summary={summary} />
       <DowntimeInsightPanel rows={downtimeStats} summary={summary} />
 
-      <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน" />
-      <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No." />
+      <ReportRowsTable rows={shiftRows} title="สรุปตามกะและช่วงเวลาทำงาน / Summary by Shift and Time" />
+      <ReportRowsTable rows={partRows.slice(0, 40)} title="สรุปตามรุ่น / Part No. / Summary by Part" />
 
       <div className="analysis-panel">
-        <h2>Downtime แยกตามหัวข้อ</h2>
+        <h2>Downtime แยกตามหัวข้อ / Downtime by Cause</h2>
         <div className="report-downtime-grid">
           {downtimeRows.map((item) => (
             <div className="report-downtime-item" key={item.key}>
@@ -6660,27 +6662,27 @@ function DowntimeInsightPanel({ rows, summary }: { rows: DowntimeStatRow[]; summ
   return (
     <div className="analysis-panel downtime-insight-panel">
       <div className="report-table-heading compact-heading">
-        <h2>วิเคราะห์การหยุดเครื่อง</h2>
-        <span>สรุปสั้น</span>
+        <h2>วิเคราะห์การหยุดเครื่อง / Downtime Analysis</h2>
+        <span>สรุปสั้น / Summary</span>
       </div>
       <div className="downtime-insight-grid">
         <div className="downtime-insight-card focus">
-          <span>ปัญหาหลัก</span>
+          <span>ปัญหาหลัก / Main Issue</span>
           <strong>{topIssue?.shortLabel ?? "-"}</strong>
           <p>{insightText}</p>
         </div>
         <div className="downtime-insight-card">
-          <span>Downtime รวม</span>
+          <span>เวลาหยุดรวม / Downtime รวม</span>
           <strong>{formatNumber(summary.downtime)} นาที</strong>
           <p>คิดเป็น {formatPercent(downtimeShare)} ของเวลาทั้งหมด</p>
         </div>
         <div className="downtime-insight-card">
-          <span>Top 3</span>
+          <span>สามอันดับแรก / Top 3</span>
           <strong>{formatPercent(topThreePercent)}</strong>
           <p>ของเวลาหยุดทั้งหมด</p>
         </div>
         <div className="downtime-insight-card">
-          <span>จำนวนปัญหา</span>
+          <span>จำนวนปัญหา / Issue Count</span>
           <strong>{formatNumber(activeRows.length)}</strong>
           <p>หัวข้อที่เกิด downtime</p>
         </div>
@@ -6712,17 +6714,17 @@ function DowntimeStatsTable({ rows }: { rows: DowntimeStatRow[] }) {
   return (
     <div className="data-table-wrap report-table">
       <div className="report-table-heading">
-        <h2>สถิติการหยุดเครื่อง</h2>
-        <span>{formatNumber(visibleRows.length)} ปัญหา</span>
+        <h2>สถิติการหยุดเครื่อง / Downtime Statistics</h2>
+        <span>{formatNumber(visibleRows.length)}  ปัญหา / Issue</span>
       </div>
       <table>
         <thead>
           <tr>
-            <th>No.</th>
-            <th>ปัญหาการหยุดเครื่อง</th>
-            <th>เวลาหยุดรวม</th>
-            <th>จำนวนครั้ง</th>
-            <th>สัดส่วน</th>
+            <th>ลำดับ / No.</th>
+            <th>ปัญหาการหยุดเครื่อง / Downtime Cause</th>
+            <th>เวลาหยุดรวม / Total Downtime</th>
+            <th>จำนวนครั้ง / Occurrences</th>
+            <th>สัดส่วน / Share</th>
           </tr>
         </thead>
         <tbody>
@@ -6757,20 +6759,20 @@ function ReportRowsTable({ rows, title }: { rows: ReportRow[]; title: string }) 
     <div className="data-table-wrap report-table">
       <div className="report-table-heading">
         <h2>{title}</h2>
-        <span>{formatNumber(rows.length)} รายการ</span>
+        <span>{formatNumber(rows.length)}  รายการ / Items</span>
       </div>
       <table>
         <thead>
           <tr>
-            <th>No.</th>
-            <th>รายการ</th>
-            <th>Good</th>
-            <th>NG</th>
-            <th>Test</th>
-            <th>Total</th>
-            <th>Downtime</th>
-            <th>Normal</th>
-            <th>Records</th>
+            <th>ลำดับ / No.</th>
+            <th>รายการ / Items</th>
+            <th>งานดี / Good</th>
+            <th>งานเสีย / NG</th>
+            <th>งานทดลอง / Test</th>
+            <th>รวม / Total</th>
+            <th>เวลาหยุด / Downtime</th>
+            <th>เวลาผลิต / Normal</th>
+            <th>รายการ / Records</th>
           </tr>
         </thead>
         <tbody>
@@ -6835,14 +6837,14 @@ function FiltersBar({
     <section className="filters-bar dashboard-filter-panel" aria-label="Dashboard filters">
       <div className="filter-panel-heading">
         <div>
-          <span>FILTERS</span>
-          <h2>เลือกข้อมูลที่ต้องการดู</h2>
+          <span>ตัวกรอง / FILTERS</span>
+          <h2>เลือกข้อมูลที่ต้องการดู / Select Data to View</h2>
           <p>{selectedMachineLabel} · {filters.shift ? shiftLabel(filters.shift) : "ทุกกะ"} · {activeFilterCount > 0 ? `${activeFilterCount} ตัวกรอง` : "ยังไม่กรองข้อมูล"}</p>
         </div>
         <div className="filter-quick-actions">
-          <button type="button" onClick={() => updateFilters({ from: today, to: today })}>วันนี้</button>
-          <button type="button" onClick={() => updateFilters({ from: "", to: "" })}>ทุกวัน</button>
-          <button type="button" onClick={() => setFilters({ machineId: "", machineIds: [], shift: "", from: "", to: "" })}>ล้างทั้งหมด</button>
+          <button type="button" onClick={() => updateFilters({ from: today, to: today })}>วันนี้ / Today</button>
+          <button type="button" onClick={() => updateFilters({ from: "", to: "" })}>ทุกวัน / All Dates</button>
+          <button type="button" onClick={() => setFilters({ machineId: "", machineIds: [], shift: "", from: "", to: "" })}>ล้างทั้งหมด / Clear All</button>
         </div>
       </div>
       <div className="filter-control-grid">
@@ -6855,7 +6857,7 @@ function FiltersBar({
           <input value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} type="date" />
         </label>
         <label className="filter-one-day-picker">
-          <span>เลือก 1 วัน</span>
+          <span>เลือก 1 วัน / Single Day</span>
           <input
             aria-label="เลือกวันที่เดียว"
             type="date"
@@ -6988,11 +6990,11 @@ function MachineComparisonPanel({
     <section className="machine-compare-panel">
       <div className="machine-compare-heading">
         <div>
-          <span>COMPARE</span>
+          <span>เปรียบเทียบ / COMPARE</span>
           <h2>เปรียบเทียบรายเครื่อง / Machine comparison</h2>
           <p>แสดงผลแยกตามเครื่องที่เลือก ไม่รวมยอดปนกัน</p>
         </div>
-        <b>{formatNumber(rows.length)} เครื่อง</b>
+        <b>{formatNumber(rows.length)}  เครื่อง / Machine</b>
       </div>
       <div className="machine-compare-grid">
         {rows.map((row) => {
@@ -7006,15 +7008,15 @@ function MachineComparisonPanel({
             <article className="machine-compare-card" key={row.machineId}>
               <div className="machine-compare-card-head">
                 <strong>{row.machineName}</strong>
-                <span>OEE {formatPercent(row.summary.oee)}</span>
+                <span>ประสิทธิผลเครื่องจักร / OEE {formatPercent(row.summary.oee)}</span>
               </div>
               <div className="machine-compare-products">
                 <small>เวลาทำงานแยกตามงาน • ทุกงาน</small>
               <section className="machine-time-total" aria-label="เวลาทำงานรวม">
                 <small>เวลาผลิตจริงรวม • ตามช่วงและกะที่เลือก</small>
                 <strong>{formatNumber(row.summary.run)} นาที</strong>
-                <span>เวลาหยุด {formatNumber(row.summary.downtime)} นาที</span>
-                <span>เวลาบันทึกรวม {formatNumber(row.products.reduce((sum, product) => sum + product.recorded, 0))} นาที</span>
+                <span>เวลาหยุด / Downtime {formatNumber(row.summary.downtime)} นาที</span>
+                <span>เวลาบันทึกรวม / Total Recorded Time {formatNumber(row.products.reduce((sum, product) => sum + product.recorded, 0))} นาที</span>
               </section>
 
                 {row.products.length > 0 ? (
@@ -7023,7 +7025,7 @@ function MachineComparisonPanel({
                       <span key={JSON.stringify([product.productName, product.partNo, product.step, product.orderNo])}>
                         <b>{product.productName}</b>
                         <em>
-                          Part No. {product.partNo}{product.orderNo ? ` · ใบสั่ง ${product.orderNo}` : ""}
+                          รหัสชิ้นงาน / Part No. {product.partNo}{product.orderNo ? ` · ใบสั่ง ${product.orderNo}` : ""}
                           {product.step && product.step !== "-" ? ` · Step ${product.step}` : ""} · Output {formatNumber(product.total)}
                         </em>
                         <div className="product-kpi-grid">
@@ -7036,8 +7038,8 @@ function MachineComparisonPanel({
                         </div>
                         <em>ค่าเฉลี่ยใช้เวลาบันทึกรวม {formatNumber(product.recorded)} นาที • Output รวม Good + NG + Test</em>
                         <em>{product.missingTarget > 0 ? `ยังคำนวณ KPI ไม่ได้: ขาดเป้า ${product.missingTarget} รายการ` : `เป้าจากตารางกำลังผลิต ${product.capacityMatches}/${product.logs} รายการ ที่เหลือใช้สูตรเป้าเดิมของรายการ`} • KPI = Output ÷ Target × 100</em>
-                        <b className="product-work-time">ผลิตจริง {formatNumber(product.run)} นาที</b>
-                        <em>หยุด {formatNumber(product.downtime)} นาที · บันทึกรวม {formatNumber(product.recorded)} นาที</em>
+                        <b className="product-work-time">ผลิตจริง / Actual Production {formatNumber(product.run)} นาที</b>
+                        <em>หยุด / Stop {formatNumber(product.downtime)} นาที · บันทึกรวม {formatNumber(product.recorded)} นาที</em>
                       </span>
                     ))}
                   </div>
@@ -7046,10 +7048,10 @@ function MachineComparisonPanel({
                 )}
               </div>
               <section className="machine-daily-times" aria-label="เวลาทำงานแยกตามวัน">
-                <h3>เวลาทำงานของแต่ละวัน</h3>
+                <h3>เวลาทำงานของแต่ละวัน / Daily Working Time</h3>
                 <p>นาที • รวมเฉพาะกะและรายการที่เลือก</p>
                 {row.dailyTimes.length ? <div className="machine-daily-times-scroll"><table>
-                  <thead><tr><th>วันที่ทำงาน</th><th>ผลิตจริง</th><th>หยุด</th><th>บันทึกรวม</th></tr></thead>
+                  <thead><tr><th>วันที่ทำงาน / Work Date</th><th>ผลิตจริง / Actual Production</th><th>หยุด / Stop</th><th>บันทึกรวม / Recorded Total</th></tr></thead>
                   <tbody>{row.dailyTimes.map(day => <tr key={day.date}>
                     <th scope="row">{day.date}</th><td>{formatNumber(day.run)}</td><td>{formatNumber(day.downtime)}</td><td>{formatNumber(day.recorded)}</td>
                   </tr>)}</tbody>
@@ -7064,21 +7066,21 @@ function MachineComparisonPanel({
                   }}
                 >
                   <div>
-                    <small>OEE</small>
+                    <small>ประสิทธิผลเครื่องจักร / OEE</small>
                     <strong>{formatPercent(row.summary.oee)}</strong>
                   </div>
                 </div>
                 <div className="machine-compare-factors">
                   <div className="machine-compare-factor machine-compare-factor-availability" style={{ "--value": `${availabilityPercent * 100}%` } as CSSProperties}>
                     <span>
-                      <b>Availability</b>
+                      <b>ความพร้อมเดินเครื่อง / Availability</b>
                       <strong>{formatPercent(row.summary.availability)}</strong>
                     </span>
                     <i />
                   </div>
                   <div className="machine-compare-factor machine-compare-factor-quality" style={{ "--value": `${qualityPercent * 100}%` } as CSSProperties}>
                     <span>
-                      <b>Quality</b>
+                      <b>คุณภาพ / Quality</b>
                       <strong>{formatPercent(row.summary.quality)}</strong>
                     </span>
                     <i />
@@ -7087,27 +7089,27 @@ function MachineComparisonPanel({
               </div>
               <div className="machine-compare-metrics">
                 <div>
-                  <small>Output</small>
+                  <small>ยอดผลิต / Output</small>
                   <b>{formatNumber(row.summary.total)}</b>
                 </div>
                 <div>
-                  <small>Target</small>
+                  <small>เป้าหมาย / Target</small>
                   <b>{formatNumber(row.summary.targetQty)}</b>
                 </div>
                 <div className={targetGap >= 0 ? "machine-compare-gap-positive" : "machine-compare-gap-negative"}>
-                  <small>Gap</small>
+                  <small>ส่วนต่าง / Gap</small>
                   <b>{row.summary.targetQty > 0 ? `${targetGap > 0 ? "+" : ""}${formatNumber(targetGap)}` : "-"}</b>
                 </div>
                 <div>
-                  <small>Good</small>
+                  <small>งานดี / Good</small>
                   <b>{formatNumber(row.summary.good)}</b>
                 </div>
                 <div>
-                  <small>NG</small>
+                  <small>งานเสีย / NG</small>
                   <b>{formatNumber(row.summary.ng)}</b>
                 </div>
                 <div>
-                  <small>Downtime</small>
+                  <small>เวลาหยุด / Downtime</small>
                   <b>{formatNumber(row.summary.downtime)} นาที</b>
                 </div>
               </div>
@@ -7135,7 +7137,7 @@ function MachineComparisonPanel({
                 )}
               </div>
               <div className="machine-compare-foot">
-                <span>Run {formatNumber(row.summary.run)} นาที · {formatPercent(runPercent)}</span>
+                <span>เดินเครื่อง / Run {formatNumber(row.summary.run)} นาที · {formatPercent(runPercent)}</span>
                 <span>{formatNumber(row.logs)} logs</span>
               </div>
             </article>
@@ -7191,7 +7193,7 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
     <div className="analysis-panel part-summary-panel">
       <div className="part-summary-heading">
         <h2>รุ่น / Part No.</h2>
-        <span>{formatNumber(rows.length)} Part No.</span>
+        <span>{formatNumber(rows.length)}  รหัสชิ้นงาน / Part No.</span>
       </div>
       {visibleRows.length > 0 ? (
         <>
@@ -7202,7 +7204,7 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
                   <strong>{row.partNo || "-"}</strong>
                   <span>{row.productName || "-"}</span>
                 </div>
-                <em>Step {row.step || "-"}</em>
+                <em>ขั้นตอน / Step {row.step || "-"}</em>
                 <b>{formatNumber(row.good + row.ng + row.test)}</b>
                 <small>{formatNumber(row.total)} logs</small>
               </div>
@@ -7251,9 +7253,9 @@ function OeeSummaryChart({
   const quality = clampRatio(summary.quality);
   const oee = clampRatio(summary.oee ?? availability * quality);
   const factors = [
-    { label: "Availability", value: availability, minutes: summary.run, color: "#22c55e", radius: 58 },
-    { label: "Quality", value: quality, minutes: summary.run * quality, color: "#0ea5e9", radius: 44 },
-    { label: "OEE", value: oee, minutes: summary.run * quality, color: "#facc15", radius: 30 },
+    { label: "ความพร้อมเดินเครื่อง / Availability", value: availability, minutes: summary.run, color: "#22c55e", radius: 58 },
+    { label: "คุณภาพ / Quality", value: quality, minutes: summary.run * quality, color: "#0ea5e9", radius: 44 },
+    { label: "ประสิทธิผลเครื่องจักร / OEE", value: oee, minutes: summary.run * quality, color: "#facc15", radius: 30 },
   ];
   const issueColors = ["#ef4444", "#fb923c", "#facc15", "#94a3b8", "#64748b"];
   const topIssueItems = downtimeItems.filter((item) => item.minutes > 0).slice(0, 3);
@@ -7328,7 +7330,7 @@ function OeeSummaryChart({
     <div className="analysis-panel oee-summary-chart">
       <div className="section-title">
         <Gauge size={20} />
-        <h2>สรุป OEE</h2>
+        <h2>สรุป OEE / OEE Summary</h2>
       </div>
       <div className={`oee-executive-summary ${oeeStatusClass}`}>
         <div className="oee-hero-score">
@@ -7338,17 +7340,17 @@ function OeeSummaryChart({
         </div>
         <div className="oee-hero-metrics">
           <p>
-            <span>Run time</span>
+            <span>เวลาเดินเครื่อง / Run time</span>
             <strong>{formatNumber(summary.run)} นาที</strong>
             <em>{formatPercent(runPercent)} ของเวลารวม</em>
           </p>
           <p>
-            <span>Downtime</span>
+            <span>เวลาหยุด / Downtime</span>
             <strong>{formatNumber(summary.downtime)} นาที</strong>
             <em>{formatPercent(downtimePercent)} ของเวลารวม</em>
           </p>
           <p>
-            <span>Total output</span>
+            <span>ผลผลิตรวม / Total output</span>
             <strong>{formatNumber(summary.total)}</strong>
             <em>ยอดผลิตรวมตามตัวกรอง</em>
           </p>
@@ -7391,7 +7393,7 @@ function OeeSummaryChart({
               })}
             </svg>
             <div className="oee-factor-combo-label">
-              <span>รวม</span>
+              <span>รวม / Total</span>
               <strong>3 KPI</strong>
             </div>
           </div>
@@ -7427,24 +7429,24 @@ function OeeSummaryChart({
         <div className="oee-volume-summary">
           <div className="oee-time-donut" style={{ background: `conic-gradient(${timeGradient})` }}>
             <div>
-              <span>เวลารวม</span>
+              <span>เวลารวม / Total Time</span>
               <strong>{formatPercent(runPercent)}</strong>
-              <small>Run</small>
+              <small>เดินเครื่อง / Run</small>
             </div>
           </div>
           <div className="oee-time-legend">
             <p>
               <i className="run" />
-              <span>Run time</span>
+              <span>เวลาเดินเครื่อง / Run time</span>
               <b>{formatNumber(summary.run)} นาที · {formatPercent(runPercent)}</b>
             </p>
             <p>
               <i className="down" />
-              <span>Downtime</span>
+              <span>เวลาหยุด / Downtime</span>
               <b>{formatNumber(summary.downtime)} นาที · {formatPercent(downtimePercent)}</b>
             </p>
             <p className="total-output">
-              <span>Total output</span>
+              <span>ผลผลิตรวม / Total output</span>
               <strong>{formatNumber(summary.total)}</strong>
             </p>
           </div>
@@ -7452,7 +7454,7 @@ function OeeSummaryChart({
         <div className="oee-issue-donut-card">
           <div className="oee-issue-donut" style={{ background: `conic-gradient(${issueGradient})` }}>
             <div>
-              <span>ปัญหา</span>
+              <span>ปัญหา / Issue</span>
               <strong>{summary.downtime > 0 ? formatNumber(summary.downtime) : "0"}</strong>
               <small>นาที</small>
             </div>
@@ -7576,14 +7578,15 @@ function CurrentShiftMachineOeeTable({
     <div className="data-table-wrap report-table current-shift-oee-table">
       <div className="report-table-heading current-shift-heading">
         <div>
-          <h2>สรุปการผลิตตามตัวกรอง</h2>
+          <h2>สรุปการผลิตตามตัวกรอง / Filtered Production Summary</h2>
           <p>
-            วันที่ผลิต {dateLabel} · {shiftName}
+            
+            วันที่ผลิต / Production Date {dateLabel} · {shiftName}
           </p>
         </div>
         <div className="current-shift-totals" aria-label="Current shift production totals">
-          <span>Output {formatNumber(totalOutput)}</span>
-          <strong>OEE {formatPercent(shiftOee)}</strong>
+          <span>ยอดผลิต / Output {formatNumber(totalOutput)}</span>
+          <strong>ประสิทธิผลเครื่องจักร / OEE {formatPercent(shiftOee)}</strong>
         </div>
       </div>
       <table>
@@ -7591,7 +7594,7 @@ function CurrentShiftMachineOeeTable({
           <tr>
             <th>เครื่องจักร / Machine</th>
             <th>ยอดงาน / Output</th>
-            <th>OEE</th>
+            <th>ประสิทธิผลเครื่องจักร / OEE</th>
           </tr>
         </thead>
         <tbody>
@@ -7606,7 +7609,7 @@ function CurrentShiftMachineOeeTable({
               <tr key={row.machineId}>
                 <td>
                   <strong>{row.machineName}</strong>
-                  <small>{formatNumber(row.count)} รายการ</small>
+                  <small>{formatNumber(row.count)}  รายการ / Items</small>
                 </td>
                 <td className="current-shift-output">{formatNumber(row.output)}</td>
                 <td>
@@ -7787,19 +7790,19 @@ function DailyMachineCompactTrendChart({
                 <strong>{latest.date}</strong>
               </div>
               <div>
-                <span>Output</span>
+                <span>ยอดผลิต / Output</span>
                 <strong>{formatNumber(latest.actualOutput)}</strong>
               </div>
               <div>
-                <span>Work time</span>
+                <span>เวลาทำงาน / Work time</span>
                 <strong>{formatNumber(latest.workMinutes)} นาที</strong>
               </div>
               <div>
-                <span>Utilization</span>
+                <span>อัตราการใช้กำลังผลิต / Utilization</span>
                 <strong>{formatPercent(latest.utilization)}</strong>
               </div>
               <div>
-                <span>Availability</span>
+                <span>ความพร้อมเดินเครื่อง / Availability</span>
                 <strong>{formatPercent(latest.availability)}</strong>
               </div>
               <div className={`daily-trend-summary ${latestTrendClass}`}>
@@ -7850,7 +7853,7 @@ function DailyMachineCompactTrendChart({
                     <span className="daily-performance-machine-name" title={row.machineNames.join(", ")}>
                       {formatDailyMachineNames(row)}
                     </span>
-                    <em title={`Products: ${formatDailyProductNames(row, 8)}`}>OEE {formatPercent(row.oee)}</em>
+                    <em title={`Products: ${formatDailyProductNames(row, 8)}`}>ประสิทธิผลเครื่องจักร / OEE {formatPercent(row.oee)}</em>
                   </div>
                 </div>
               );
@@ -7936,34 +7939,34 @@ function DailyMachineProfessionalTrendChart({
           {latest && (
             <div className="daily-pro-summary">
               <div>
-                <span>Latest date</span>
+                <span>วันที่ล่าสุด / Latest date</span>
                 <strong>{latest.date}</strong>
               </div>
               <div>
-                <span>Output</span>
+                <span>ยอดผลิต / Output</span>
                 <strong>{formatNumber(latest.actualOutput)}</strong>
               </div>
               <div>
-                <span>Work time</span>
+                <span>เวลาทำงาน / Work time</span>
                 <strong>{formatNumber(latest.workMinutes)} นาที</strong>
               </div>
               <div>
-                <span>Utilization</span>
+                <span>อัตราการใช้กำลังผลิต / Utilization</span>
                 <strong>{formatPercent(latest.utilization)}</strong>
               </div>
               <div>
-                <span>Availability</span>
+                <span>ความพร้อมเดินเครื่อง / Availability</span>
                 <strong>{formatPercent(latest.availability)}</strong>
               </div>
               <div className={`daily-pro-trend-card ${latestTrendClass}`}>
-                <span>Output trend</span>
+                <span>แนวโน้มผลผลิต / Output trend</span>
                 <strong>{latestTrendLabel}</strong>
               </div>
             </div>
           )}
           <div className="daily-pro-legend">
-            <span><i className="output" /> Daily output</span>
-            <span><i className="trend" /> Trend line</span>
+            <span><i className="output" /> ผลผลิตรายวัน / Daily output</span>
+            <span><i className="trend" /> เส้นแนวโน้ม / Trend line</span>
           </div>
           <div className="daily-pro-chart" role="img" aria-label="Daily output trend chart">
             <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: chartWidth, minWidth: chartWidth }}>
@@ -8032,7 +8035,7 @@ function DailyMachineProfessionalTrendChart({
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="68" textAnchor="end">
                         {formatNumber(point.row.targetQty)}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="14" y="89">OEE</text>
+                      <text className="daily-pro-tooltip-label" x="14" y="89">ประสิทธิผลเครื่องจักร / OEE</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 14} y="89" textAnchor="end">
                         {formatPercent(point.row.oee)}
                       </text>
@@ -8058,19 +8061,19 @@ function DailyMachineProfessionalTrendChart({
                       <text className="daily-pro-tooltip-title" x="22" y="36">
                         {point.row.date} - {point.machineLabel}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="76">Output</text>
+                      <text className="daily-pro-tooltip-label" x="22" y="76">ยอดผลิต / Output</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="76" textAnchor="end">
                         {point.outputLabel}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="112">Work time</text>
+                      <text className="daily-pro-tooltip-label" x="22" y="112">เวลาทำงาน / Work time</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="112" textAnchor="end">
                         {formatNumber(point.row.workMinutes)} min
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="148">Target</text>
+                      <text className="daily-pro-tooltip-label" x="22" y="148">เป้าหมาย / Target</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="148" textAnchor="end">
                         {formatNumber(point.row.targetQty)}
                       </text>
-                      <text className="daily-pro-tooltip-label" x="22" y="184">OEE</text>
+                      <text className="daily-pro-tooltip-label" x="22" y="184">ประสิทธิผลเครื่องจักร / OEE</text>
                       <text className="daily-pro-tooltip-value" x={tooltipWidth - 22} y="184" textAnchor="end">
                         {formatPercent(point.row.oee)}
                       </text>
@@ -8141,11 +8144,11 @@ function DailyMachineProductionTrendChart({
                 <strong>{latest.date}</strong>
               </div>
               <div>
-                <span>Utilization</span>
+                <span>อัตราการใช้กำลังผลิต / Utilization</span>
                 <strong>{formatPercent(latest.utilization)}</strong>
               </div>
               <div>
-                <span>Availability</span>
+                <span>ความพร้อมเดินเครื่อง / Availability</span>
                 <strong>{formatPercent(latest.availability)}</strong>
               </div>
               <div>
@@ -8198,7 +8201,7 @@ function DailyMachineProductionTrendChart({
                   </div>
                   <div className="daily-performance-bar-labels" aria-hidden="true">
                     <span>ใช้</span>
-                    <span>ประสิทธิภาพ</span>
+                    <span>ประสิทธิภาพ / Performance</span>
                     <span>งาน</span>
                   </div>
                   <div className="daily-performance-column-date">
@@ -8207,7 +8210,7 @@ function DailyMachineProductionTrendChart({
                       {formatDailyMachineNames(row)}
                     </span>
                     <span>{formatNumber(row.machineCount)} เครื่อง / Machines</span>
-                    <em>Output {formatNumber(row.actualOutput)}</em>
+                    <em>ยอดผลิต / Output {formatNumber(row.actualOutput)}</em>
                   </div>
                 </div>
               );
@@ -8263,11 +8266,11 @@ function DailyMachinePerformanceChart({
                 <strong>{latest.date}</strong>
               </div>
               <div>
-                <span>Utilization</span>
+                <span>อัตราการใช้กำลังผลิต / Utilization</span>
                 <strong>{formatPercent(latest.utilization)}</strong>
               </div>
               <div>
-                <span>Availability</span>
+                <span>ความพร้อมเดินเครื่อง / Availability</span>
                 <strong>{formatPercent(latest.availability)}</strong>
               </div>
               <div>
@@ -8320,7 +8323,7 @@ function DailyMachinePerformanceChart({
                   </div>
                   <div className="daily-performance-bar-labels" aria-hidden="true">
                     <span>ใช้</span>
-                    <span>ประสิทธิภาพ</span>
+                    <span>ประสิทธิภาพ / Performance</span>
                     <span>งาน</span>
                   </div>
                   <div className="daily-performance-column-date">
@@ -8405,22 +8408,22 @@ function MachineCapacityDashboard({
   return (
     <div className="analysis-panel capacity-panel">
       <div className="report-table-heading compact-heading">
-        <h2>ผลผลิตเทียบเป้าตามเวลาบันทึก</h2>
-        <span>{formatNumber(rows.length)} เครื่อง</span>
+        <h2>ผลผลิตเทียบเป้าตามเวลาบันทึก / Output vs Target by Recorded Time</h2>
+        <span>{formatNumber(rows.length)}  เครื่อง / Machine</span>
       </div>
       <div className="data-table-wrap capacity-table">
         <table>
           <thead>
             <tr>
-              <th>Machine</th>
-              <th>Dates</th>
-              <th>Logs</th>
-              <th title="รวมเวลาจากรายการบันทึก ไม่ใช่เวลาตามแผน">เวลาบันทึก (นาที)</th>
-              <th>Target</th>
-              <th>Actual</th>
-              <th>Gap</th>
-              <th>ผลผลิตเทียบเป้า</th>
-              <th>Availability</th>
+              <th>เครื่องจักร / Machine</th>
+              <th>ช่วงวันที่ / Dates</th>
+              <th>รายการบันทึก / Logs</th>
+              <th title="รวมเวลาจากรายการบันทึก ไม่ใช่เวลาตามแผน">เวลาบันทึก (นาที) / Recorded Time (min)</th>
+              <th>เป้าหมาย / Target</th>
+              <th>ผลิตจริง / Actual</th>
+              <th>ส่วนต่าง / Gap</th>
+              <th>ผลผลิตเทียบเป้า / Output vs Target</th>
+              <th>ความพร้อมเดินเครื่อง / Availability</th>
             </tr>
           </thead>
           <tbody>
@@ -8607,7 +8610,7 @@ function ProductionCapacityView({
       <div className="analysis-panel production-capacity-hero">
         <div>
           <p className="eyebrow">Production capacity</p>
-          <h2>ดูกำลังผลิตตามเครื่องจักร</h2>
+          <h2>ดูกำลังผลิตตามเครื่องจักร / Machine Production Capacity</h2>
           <p>อ้างอิงจาก Google Sheet กำลังผลิต แยกตาม sheet ของแต่ละเครื่อง</p>
         </div>
         <button className="ghost-button" disabled={loading} onClick={onRefresh} type="button">
@@ -8624,7 +8627,7 @@ function ProductionCapacityView({
 
       <div className="filters-bar production-capacity-toolbar">
         <label>
-          กลุ่มเครื่อง
+          กลุ่มเครื่อง / Machine Group
           <select value={groupValue} onChange={(event) => setSelectedGroup(event.target.value)}>
             {groups.map((group) => (
               <option key={group} value={group}>
@@ -8634,7 +8637,8 @@ function ProductionCapacityView({
           </select>
         </label>
         <label>
-          เครื่อง
+          
+          เครื่อง / Machine
           <select value={machineValue} onChange={(event) => setSelectedMachine(event.target.value)}>
             <option value="">ทั้งหมด</option>
             {machines.map((machine) => (
@@ -8645,7 +8649,7 @@ function ProductionCapacityView({
           </select>
         </label>
         <label>
-          ชิ้นงาน / Part No.
+          ชิ้นงาน / Part No. / Part No.
           <select value={partValue} onChange={(event) => setSelectedPart(event.target.value)}>
             <option value="">ทั้งหมด</option>
             {partOptions.map((option) => (
@@ -8660,12 +8664,13 @@ function ProductionCapacityView({
             <span>Part No. ที่เลือก</span>
             <strong>{selectedPartDetails.productNames.join(", ") || "-"}</strong>
             <small>
-              Part No. {partValue} · Step {selectedPartDetails.steps.join(", ") || "-"} · {formatNumber(selectedPartDetails.count)} รายการ
+              รหัสชิ้นงาน / Part No. {partValue} · Step {selectedPartDetails.steps.join(", ") || "-"} · {formatNumber(selectedPartDetails.count)}  รายการ / Items
             </small>
           </div>
         )}
         <label className="capacity-percent-field">
-          KPI %
+          
+          ตัวชี้วัด / KPI %
           <input
             max={MAX_CAPACITY_PERCENT}
             min={MIN_CAPACITY_PERCENT}
@@ -8677,7 +8682,7 @@ function ProductionCapacityView({
           />
         </label>
         <label className="capacity-search-field">
-          ค้นหา
+          ค้นหา / Search
           <div className="input-with-icon">
             <Search size={16} />
             <input
@@ -8692,7 +8697,7 @@ function ProductionCapacityView({
 
       <div className="daily-performance-summary production-capacity-summary">
         <div>
-          <span>แหล่งข้อมูล</span>
+          <span>แหล่งข้อมูล / Data Source</span>
           <strong>{data?.sourceName || "-"}</strong>
         </div>
         <div>
@@ -8702,11 +8707,11 @@ function ProductionCapacityView({
           </strong>
         </div>
         <div>
-          <span>Part + Step</span>
+          <span>ชิ้นงานและขั้นตอน / Part + Step</span>
           <strong>{formatNumber(summary.partCount)}</strong>
         </div>
         <div>
-          <span>KPI {selectedPercent}% เฉลี่ย</span>
+          <span>ตัวชี้วัด / KPI {selectedPercent}% เฉลี่ย</span>
           <strong>{formatRate(summary.avgKpi)}</strong>
         </div>
         <div>
@@ -8736,8 +8741,8 @@ function ProductionCapacityView({
                 <span>{machine.group}</span>
                 <strong>{machine.machineName}</strong>
                 <small>{machine.sheetName}</small>
-                <b>{formatNumber(machine.rowCount)} รายการ</b>
-                <em>KPI {selectedPercent}% {formatRate(machineAvgKpi)} · Target 8H {formatNumber(machineTarget8h)}</em>
+                <b>{formatNumber(machine.rowCount)}  รายการ / Items</b>
+                <em>ตัวชี้วัด / KPI {selectedPercent}% {formatRate(machineAvgKpi)} · Target 8H {formatNumber(machineTarget8h)}</em>
               </button>
             );
           })
@@ -8747,23 +8752,23 @@ function ProductionCapacityView({
       <div className="analysis-panel production-capacity-table-panel">
         <div className="report-table-heading compact-heading">
           <div>
-            <h2>รายการกำลังผลิต</h2>
+            <h2>รายการกำลังผลิต / Capacity Records</h2>
             <p>{data?.fetchedAt ? `อัปเดตล่าสุด ${formatSharedStatusTime(data.fetchedAt)}` : "ยังไม่มีข้อมูล"}</p>
           </div>
-          <span>{formatNumber(records.length)} รายการ</span>
+          <span>{formatNumber(records.length)}  รายการ / Items</span>
         </div>
         <div className="data-table-wrap production-capacity-table">
           <table>
             <thead>
               <tr>
-                <th>เครื่อง</th>
+                <th>เครื่อง / Machine</th>
                 <th>รุ่น / Part No.</th>
-                <th>Step</th>
-                <th>KPI {selectedPercent}%/นาที</th>
-                <th>Target 8H</th>
-                <th>Target 10.5H</th>
-                <th>Target 12.5H</th>
-                <th>M/C</th>
+                <th>ขั้นตอน / Step</th>
+                <th>ตัวชี้วัด / KPI {selectedPercent}%/นาที</th>
+                <th>เป้าหมาย 8 ชม. / Target 8H</th>
+                <th>เป้าหมาย 10.5 ชม. / Target 10.5H</th>
+                <th>เป้าหมาย 12.5 ชม. / Target 12.5H</th>
+                <th>เครื่องจักร / M/C</th>
               </tr>
             </thead>
             <tbody>
@@ -8849,7 +8854,7 @@ function MachineRanking({ logs, machines }: { logs: ProductionLog[]; machines: M
 
   return (
     <div className="analysis-panel">
-      <h2>Machine ranking</h2>
+      <h2>อันดับเครื่องจักร / Machine ranking</h2>
       <div className="ranking-list">
         {rows.map((row, index) => (
           <div className="ranking-row" key={row.machine.id}>
@@ -8889,7 +8894,7 @@ function Trend({ logs }: { logs: ProductionLog[] }) {
 
   return (
     <div className="analysis-panel trend-panel">
-      <h2>Good quantity trend</h2>
+      <h2>แนวโน้มงานดี / Good quantity trend</h2>
       <svg viewBox={`0 0 ${width} ${height}`} role="img">
         <path d={path} fill="none" stroke="#2563eb" strokeLinecap="round" strokeWidth="4" />
         {points.map((point, index) => {
@@ -8913,20 +8918,20 @@ function LogsTable({ logs, onEdit }: { logs: ProductionLog[]; onEdit: (log: Prod
       <table>
         <thead>
           <tr>
-            <th>Action</th>
-            <th>Entry Date</th>
-            <th>Entry Time</th>
-            <th>Production Date</th>
-            <th>Shift</th>
-            <th>Shift Time</th>
-            <th>Machine</th>
-            <th>Product</th>
-            <th>Part No.</th>
-            <th>Step</th>
-            <th>Speed</th>
-            <th>Good</th>
-            <th>NG</th>
-            <th>Downtime</th>
+            <th>การจัดการ / Action</th>
+            <th>วันที่บันทึก / Entry Date</th>
+            <th>เวลาบันทึก / Entry Time</th>
+            <th>วันที่ผลิต / Production Date</th>
+            <th>กะ / Shift</th>
+            <th>เวลากะ / Shift Time</th>
+            <th>เครื่องจักร / Machine</th>
+            <th>ชิ้นงาน / Product</th>
+            <th>รหัสชิ้นงาน / Part No.</th>
+            <th>ขั้นตอน / Step</th>
+            <th>ความเร็ว / Speed</th>
+            <th>งานดี / Good</th>
+            <th>งานเสีย / NG</th>
+            <th>เวลาหยุด / Downtime</th>
           </tr>
         </thead>
         <tbody>
@@ -8982,11 +8987,11 @@ function MasterTable({ products }: { products: ProductMaster[] }) {
         <table>
           <thead>
             <tr>
-              <th>Machine</th>
-              <th>Product</th>
-              <th>Part No.</th>
-              <th>Step</th>
-              <th>Sample Good</th>
+              <th>เครื่องจักร / Machine</th>
+              <th>ชิ้นงาน / Product</th>
+              <th>รหัสชิ้นงาน / Part No.</th>
+              <th>ขั้นตอน / Step</th>
+              <th>ตัวอย่างงานดี / Sample Good</th>
             </tr>
           </thead>
           <tbody>
