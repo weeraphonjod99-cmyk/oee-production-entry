@@ -964,7 +964,7 @@ function getDowntimeStats(logs: ProductionLog[]): DowntimeStatRow[] {
 function getDowntimeActionText(key: string) {
   switch (key) {
     case "changeoverMinutes":
-      return "เตรียม jig, material และเอกสารล่วงหน้า ลดเวลาตั้งเครื่องก่อนเปลี่ยนรุ่น";
+      return "เตรียม jig, material และเอกสารล่วงหน้า ลดเวลาตั้งเครื่องก่อนเปลี่ยนรุ่น / Prepare jigs, materials, and documents in advance to reduce setup time during changeovers.";
     case "inspectionMinutes":
       return "แจ้ง QC ก่อนเริ่มล็อต แยกจุดตรวจรอหน้างาน และกำหนดตัวอย่างมาตรฐาน";
     case "equipmentRepairMinutes":
@@ -7224,24 +7224,24 @@ function PartNoSummary({ logs }: { logs: ProductionLog[] }) {
 function getOeeImprovementAction(label: string): string {
   const normalized = label.toLowerCase();
   if (label.includes("ซ่อมแม่พิมพ์") || normalized.includes("mold")) {
-    return "จัดอันดับแม่พิมพ์เสียซ้ำ ทำ PM ก่อนขึ้นงาน และเตรียมอะไหล่หรือแม่พิมพ์สำรอง";
+    return "จัดอันดับแม่พิมพ์เสียซ้ำ ทำ PM ก่อนขึ้นงาน และเตรียมอะไหล่หรือแม่พิมพ์สำรอง / Prioritize molds with recurring failures, perform preventive maintenance before production, and prepare spare parts or backup molds.";
   }
   if (label.includes("ตรวจสอบ") || normalized.includes("inspect") || normalized.includes("qc")) {
-    return "แยกจุดตรวจที่ใช้เวลานาน แจ้ง QC ก่อนเริ่มล็อต และกำหนดมาตรฐานตัวอย่างงาน";
+    return "แยกจุดตรวจที่ใช้เวลานาน แจ้ง QC ก่อนเริ่มล็อต และกำหนดมาตรฐานตัวอย่างงาน / Identify time-consuming inspection points, notify QC before each lot, and define reference sample standards.";
   }
   if (label.includes("หยุดตามแผน") || normalized.includes("plan")) {
-    return "ล็อกช่วงหยุดให้ชัด ย้ายงานค้างก่อนถึงเวลาหยุด และตรวจเวลาที่เกินแผนทุกวัน";
+    return "ล็อกช่วงหยุดให้ชัด ย้ายงานค้างก่อนถึงเวลาหยุด และตรวจเวลาที่เกินแผนทุกวัน / Define planned downtime windows, move unfinished work before shutdown, and review overruns daily.";
   }
   if (label.includes("เปลี่ยนรุ่น") || normalized.includes("change")) {
-    return "เตรียม jig, material และเอกสารล่วงหน้า ลดเวลาตั้งเครื่องก่อนเปลี่ยนรุ่น";
+    return "เตรียม jig, material และเอกสารล่วงหน้า ลดเวลาตั้งเครื่องก่อนเปลี่ยนรุ่น / Prepare jigs, materials, and documents in advance to reduce setup time during changeovers.";
   }
   if (label.includes("วัตถุดิบ") || normalized.includes("material")) {
-    return "ตรวจวัตถุดิบก่อนเริ่มกะ ตั้งจุดเติมใกล้เครื่อง และแจ้งเตือนเมื่อวัตถุดิบต่ำ";
+    return "ตรวจวัตถุดิบก่อนเริ่มกะ ตั้งจุดเติมใกล้เครื่อง และแจ้งเตือนเมื่อวัตถุดิบต่ำ / Check materials before each shift, locate replenishment points near machines, and set low-material alerts.";
   }
   if (label.includes("ซ่อมเครื่อง") || normalized.includes("equipment") || normalized.includes("repair")) {
-    return "แยกอาการเสียซ้ำ เปิดรายการ PM และกำหนดเจ้าของเครื่องที่ต้องติดตาม";
+    return "แยกอาการเสียซ้ำ เปิดรายการ PM และกำหนดเจ้าของเครื่องที่ต้องติดตาม / Identify recurring equipment faults, schedule preventive maintenance, and assign a responsible person for follow-up.";
   }
-  return "เก็บเหตุผลให้ครบทุกครั้ง แล้วสรุปสาเหตุซ้ำรายวันเพื่อเลือกงานแก้ไขก่อน";
+  return "เก็บเหตุผลให้ครบทุกครั้ง แล้วสรุปสาเหตุซ้ำรายวันเพื่อเลือกงานแก้ไขก่อน / Record every stop reason and review recurring causes daily to prioritize corrective actions.";
 }
 
 function OeeSummaryChart({
@@ -7299,8 +7299,8 @@ function OeeSummaryChart({
   const mainIssue = topIssueItems[0];
   const issueSummary =
     summary.downtime > 0 && mainIssue
-      ? `${mainIssue.label} สูงสุด ${formatNumber(mainIssue.minutes)} นาที (${formatPercent(mainIssue.minutes / Math.max(summary.downtime, 1))})`
-      : "ไม่มี Downtime ตามตัวกรองนี้";
+      ? `${mainIssue.label} สูงสุด / Highest: ${formatNumber(mainIssue.minutes)} นาที / min (${formatPercent(mainIssue.minutes / Math.max(summary.downtime, 1))})`
+      : "ไม่มี Downtime ตามตัวกรองนี้ / No downtime for the selected filters";
   const totalTime = summary.run + summary.downtime;
   const runPercent = totalTime > 0 ? summary.run / totalTime : 0;
   const downtimePercent = totalTime > 0 ? summary.downtime / totalTime : 0;
@@ -7309,7 +7309,7 @@ function OeeSummaryChart({
       ? `#16a34a 0% ${runPercent * 100}%, #dc2626 ${runPercent * 100}% 100%`
       : "#e5e7eb 0% 100%";
   const oeeStatus =
-    oee >= 0.75 ? "ดีมาก" : oee >= 0.5 ? "ต้องติดตาม" : "ต้องแก้ไขเร่งด่วน";
+    oee >= 0.75 ? "ดีมาก / Very good" : oee >= 0.5 ? "ต้องติดตาม / Needs monitoring" : "ต้องแก้ไขเร่งด่วน / Urgent action needed";
   const oeeStatusClass = oee >= 0.75 ? "good" : oee >= 0.5 ? "warn" : "critical";
   const actionRows =
     topIssueItems.length > 0
@@ -7321,10 +7321,10 @@ function OeeSummaryChart({
         }))
       : [
           {
-            label: "ไม่มี Downtime หลัก",
+            label: "ไม่มี Downtime หลัก / No major downtime",
             minutes: 0,
             percent: 0,
-            action: "รักษามาตรฐานการผลิตและติดตามความเร็วเครื่องต่อเนื่อง",
+            action: "รักษามาตรฐานการผลิตและติดตามความเร็วเครื่องต่อเนื่อง / Maintain production standards and continuously monitor machine speed.",
           },
         ];
 
@@ -7343,29 +7343,29 @@ function OeeSummaryChart({
         <div className="oee-hero-metrics">
           <p>
             <span>เวลาเดินเครื่อง / Run time</span>
-            <strong>{formatNumber(summary.run)} นาที</strong>
-            <em>{formatPercent(runPercent)} ของเวลารวม</em>
+            <strong>{formatNumber(summary.run)} นาที / min</strong>
+            <em>{formatPercent(runPercent)} ของเวลารวม / of total time</em>
           </p>
           <p>
             <span>เวลาหยุด / Downtime</span>
-            <strong>{formatNumber(summary.downtime)} นาที</strong>
-            <em>{formatPercent(downtimePercent)} ของเวลารวม</em>
+            <strong>{formatNumber(summary.downtime)} นาที / min</strong>
+            <em>{formatPercent(downtimePercent)} ของเวลารวม / of total time</em>
           </p>
           <p>
             <span>ผลผลิตรวม / Total output</span>
             <strong>{formatNumber(summary.total)}</strong>
-            <em>ยอดผลิตรวมตามตัวกรอง</em>
+            <em>ยอดผลิตรวมตามตัวกรอง / Total output for the selected filters</em>
           </p>
         </div>
         <div className="oee-improvement-card">
           <span>แนวทางปรับปรุง / Improvement Focus</span>
-          <strong>{mainIssue ? `โฟกัสปัญหา: ${mainIssue.label}` : "ยังไม่พบปัญหาหลัก"}</strong>
+          <strong>{mainIssue ? `โฟกัสปัญหา / Focus issue: ${mainIssue.label}` : "ยังไม่พบปัญหาหลัก / No main issue identified"}</strong>
           <ul>
             {actionRows.map((item, index) => (
               <li key={item.label}>
                 <b>{index + 1}. {item.label}</b>
-                <span>{formatNumber(item.minutes)} นาที · {formatPercent(item.percent)}</span>
-                <em>{item.action}</em>
+                <span>{formatNumber(item.minutes)} นาที / min · {formatPercent(item.percent)}</span>
+                <em className="oee-action-copy">{item.action.split(" / ").map((text, index) => <span className="oee-action-language" lang={index === 0 ? "th" : "en"} key={index}>{text}</span>)}</em>
               </li>
             ))}
           </ul>
@@ -7404,7 +7404,7 @@ function OeeSummaryChart({
               <p key={factor.label}>
                 <i style={{ background: factor.color }} />
                 <span>{factor.label}</span>
-                <b>{formatNumber(factor.minutes)} นาที · {formatPercent(factor.value)}</b>
+                <b>{formatNumber(factor.minutes)} นาที / min · {formatPercent(factor.value)}</b>
               </p>
             ))}
           </div>
@@ -7422,7 +7422,7 @@ function OeeSummaryChart({
                 </div>
                 <div className="oee-factor-detail">
                   <span>{factor.label}</span>
-                  <strong>{formatNumber(factor.minutes)} นาที · {formatPercent(factor.value)}</strong>
+                  <strong>{formatNumber(factor.minutes)} นาที / min · {formatPercent(factor.value)}</strong>
                 </div>
               </div>
             );
@@ -7440,12 +7440,12 @@ function OeeSummaryChart({
             <p>
               <i className="run" />
               <span>เวลาเดินเครื่อง / Run time</span>
-              <b>{formatNumber(summary.run)} นาที · {formatPercent(runPercent)}</b>
+              <b>{formatNumber(summary.run)} นาที / min · {formatPercent(runPercent)}</b>
             </p>
             <p>
               <i className="down" />
               <span>เวลาหยุด / Downtime</span>
-              <b>{formatNumber(summary.downtime)} นาที · {formatPercent(downtimePercent)}</b>
+              <b>{formatNumber(summary.downtime)} นาที / min · {formatPercent(downtimePercent)}</b>
             </p>
             <p className="total-output">
               <span>ผลผลิตรวม / Total output</span>
@@ -7471,7 +7471,7 @@ function OeeSummaryChart({
                   <span>{item.label}</span>
                   <b>
                     {summary.downtime > 0
-                      ? `${formatNumber(item.minutes)} นาที · ${formatPercent(item.percent)}`
+                      ? `${formatNumber(item.minutes)} นาที / min · ${formatPercent(item.percent)}`
                       : "ปกติ"}
                   </b>
                 </p>
@@ -7930,7 +7930,7 @@ function DailyMachineProfessionalTrendChart({
       <div className="report-table-heading compact-heading">
         <div>
           <h2>แนวโน้มกำลังผลิตรายวัน / Daily Production Trend</h2>
-          <p>ดูจำนวนงานรายวันและทิศทางการผลิตแบบสรุป อ่านง่ายสำหรับเทียบขึ้นลงในแต่ละวัน</p>
+          <p>ดูจำนวนงานรายวันและทิศทางการผลิตแบบสรุป อ่านง่ายสำหรับเทียบขึ้นลงในแต่ละวัน / Compare daily output and production trends at a glance.</p>
         </div>
         <span>{formatNumber(rows.length)} วัน</span>
       </div>

@@ -6206,3 +6206,7 @@ td:nth-child(10) {
 .machine-compare-products .product-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.product-kpi-grid>div{padding:8px;background:#edf6f3;border-radius:6px;min-width:0}.product-kpi-grid small{display:block;font-size:10px;color:#506879}.product-kpi-grid strong{display:block;font-size:15px;color:#164a37;overflow-wrap:anywhere}@media(max-width:480px){.machine-compare-products .product-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .machine-compare-products .product-kpi-grid .job-kpi-negative{background:#fff0f0;border:1px solid #f1b4b4}.machine-compare-products .product-kpi-grid .job-kpi-negative strong,.machine-compare-products .product-kpi-grid .job-kpi-negative .job-kpi-status{color:#b42318}.machine-compare-products .product-kpi-grid .job-kpi-positive{background:#edf8ef;border:1px solid #b9dcc1}.machine-compare-products .product-kpi-grid .job-kpi-positive strong,.machine-compare-products .product-kpi-grid .job-kpi-positive .job-kpi-status{color:#176534}.machine-compare-products .product-kpi-grid .job-kpi-status{display:block;font-size:11px;margin-top:5px;font-weight:700}
+
+/* Keep bilingual advice on separate readable lines. */
+.oee-improvement-card li .oee-action-language { display: block; white-space: normal; color: inherit; font-size: inherit; font-weight: inherit; line-height: 1.55; overflow-wrap: anywhere; }
+.oee-improvement-card li .oee-action-language + .oee-action-language { margin-top: 5px; font-weight: 500; }
