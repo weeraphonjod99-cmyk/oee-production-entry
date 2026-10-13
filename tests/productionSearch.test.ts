@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {searchProduction,searchPartKey,recordedStop,productionSearchSummary} from '../src/lib/productionSearch';
+const a:any={id:'a',date:'2026-10-01',machineId:'m1',machineName:'CNC-C1',partNo:'A',productName:'Part A',step:'1',shift:'D',normalMinutes:200,meetingMinutes:130,changeoverMinutes:10,goodQty:90,ngQty:5,testQty:5,note:'repair'};
+const b={...a,id:'b',date:'2026-10-02',machineId:'m2',machineName:'CNC-C2',step:'2',normalMinutes:300,goodQty:190};
+const f={machine:'',part:'',from:'',to:'',shift:'',query:''};
+assert.equal(recordedStop(a),140,'preserve all recorded stop minutes including breaks');
+assert.deepEqual(searchProduction([a,b],{...f,machine:'m1',from:a.date,to:a.date,part:searchPartKey(a)}).map(l=>l.id),['a']);
+assert.equal(searchProduction([a,b],{...f,part:searchPartKey(a)}).length,1,'steps remain distinct');
+assert.equal(searchProduction([a,b],{...f,from:'2026-10-03',to:'2026-10-01'}).length,0);
+assert.equal(searchProduction([a,b],{...f,query:'REPAIR'}).length,2);
+const sums=productionSearchSummary([a,b],'date');
+assert.equal(sums.reduce((s,r)=>s+r.output,0),300);
+assert.equal(sums.reduce((s,r)=>s+r.run,0),500);
+assert.equal(sums.reduce((s,r)=>s+r.stop,0),280);
+assert.equal(productionSearchSummary([a,b],'part').length,2);
+console.log('Production search filters and reconciliation passed');

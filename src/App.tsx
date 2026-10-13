@@ -1,3 +1,4 @@
+import { ProductionSearch } from "./components/ProductionSearch";
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import { ProductionReport } from "./components/ProductionReport";
 import {
@@ -84,7 +85,7 @@ import {
 import { appendLocalLog, exportLogsCsv, exportMasterCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
-type TabId = "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
+type TabId = "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -2697,7 +2698,7 @@ function App() {
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   useEffect(() => {
-    if (tab !== "reports" || !remoteEnabled) return;
+    if ((tab !== "reports" && tab !== "productionSearch") || !remoteEnabled) return;
     let cancelled = false;
     setReportDataLoading(true); setReportDataError("");
     fetchRemoteLogs(100000).then(logs => {
@@ -4626,6 +4627,7 @@ function App() {
               <FileText size={18} /> รายงานการผลิต
             </button>
           )}
+          {canAccessTab(session, "productionSearch") && <button className={tab === "productionSearch" ? "active" : ""} onClick={() => setTab("productionSearch")} type="button"><FileText size={18} /> ค้นหาการผลิต</button>}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ
           </button>
@@ -5487,6 +5489,12 @@ function App() {
             <ProductionReport logs={reportDataLoading ? [] : reportLogs} machines={machines} products={canonicalProducts} />
           </section>
         )}
+
+        {tab === "productionSearch" && <ProductionSearch
+          logs={reportDataLoading ? [] : (reportRemoteLogs || []).map(log => withCanonicalMachineName(log, machineNameById))}
+          loading={reportDataLoading}
+          error={!remoteEnabled ? "ยังไม่ได้เชื่อมต่อ Google Sheet" : reportDataError}
+          onRefresh={() => setReportRefresh(v => v+1)} />}
 
         {tab === "history" && (
           <section className="table-view">
