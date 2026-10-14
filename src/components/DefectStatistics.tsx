@@ -7,8 +7,8 @@ const empty:SearchFilters={from:'',to:'',machine:'',part:'',shift:'',query:''};
 const n=(v:number)=>v.toLocaleString('th-TH',{maximumFractionDigits:2});
 const rate=(v:number|null)=>v===null?'—':n(v)+'%';
 function Ranking({title,rows,total,onSelect}:{title:string;rows:DefectGroup[];total:number;onSelect:(key:string)=>void}){
- const top=rows.filter(r=>r.ng>0).slice(0,10),max=Math.max(1,...top.map(r=>r.ng));
- return <section className="ds-panel"><h3>{title}</h3><p>10 อันดับตามจำนวน NG / Top 10 by NG quantity</p>{!top.length?<p>ไม่พบงานเสีย / No defects recorded</p>:top.map((r,i)=><div className="ds-rank" key={r.key}><button type="button" onClick={()=>onSelect(r.key)}>{i+1}. {r.label}</button><span><b>{n(r.ng)} ชิ้น / pcs</b> · NG {rate(r.rate)} · สัดส่วน / Share {rate(total?r.ng/total*100:null)}</span><div className="ds-track"><i style={{width:`${r.ng/max*100}%`}}/></div></div>)}</section>;
+ const ranked=rows.filter(r=>r.ng>0),max=ranked.reduce((highest,row)=>Math.max(highest,row.ng),1);
+ return <section className="ds-panel" aria-label={title}><h3>{title}</h3><p>แสดงทั้งหมด {n(ranked.length)} กลุ่มตามตัวกรอง เรียงตามจำนวน NG / All {n(ranked.length)} matching groups, sorted by NG quantity</p>{!ranked.length?<p>ไม่พบงานเสีย / No defects recorded</p>:ranked.map((r,i)=><div className="ds-rank" key={r.key}><button type="button" onClick={()=>onSelect(r.key)}>{i+1}. {r.label}</button><span><b>{n(r.ng)} ชิ้น / pcs</b> · NG {rate(r.rate)} · สัดส่วน / Share {rate(total?r.ng/total*100:null)}</span><div className="ds-track"><i style={{width:`${r.ng/max*100}%`}}/></div></div>)}</section>;
 }
 export function DefectStatistics({logs,loading,error,onRefresh}:{logs:ProductionLog[];loading:boolean;error:string;onRefresh:()=>void}){
  const [filter,setFilter]=useState(empty),[page,setPage]=useState(0),[onlyNg,setOnlyNg]=useState(true);
