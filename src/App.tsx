@@ -1,3 +1,4 @@
+import { DefectStatistics } from "./components/DefectStatistics";
 import { ProductionSearch } from "./components/ProductionSearch";
 import { ReliabilitySummary } from "./components/ReliabilitySummary";
 import {CapacitySourceStatus,useCapacityRefreshTick} from './components/CapacitySourceStatus';
@@ -89,7 +90,7 @@ import {
 import { appendLocalLog, exportLogsCsv, exportMasterCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
-type TabId = "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
+type TabId = "defects" | "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -2707,7 +2708,7 @@ function App() {
   );
   const dashboardLogs = useMemo(() => filterLogsByFilters(allLogs, dashboardFilters), [allLogs, dashboardFilters]);
   useEffect(() => {
-    if ((tab !== "reports" && tab !== "productionSearch") || !remoteEnabled) return;
+    if ((tab !== "reports" && tab !== "productionSearch" && tab !== "defects") || !remoteEnabled) return;
     let cancelled = false;
     setReportDataLoading(true); setReportDataError("");
     fetchRemoteLogs(100000).then(logs => {
@@ -4637,6 +4638,7 @@ function App() {
             </button>
           )}
           {canAccessTab(session, "productionSearch") && <button className={tab === "productionSearch" ? "active" : ""} onClick={() => setTab("productionSearch")} type="button"><FileText size={18} /> ค้นหาการผลิต / Production Search</button>}
+          {canAccessTab(session, "defects") && <button className={tab === "defects" ? "active" : ""} onClick={() => setTab("defects")} type="button"><AlertTriangle size={18} /> สถิติงานเสีย / Defect Statistics</button>}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ / History
           </button>
@@ -4680,10 +4682,10 @@ function App() {
             <button className="ghost-button" onClick={shareApp} type="button">
               <Share2 size={17} /> แบ่งปัน / Share
             </button>
-            <button className="ghost-button" onClick={downloadCsv} type="button">
+            <button style={tab === "defects" ? {display:"none"} : undefined} className="ghost-button" onClick={downloadCsv} type="button">
               <Download size={17} /> CSV
             </button>
-            <button className="ghost-button" onClick={downloadPdfReport} type="button">
+            <button style={tab === "defects" ? {display:"none"} : undefined} className="ghost-button" onClick={downloadPdfReport} type="button">
               <FileText size={17} /> PDF
             </button>
             <button className="ghost-button" onClick={signOut} type="button">
@@ -5509,6 +5511,7 @@ function App() {
           error={!remoteEnabled ? "ยังไม่ได้เชื่อมต่อ Google Sheet" : reportDataError}
           onRefresh={() => setReportRefresh(v => v+1)} />}
 
+        {tab === "defects" && <DefectStatistics logs={reportAllLogs} loading={reportDataLoading} error={reportDataError} onRefresh={() => setReportRefresh(v => v+1)} />}
         {tab === "history" && (
           <section className="table-view">
             <FiltersBar filters={historyFilters} machines={machines} setFilters={setHistoryFilters} />
