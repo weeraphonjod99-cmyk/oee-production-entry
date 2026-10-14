@@ -1,5 +1,10 @@
 import type {ProductionLog} from '../types';
-import {searchPartKey} from './productionSearch';
+import {searchPartKey,searchProduction,type SearchFilters} from './productionSearch';
+export type DefectFilters=Omit<SearchFilters,'machine'|'part'> & {machineIds:string[];partKeys:string[]};
+export function searchDefects(logs:ProductionLog[],filter:DefectFilters){
+ const machines=new Set(filter.machineIds),parts=new Set(filter.partKeys);
+ return searchProduction(logs,{...filter,machine:'',part:''}).filter(l=>(!machines.size||machines.has(l.machineId))&&(!parts.size||parts.has(searchPartKey(l))));
+}
 export type DefectGroup={key:string;label:string;good:number;ng:number;records:number;affected:number;rate:number|null};
 export const validDefectQuantity=(v:unknown)=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v))&&Number(v)>=0;
 export const validDefectLog=(l:ProductionLog)=>validDefectQuantity(l.goodQty)&&validDefectQuantity(l.ngQty);

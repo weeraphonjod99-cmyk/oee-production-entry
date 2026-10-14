@@ -1,9 +1,10 @@
 import {useMemo,useState} from 'react';
 import type {ProductionLog} from '../types';
-import {searchPartKey,searchProduction,type SearchFilters} from '../lib/productionSearch';
-import {defectCsv,defectRate,defectStatistics,groupDefects,validDefectLog,type DefectGroup} from '../lib/defectStatistics';
+import {searchPartKey} from '../lib/productionSearch';
+import {DefectMultiSelect} from './DefectMultiSelect';
+import {defectCsv,defectRate,defectStatistics,groupDefects,validDefectLog,searchDefects,type DefectFilters,type DefectGroup} from '../lib/defectStatistics';
 import './defect-statistics.css';
-const empty:SearchFilters={from:'',to:'',machine:'',part:'',shift:'',query:''};
+const empty:DefectFilters={from:'',to:'',machineIds:[],partKeys:[],shift:'',query:''};
 const n=(v:number)=>v.toLocaleString('th-TH',{maximumFractionDigits:2});
 const rate=(v:number|null)=>v===null?'—':n(v)+'%';
 function Ranking({title,rows,total,onSelect}:{title:string;rows:DefectGroup[];total:number;onSelect:(key:string)=>void}){
@@ -12,10 +13,10 @@ function Ranking({title,rows,total,onSelect}:{title:string;rows:DefectGroup[];to
 }
 export function DefectStatistics({logs,loading,error,onRefresh}:{logs:ProductionLog[];loading:boolean;error:string;onRefresh:()=>void}){
  const [filter,setFilter]=useState(empty),[page,setPage]=useState(0),[onlyNg,setOnlyNg]=useState(true);
- const change=(key:keyof SearchFilters,value:string)=>{setFilter(f=>({...f,[key]:value,...(key==='machine'?{part:''}:{})}));setPage(0);};
+ const change=<K extends keyof DefectFilters,>(key:K,value:DefectFilters[K])=>{setFilter(f=>({...f,[key]:value}));setPage(0);};
  const machines=useMemo(()=>[...new Map(logs.map(l=>[l.machineId,l.machineName])).entries()].sort((a,b)=>a[1].localeCompare(b[1])),[logs]);
- const parts=useMemo(()=>[...new Map(logs.filter(l=>!filter.machine||l.machineId===filter.machine).map(l=>[searchPartKey(l),`${l.partNo||l.productName} · ${l.productName} · Step ${l.step||'—'}`])).entries()].sort((a,b)=>a[1].localeCompare(b[1])),[logs,filter.machine]);
- const rows=useMemo(()=>searchProduction(logs,filter),[logs,filter]),stats=useMemo(()=>defectStatistics(rows),[rows]);
+ const parts=useMemo(()=>[...new Map(logs.filter(l=>!filter.machineIds.length||filter.machineIds.includes(l.machineId)||filter.partKeys.includes(searchPartKey(l))).map(l=>[searchPartKey(l),`${l.partNo||l.productName} · ${l.productName} · Step ${l.step||'—'}`])).entries()].sort((a,b)=>a[1].localeCompare(b[1])),[logs,filter.machineIds,filter.partKeys]);
+ const rows=useMemo(()=>searchDefects(logs,filter),[logs,filter]),stats=useMemo(()=>defectStatistics(rows),[rows]);
  const days=useMemo(()=>groupDefects(rows,'date'),[rows]),byMachine=useMemo(()=>groupDefects(rows,'machine'),[rows]),byPart=useMemo(()=>groupDefects(rows,'part'),[rows]);
  const details=rows.filter(l=>!onlyNg||Number(l.ngQty)>0||!validDefectLog(l)),pages=Math.max(1,Math.ceil(details.length/30)),current=Math.min(page,pages-1),max=Math.max(1,...days.map(d=>d.ng));
  const exportCsv=()=>{const url=URL.createObjectURL(new Blob([defectCsv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='production-defects.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
@@ -25,8 +26,8 @@ export function DefectStatistics({logs,loading,error,onRefresh}:{logs:Production
   <div className="ds-panel ds-filters">
    <label>จากวันที่ / From Date<input type="date" value={filter.from} onChange={e=>change('from',e.target.value)}/></label>
    <label>ถึงวันที่ / To Date<input type="date" value={filter.to} onChange={e=>change('to',e.target.value)}/></label>
-   <label>เครื่องจักร / Machine<select value={filter.machine} onChange={e=>change('machine',e.target.value)}><option value="">ทุกเครื่อง / All Machines</option>{machines.map(([id,name])=><option value={id} key={id}>{name}</option>)}</select></label>
-   <label>ชิ้นงานและขั้นตอน / Part / Step<select value={filter.part} onChange={e=>change('part',e.target.value)}><option value="">ทุกชิ้นงาน / All Parts</option>{parts.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
+   <DefectMultiSelect label="เครื่องจักร / Machine" allLabel="ทุกเครื่อง / All Machines" options={machines} selected={filter.machineIds} onChange={ids=>change('machineIds',ids)}/>
+   <DefectMultiSelect label="ชิ้นงานและขั้นตอน / Part / Step" allLabel="ทุกชิ้นงาน / All Parts" options={parts} selected={filter.partKeys} onChange={ids=>change('partKeys',ids)}/>
    <label>กะ / Shift<select value={filter.shift} onChange={e=>change('shift',e.target.value)}><option value="">ทุกกะ / All Shifts</option>{[...new Set(logs.map(l=>l.shift))].filter(Boolean).sort().map(s=><option key={s} value={s}>{s}</option>)}</select></label>
    <label>ค้นหา / Search<input type="search" placeholder="รหัสชิ้นงานหรือหมายเหตุ / Part or note" value={filter.query} onChange={e=>change('query',e.target.value)}/></label>
    <button onClick={()=>{setFilter(empty);setPage(0);}}>ล้างตัวกรอง / Clear Filters</button>
@@ -38,7 +39,7 @@ export function DefectStatistics({logs,loading,error,onRefresh}:{logs:Production
   {stats.invalid>0&&<p className="ds-warning" role="alert">ไม่นำ {n(stats.invalid)} รายการที่ Good หรือ NG ว่าง ติดลบ หรือไม่ใช่ตัวเลขมาคำนวณ โปรดตรวจข้อมูลต้นทาง / Records with missing, negative or invalid Good/NG quantities are excluded.</p>}
   {loading?<p className="ds-panel" role="status">กำลังโหลดประวัติการผลิต / Loading production history…</p>:!rows.length?<p className="ds-panel" role="status">ไม่พบข้อมูลตามตัวกรอง / No matching records.</p>:<>
    <section className="ds-panel"><h3>แนวโน้มงานเสียรายวัน / Daily Defect Trend</h3><p>แสดงเฉพาะวันที่มีบันทึก / Recorded dates only · {n(days.length)} วัน / days</p><div className="ds-trend">{days.map(d=><div className="ds-day" key={d.key}><span>{d.label}</span><div className="ds-track" role="img" aria-label={`${d.label}: NG ${n(d.ng)}, ${rate(d.rate)}`}><i style={{width:`${d.ng/max*100}%`}}/></div><b>{n(d.ng)} ชิ้น / pcs</b><span>NG {rate(d.rate)}</span></div>)}</div></section>
-   <div className="ds-rank-grid"><Ranking title="เครื่องจักรที่มีงานเสีย / Defects by Machine" rows={byMachine} total={stats.ng} onSelect={id=>change('machine',id)}/><Ranking title="ชิ้นงานที่มีงานเสีย / Defects by Part" rows={byPart} total={stats.ng} onSelect={id=>change('part',id)}/></div>
+   <div className="ds-rank-grid"><Ranking title="เครื่องจักรที่มีงานเสีย / Defects by Machine" rows={byMachine} total={stats.ng} onSelect={id=>change('machineIds',[id])}/><Ranking title="ชิ้นงานที่มีงานเสีย / Defects by Part" rows={byPart} total={stats.ng} onSelect={id=>change('partKeys',[id])}/></div>
    <section className="ds-panel"><h3>รายละเอียดงานเสีย / Defect Records</h3><p>ไม่มีรหัสสาเหตุงานเสียแยกในประวัติ จึงแสดงหมายเหตุตามต้นทาง / No structured defect-cause field is available; original notes are shown.</p><label className="ds-check"><input type="checkbox" checked={onlyNg} onChange={e=>{setOnlyNg(e.target.checked);setPage(0);}}/>แสดงเฉพาะรายการมี NG หรือข้อมูลผิดปกติ / Show NG or invalid records only</label><p>{n(details.length)} รายการ / records</p><div className="ds-table"><table><thead><tr>{['วันที่ / Date','กะ / Shift','เครื่อง / Machine','ชิ้นงาน / Part / Step','งานดี / Good','งานเสีย / NG','อัตรางานเสีย / NG %','หมายเหตุ / Note'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{details.slice(current*30,current*30+30).map((l,i)=><tr key={l.id+'-'+i}><td>{l.date}</td><td>{l.shift}</td><td>{l.machineName}</td><td>{l.partNo} · {l.productName}<br/>Step {l.step||'—'}</td><td>{String(l.goodQty??'—')}</td><td className="ds-ng">{String(l.ngQty??'—')}</td><td>{validDefectLog(l)?rate(defectRate(Number(l.goodQty),Number(l.ngQty))):'ข้อมูลผิดปกติ / Invalid'}</td><td>{l.note||'—'}</td></tr>)}</tbody></table></div><div className="ds-pagination"><button disabled={!current} onClick={()=>setPage(current-1)}>ก่อนหน้า / Previous</button><span>{current+1} / {pages}</span><button disabled={current+1>=pages} onClick={()=>setPage(current+1)}>ถัดไป / Next</button></div></section>
   </>}
  </section>;
