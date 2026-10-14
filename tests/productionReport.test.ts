@@ -29,23 +29,28 @@ for(const [sheet,name] of [['SW#1 Spot','SW1# spot'],['SW4 NMS/CU Box','SW4 NMS'
  assert.equal(match({...base,machineName:'Other machine'}).rate,null);
 }
 
+
 const dailyLogs = [
- {...base,date:'2026-10-13'},
- {...base,id:'2',date:'2026-10-13',entryUser:'Bob',partNo:'B',productName:'Part B',workMinutes:50,normalMinutes:50,changeoverMinutes:0,goodQty:50,ngQty:0},
- {...base,id:'3',date:'2026-10-14',machineId:'m2',machineName:'Other',goodQty:30,ngQty:5},
+ {...base,id:'d1',date:'2026-10-13',shift:'白'},
+ {...base,id:'d2',date:'2026-10-13',shift:'D',entryUser:'Bob'},
+ {...base,id:'d3',date:'2026-10-13',shift:'夜'},
+ {...base,id:'d4',date:'2026-10-13',shift:'白',partNo:'B',productName:'Part B'},
+ {...base,id:'d5',date:'2026-10-13',shift:'白',step:'2'},
+ {...base,id:'d6',date:'2026-10-13',shift:'白',machineId:'m2',machineName:'Other'},
+ {...base,id:'d7',date:'2026-10-14',shift:'白'},
 ];
 const daily=buildProductionReport(dailyLogs,'day',matcher);
-assert.equal(daily.rows.length,2,'group all machines, recorders and parts by production date');
-const firstDay=daily.rows.find(row=>row.date==='2026-10-13')!;
-assert.equal(firstDay.count,2);assert.equal(firstDay.output,150);
-assert.equal(firstDay.run,130);assert.equal(firstDay.downtime,20);
-assert.equal(reportValues(firstDay).target,200);
-assert.equal(reportValues(firstDay).rate,200/150,'daily target rate is time weighted');
-assert.equal(reportValues(firstDay).kpi,75);
-assert.equal(reportValues(daily.rows.find(row=>row.date==='2026-10-14')!).target,null,'missing targets stay unavailable within their day');
-assert.equal(daily.rows.reduce((sum,row)=>sum+row.output,0),daily.total.output,'each record counted once');
-assert.deepEqual(daily.total,buildProductionReport(dailyLogs,'detail',matcher).total,'changing view preserves totals');
-assert.equal(buildProductionReport(dailyLogs.slice(1,2),'day',matcher).rows[0].output,50,'aggregate only supplied filtered records');
+assert.equal(daily.rows.length,6,'separate date, shift, machine, part and step');
+const combined=daily.rows.find(row=>row.count===2)!;
+assert.equal(combined.date,'2026-10-13');assert.equal(combined.shift,'白');
+assert.equal(combined.machine,'CNC-C1');assert.equal(combined.partNo,'A');assert.equal(combined.step,'1');
+assert.equal(combined.output,200);assert.equal(combined.run,160);assert.equal(combined.downtime,40);
+assert.equal(reportValues(combined).target,200);assert.equal(reportValues(combined).kpi,100);
+assert.equal(reportValues(daily.rows.find(row=>row.machine==='Other')!).target,null,'missing target affects only its own group');
+assert.equal(daily.rows.reduce((sum,row)=>sum+row.output,0),daily.total.output,'no duplicated output');
+assert.deepEqual(daily.total,buildProductionReport(dailyLogs,'detail',matcher).total,'view preserves totals');
+assert.equal(buildProductionReport(dailyLogs.slice(0,1),'day',matcher).rows[0].output,100,'honor filtered records');
 assert.equal(buildProductionReport([],'day',matcher).rows.length,0);
-assert.equal(buildProductionReport([base],'day',matcher).rows[0].date,'','undated records do not acquire a fabricated date');
-console.log('Daily production report tests passed');
+assert.equal(buildProductionReport([base],'day',matcher).rows[0].date,'','do not invent dates');
+assert.equal(buildProductionReport([base],'day',matcher).rows[0].shift,'','do not invent shifts');
+console.log('Daily production breakdown tests passed');

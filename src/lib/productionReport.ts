@@ -22,6 +22,16 @@ const capacityMachineAliases:Record<string,string> = {
   'riveting pdb':'riveting',
 };
 export const capacityMachineKey=(value:string)=>capacityMachineAliases[reportText(value)]||reportText(value);
+export const reportShift = (value: unknown) => {
+  const shift = reportText(value);
+  if (['白','day','a','d'].includes(shift)) return '白';
+  if (['夜','night','b','n'].includes(shift)) return '夜';
+  return shift;
+};
+export const reportShiftLabel = (value: string) => {
+  const shift = reportShift(value);
+  return shift === '白' ? 'กะเช้า / Day' : shift === '夜' ? 'กะดึก / Night' : value || 'ไม่ระบุกะ / Unknown shift';
+};
 export const reportPerson = (log: ProductionLog) => log.entryUser?.trim() || 'ไม่ระบุผู้บันทึก';
 export const reportPart = (log: Pick<ProductionLog, 'partNo' | 'productName' | 'step'>) => JSON.stringify([reportText(log.partNo), reportText(log.productName), stepKey(log.step)]);
 
@@ -70,12 +80,12 @@ export function capacityMatcher(data: ProductionCapacityData | null, machines: M
 }
 
 export type ReportRow = {
-  key: string; date: string; machine: string; person: string; product: string; partNo: string; step: string;
+  key: string; date: string; shift: string; machine: string; person: string; product: string; partNo: string; step: string;
   count: number; good: number; ng: number; test: number; output: number;
   minutes: number; run: number; downtime: number; target: number; eligible: number;
   missingTime: number; invalidQty: number; reasons: Record<string, number>;
 };
-export const emptyReportRow = (key = 'total'): ReportRow => ({key, date:'', machine:'', person:'', product:'', partNo:'',step:'',count:0,good:0,ng:0,test:0,output:0,minutes:0,run:0,downtime:0,target:0,eligible:0,missingTime:0,invalidQty:0,reasons:{}});
+export const emptyReportRow = (key = 'total'): ReportRow => ({key, date:'', shift:'', machine:'', person:'', product:'', partNo:'',step:'',count:0,good:0,ng:0,test:0,output:0,minutes:0,run:0,downtime:0,target:0,eligible:0,missingTime:0,invalidQty:0,reasons:{}});
 export function reportValues(row: ReportRow) {
   const complete = row.count > 0 && row.eligible === row.count && row.target > 0;
   return {
@@ -91,8 +101,8 @@ export function buildProductionReport(logs: ProductionLog[], mode: ReportMode, m
   for (const log of logs) {
     const person = reportPerson(log); const machine = log.machineName || log.machineId;
     const part = reportPart(log);
-    const key = JSON.stringify(mode === 'day' ? [log.date || ''] : mode === 'machine' ? [log.machineId || machine] : mode === 'person' ? [reportText(person)] : mode === 'part' ? [part] : [log.machineId || machine, reportText(person),part]);
-    if (!rows.has(key)) rows.set(key, {...emptyReportRow(key),date:log.date || '',machine,person,product:log.productName,partNo:log.partNo,step:log.step});
+    const key = JSON.stringify(mode === 'day' ? [log.date || '',reportShift(log.shift),log.machineId || machine,part] : mode === 'machine' ? [log.machineId || machine] : mode === 'person' ? [reportText(person)] : mode === 'part' ? [part] : [log.machineId || machine, reportText(person),part]);
+    if (!rows.has(key)) rows.set(key, {...emptyReportRow(key),date:log.date || '',shift:reportShift(log.shift),machine,person,product:log.productName,partNo:log.partNo,step:log.step});
     const downtime = totalDowntime(log);
     const minutes = log.workMinutes != null ? Number(log.workMinutes) : Number(log.normalMinutes) + downtime;
     const timeOk = Number.isFinite(minutes) && minutes > 0 && minutes <= 1440 && Number.isFinite(downtime) && downtime >= 0 && downtime <= 1440 && finite(log.normalMinutes) && log.normalMinutes >= 0 && log.normalMinutes <= 1440;
