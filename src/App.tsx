@@ -4642,7 +4642,7 @@ function App() {
           </button>
           {canAccessTab(session, "master") && (
             <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
-              <Database size={18} /> ข้อมูลหลัก / Master
+              <Database size={18} /> รายการเครื่องจักร / Machine List
             </button>
           )}
           {canAccessTab(session, "users") && (
