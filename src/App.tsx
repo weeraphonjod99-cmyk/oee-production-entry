@@ -4622,14 +4622,14 @@ function App() {
             </span>
             กรอกยอดสำหรับพนักงาน / Employee Entry
           </button>
-          {canAccessTab(session, "capacity") && (
-            <button className={tab === "capacity" ? "active" : ""} onClick={() => setTab("capacity")} type="button">
-              <TableProperties size={18} /> ดูกำลังผลิต / Production Capacity
-            </button>
-          )}
           {canAccessTab(session, "dashboard") && (
             <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")} type="button">
               <BarChart3 size={18} /> ภาพรวม / Dashboard
+            </button>
+          )}
+          {canAccessTab(session, "capacity") && (
+            <button className={tab === "capacity" ? "active" : ""} onClick={() => setTab("capacity")} type="button">
+              <TableProperties size={18} /> ดูกำลังผลิต / Production Capacity
             </button>
           )}
           {canAccessTab(session, "reports") && (
