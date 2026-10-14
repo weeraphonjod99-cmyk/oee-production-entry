@@ -4603,7 +4603,7 @@ function App() {
         <div className="brand-mark">
           <img alt="JR logo" className="brand-logo" src={brandLogoSrc} />
           <div>
-            <strong>OEE Entry</strong>
+            <strong>Production</strong>
             <span>การผลิต / Production</span>
           </div>
         </div>
@@ -6034,7 +6034,7 @@ function FactoryGeofenceGate({ access, onLogout }: { access: FactoryGeofenceAcce
         <div className="login-brand">
           <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
-            <strong>OEE Entry</strong>
+            <strong>Production</strong>
             <span>พื้นที่ใช้งานโรงงาน / Factory zone access</span>
           </div>
         </div>
@@ -6106,7 +6106,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
         <div className="login-brand">
           <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
-            <strong>OEE Entry</strong>
+            <strong>Production</strong>
             <span>เข้าใช้งานการผลิต / Production access</span>
           </div>
         </div>
