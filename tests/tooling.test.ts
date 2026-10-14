@@ -8,3 +8,6 @@ assert.equal(data.records.length,1);assert.equal(data.records[0].sourceRow,4);as
 assert.equal(combineTooling([data,data]).records.length,2,'retain independent source records rather than deduplicate parts');
 assert.throws(()=>parseToolingHtml('<html/>',sheet,s=>new DOMParser().parseFromString(s,'text/xml') as any));
 console.log('Tooling HTML parsing and image anchor tests passed');
+
+const merged=html.replace('<td>Part<br/>Name</td><td>001</td>','<td rowspan="2">Part<br/>Name</td><td rowspan="2">001</td>').replace('<td>2</td><td/><td/><td/>','<td/><td/>');
+assert.equal(parseToolingHtml(merged,sheet,s=>new DOMParser().parseFromString(s,'text/xml') as any).records.length,1,'blank merged continuation must not create a duplicate record');
