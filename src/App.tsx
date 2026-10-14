@@ -4639,7 +4639,6 @@ function App() {
             </button>
           )}
           {canAccessTab(session, "productionSearch") && <button className={tab === "productionSearch" ? "active" : ""} onClick={() => setTab("productionSearch")} type="button"><FileText size={18} /> ค้นหาการผลิต / Production Search</button>}
-          {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> JRTL TooLing List</button>}
           {canAccessTab(session, "defects") && <button className={tab === "defects" ? "active" : ""} onClick={() => setTab("defects")} type="button"><AlertTriangle size={18} /> สถิติงานเสีย / Defect Statistics</button>}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ / History
@@ -4649,6 +4648,7 @@ function App() {
               <Database size={18} /> รายการเครื่องจักร / Machine List
             </button>
           )}
+          {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> รายการแม่พิมพ์ / JRTL Tooling List</button>}
           {canAccessTab(session, "users") && (
             <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")} type="button">
               <UserPlus size={18} /> ผู้ใช้งาน / Users
