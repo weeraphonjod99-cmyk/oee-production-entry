@@ -1,3 +1,4 @@
+import {ToolingList} from './components/ToolingList';
 import { DefectStatistics } from "./components/DefectStatistics";
 import { ProductionSearch } from "./components/ProductionSearch";
 import { ReliabilitySummary } from "./components/ReliabilitySummary";
@@ -90,7 +91,7 @@ import {
 import { appendLocalLog, exportLogsCsv, exportMasterCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
-type TabId = "defects" | "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
+type TabId = "tooling" | "defects" | "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -4638,6 +4639,7 @@ function App() {
             </button>
           )}
           {canAccessTab(session, "productionSearch") && <button className={tab === "productionSearch" ? "active" : ""} onClick={() => setTab("productionSearch")} type="button"><FileText size={18} /> ค้นหาการผลิต / Production Search</button>}
+          {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> JRTL TooLing List</button>}
           {canAccessTab(session, "defects") && <button className={tab === "defects" ? "active" : ""} onClick={() => setTab("defects")} type="button"><AlertTriangle size={18} /> สถิติงานเสีย / Defect Statistics</button>}
           <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")} type="button">
             <History size={18} /> ประวัติ / History
@@ -4682,10 +4684,10 @@ function App() {
             <button className="ghost-button" onClick={shareApp} type="button">
               <Share2 size={17} /> แบ่งปัน / Share
             </button>
-            <button style={tab === "defects" ? {display:"none"} : undefined} className="ghost-button" onClick={downloadCsv} type="button">
+            <button style={(tab === "defects" || tab === "tooling") ? {display:"none"} : undefined} className="ghost-button" onClick={downloadCsv} type="button">
               <Download size={17} /> CSV
             </button>
-            <button style={tab === "defects" ? {display:"none"} : undefined} className="ghost-button" onClick={downloadPdfReport} type="button">
+            <button style={(tab === "defects" || tab === "tooling") ? {display:"none"} : undefined} className="ghost-button" onClick={downloadPdfReport} type="button">
               <FileText size={17} /> PDF
             </button>
             <button className="ghost-button" onClick={signOut} type="button">
@@ -5511,6 +5513,7 @@ function App() {
           error={!remoteEnabled ? "ยังไม่ได้เชื่อมต่อ Google Sheet" : reportDataError}
           onRefresh={() => setReportRefresh(v => v+1)} />}
 
+        {tab === "tooling" && <ToolingList />}
         {tab === "defects" && <DefectStatistics logs={reportAllLogs} loading={reportDataLoading} error={reportDataError} onRefresh={() => setReportRefresh(v => v+1)} />}
         {tab === "history" && (
           <section className="table-view">
@@ -9024,3 +9027,4 @@ function MasterTable({ products }: { products: ProductMaster[] }) {
 }
 
 export default App;
+
