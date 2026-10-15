@@ -2,17 +2,22 @@ import {useEffect,useMemo,useState} from 'react';
 import {parseToolingHtml,combineTooling,TOOLING_SHEETS,TOOLING_URL,toolingThai,type ToolingData} from '../lib/tooling';
 import './tooling-list.css';
 export function ToolingList(){
- const [section,setSection]=useState<'list'|'repair'>('list');
+ const [section,setSection]=useState<'list'|'repair'|'maintenance'>('list');
  return <div className="tooling-workspace">
   <nav className="tooling-subnav" aria-label="เมนูแม่พิมพ์ / Tooling menu">
    <button type="button" aria-pressed={section==='list'} onClick={()=>setSection('list')}>ทะเบียนแม่พิมพ์ / Tooling List</button>
    <button type="button" aria-pressed={section==='repair'} onClick={()=>setSection('repair')}>ซ่อมแม่พิมพ์ / Tooling Repair</button>
+   <button type="button" aria-pressed={section==='maintenance'} onClick={()=>setSection('maintenance')}>จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management</button>
   </nav>
   <div hidden={section!=='list'}><ToolingRegister /></div>
   {section==='repair'&&<section className="tooling-list" aria-label="ซ่อมแม่พิมพ์ / Tooling Repair">
    <header><div><p>งานซ่อมบำรุงแม่พิมพ์ / Tooling Maintenance</p><h2>ซ่อมแม่พิมพ์ / Tooling Repair</h2></div></header>
    <p>ยังไม่ได้เชื่อมต่อแหล่งข้อมูลการซ่อมแม่พิมพ์ / Tooling repair data source is not connected yet.</p>
    <p>หน้านี้สำหรับแสดงข้อมูลการซ่อมแม่พิมพ์ เมื่อเชื่อมต่อชีตบันทึกการซ่อม / This page will display repair records once a repair sheet is connected.</p>
+  </section>}
+  {section==='maintenance'&&<section className="tooling-list" aria-label="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management">
+   <header><div><p>การบำรุงรักษาแม่พิมพ์ / Die Maintenance</p><h2>จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management</h2></div></header>
+   <p>ยังไม่ได้เชื่อมต่อแหล่งข้อมูลการบำรุงรักษาแม่พิมพ์ / Die maintenance data source is not connected yet.</p>
   </section>}
  </div>;
 }
