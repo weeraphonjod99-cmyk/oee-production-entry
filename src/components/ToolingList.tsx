@@ -2,6 +2,21 @@ import {useEffect,useMemo,useState} from 'react';
 import {parseToolingHtml,combineTooling,TOOLING_SHEETS,TOOLING_URL,toolingThai,type ToolingData} from '../lib/tooling';
 import './tooling-list.css';
 export function ToolingList(){
+ const [section,setSection]=useState<'list'|'repair'>('list');
+ return <div className="tooling-workspace">
+  <nav className="tooling-subnav" aria-label="เมนูแม่พิมพ์ / Tooling menu">
+   <button type="button" aria-pressed={section==='list'} onClick={()=>setSection('list')}>ทะเบียนแม่พิมพ์ / Tooling List</button>
+   <button type="button" aria-pressed={section==='repair'} onClick={()=>setSection('repair')}>ซ่อมแม่พิมพ์ / Tooling Repair</button>
+  </nav>
+  <div hidden={section!=='list'}><ToolingRegister /></div>
+  {section==='repair'&&<section className="tooling-list" aria-label="ซ่อมแม่พิมพ์ / Tooling Repair">
+   <header><div><p>งานซ่อมบำรุงแม่พิมพ์ / Tooling Maintenance</p><h2>ซ่อมแม่พิมพ์ / Tooling Repair</h2></div></header>
+   <p>ยังไม่ได้เชื่อมต่อแหล่งข้อมูลการซ่อมแม่พิมพ์ / Tooling repair data source is not connected yet.</p>
+   <p>หน้านี้สำหรับแสดงข้อมูลการซ่อมแม่พิมพ์ เมื่อเชื่อมต่อชีตบันทึกการซ่อม / This page will display repair records once a repair sheet is connected.</p>
+  </section>}
+ </div>;
+}
+function ToolingRegister(){
  const [data,setData]=useState<ToolingData|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[updated,setUpdated]=useState(''),[reload,setReload]=useState(0);
  const [sheetFilter,setSheetFilter]=useState(''),[year,setYear]=useState('');
  const [query,setQuery]=useState(''),[customer,setCustomer]=useState(''),[machine,setMachine]=useState(''),[page,setPage]=useState(0);
