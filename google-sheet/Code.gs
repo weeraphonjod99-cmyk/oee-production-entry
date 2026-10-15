@@ -450,6 +450,7 @@ const DOWNTIME_CATALOG_ROWS = [
 ];
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.action === "dieBackupStatus") return jsonResponse({ok:true,service:"die-maintenance-backup-v1"});
   const action = e.parameter.action || "health";
   try {
     if (action === "logs") {
@@ -573,6 +574,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || "{}");
+    if (body.action === "backupDieMaintenance") return jsonResponse(backupDieMaintenance_(body.payload));
     if (body.action === "appendLog") {
       const log = appendLog(body.payload || {});
       return jsonResponse({ ok: true, log });
@@ -3926,6 +3928,16 @@ function repairProductionLogMinuteConsistency(log) {
   if (minuteNumber(log.normalMinutes) <= 0 && minuteNumber(log.workMinutes) > downtimeMinutes) {
     log.normalMinutes = minuteNumber(log.workMinutes - downtimeMinutes);
   }
+  if (minuteNumber(log.normalMinutes) <= 0) {
+    const currentWorkMinutes = minuteNumber(log.workMinutes);
+    log.normalMinutes = 1;
+    log.workMinutes = minuteNumber(Math.max(currentWorkMinutes, downtimeMinutes + 1));
+    log.timeSlots = minuteNumber(log.workMinutes);
+    const fallbackNote = "ระบบเติมเวลาผลิตขั้นต่ำอัตโนมัติ เนื่องจากมี Good/NG/Test แต่ตัวจับเวลาหน้าเว็บหลุด";
+    if (String(log.buttonDetails || "").indexOf(fallbackNote) < 0) {
+      log.buttonDetails = [log.buttonDetails, fallbackNote].filter(Boolean).join(" | ");
+    }
+  }
   return log;
 }
 
@@ -3936,7 +3948,7 @@ function validateProductionLogMinuteConsistency(log) {
   if (minuteNumber(log.normalMinutes) > 0) {
     return;
   }
-  throw new Error("มียอดชิ้นงาน Good/NG/Test แต่ไม่มีเวลาผลิตจริง กรุณากดเริ่มผลิตหรือกดหัวข้อเวลาที่ใช้งานจริงก่อนส่งยอด");
+  repairProductionLogMinuteConsistency(log);
 }
 
 function sumValues(values) {
@@ -5698,4 +5710,32 @@ function jsonResponse(payload) {
   return ContentService
     .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function backupDieMaintenance_(p) {
+  if (!p || !/^[a-zA-Z0-9_-]{8,100}$/.test(p.backupId || "") || !/^[a-zA-Z0-9_-]{8,100}$/.test(p.clientId || "")) throw new Error("Invalid backup identity");
+  var data = p.data;
+  if (!data || !["dies","shots","checks","repairs"].every(function(k){return Array.isArray(data[k]);})) throw new Error("Invalid backup data");
+  var text = JSON.stringify({version:1,dies:data.dies,shots:data.shots,checks:data.checks,repairs:data.repairs});
+  if (text.length > 2000000) throw new Error("Backup exceeds 2 MB; export JSON and contact administrator");
+  var lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    var sheet = ensureSheet("die_maintenance_backups", ["backup_id","client_id","received_at","part","parts","dies","shots","checks","repairs","json"]);
+    var count = Math.ceil(text.length / 40000), rows = [];
+    var existing = sheet.getLastRow() > 1 ? sheet.getRange(2,1,sheet.getLastRow()-1,5).getValues().filter(function(r){return r[0]===p.backupId && r[1]===p.clientId;}) : [];
+    if (existing.length) {
+      if (existing.length!==count) throw new Error("Incomplete backup; contact administrator");
+      return {ok:true,backupId:p.backupId,receivedAt:String(existing[0][2]),parts:count};
+    }
+    var receivedAt = new Date().toISOString();
+    for (var i=0;i<count;i++) rows.push([p.backupId,p.clientId,receivedAt,i+1,count,data.dies.length,data.shots.length,data.checks.length,data.repairs.length,text.slice(i*40000,(i+1)*40000)]);
+    var start = sheet.getLastRow()+1;
+    ensureSheetSize(sheet,start+rows.length-1,10);
+    sheet.getRange(start,10,rows.length,1).setNumberFormat("@");
+    // Prefix fragments to prevent spreadsheet formula evaluation. Strip 'json:' when restoring.
+    rows.forEach(function(r){r[9]="json:"+r[9];});
+    sheet.getRange(start,1,rows.length,10).setValues(rows);
+    SpreadsheetApp.flush();
+    return {ok:true,backupId:p.backupId,receivedAt:receivedAt,parts:count};
+  } finally {lock.releaseLock();}
 }
