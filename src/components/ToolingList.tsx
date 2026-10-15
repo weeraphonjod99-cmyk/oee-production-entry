@@ -1,7 +1,11 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useState,useRef} from 'react';
 import {parseToolingHtml,combineTooling,TOOLING_SHEETS,TOOLING_URL,toolingThai,type ToolingData} from '../lib/tooling';
 import './tooling-list.css';
 export function ToolingList(){
+ const [source,setSource]=useState<ToolingData|null>(null);
+ const frame=useRef<HTMLIFrameElement>(null);
+ const sendSource=()=>{if(source)frame.current?.contentWindow?.postMessage({type:'jrtl-tooling-source-v1',records:source.records},window.location.origin);};
+ useEffect(()=>{sendSource();},[source]);
  const [section,setSection]=useState<'list'|'repair'|'maintenance'>('list');
  return <div className="tooling-workspace">
   <nav className="tooling-subnav" aria-label="เมนูแม่พิมพ์ / Tooling menu">
@@ -9,27 +13,27 @@ export function ToolingList(){
    <button type="button" aria-pressed={section==='repair'} onClick={()=>setSection('repair')}>ซ่อมแม่พิมพ์ / Tooling Repair</button>
    <button type="button" aria-pressed={section==='maintenance'} onClick={()=>setSection('maintenance')}>จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management</button>
   </nav>
-  <div hidden={section!=='list'}><ToolingRegister /></div>
+  <div hidden={section!=='list'}><ToolingRegister onData={setSource} /></div>
   {section==='repair'&&<section className="tooling-list" aria-label="ซ่อมแม่พิมพ์ / Tooling Repair">
    <header><div><p>งานซ่อมบำรุงแม่พิมพ์ / Tooling Maintenance</p><h2>ซ่อมแม่พิมพ์ / Tooling Repair</h2></div></header>
    <p>ยังไม่ได้เชื่อมต่อแหล่งข้อมูลการซ่อมแม่พิมพ์ / Tooling repair data source is not connected yet.</p>
    <p>หน้านี้สำหรับแสดงข้อมูลการซ่อมแม่พิมพ์ เมื่อเชื่อมต่อชีตบันทึกการซ่อม / This page will display repair records once a repair sheet is connected.</p>
   </section>}
   <section hidden={section!=='maintenance'} aria-label="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management">
-   <iframe className="die-maintenance-frame" src="./JRTL_Die_Maintenance.html" title="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management" />
+   <iframe ref={frame} onLoad={sendSource} className="die-maintenance-frame" src="./JRTL_Die_Maintenance.html" title="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management" />
   </section>
  </div>;
 }
-function ToolingRegister(){
+function ToolingRegister({onData}:{onData:(data:ToolingData)=>void}){
  const [data,setData]=useState<ToolingData|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[updated,setUpdated]=useState(''),[reload,setReload]=useState(0);
  const [sheetFilter,setSheetFilter]=useState(''),[year,setYear]=useState('');
  const [query,setQuery]=useState(''),[customer,setCustomer]=useState(''),[machine,setMachine]=useState(''),[page,setPage]=useState(0);
  useEffect(()=>{let disposed=false,busy=false;let controller:AbortController|undefined;
  const load=async()=>{if(busy)return;busy=true;controller=new AbortController();const timeout=setTimeout(()=>controller?.abort(),45000);setLoading(true);
- try{const results=await Promise.all(TOOLING_SHEETS.map(async sheet=>{const response=await fetch(`https://docs.google.com/spreadsheets/d/1GJT6p_Yfn7Lda-kYgH7-lFofOO0GOn1ZfwWjTlGXm2c/htmlview/sheet?headers=true&gid=${sheet.gid}&_=${Date.now()}`,{signal:controller!.signal,credentials:'omit',cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);return parseToolingHtml(await response.text(),sheet);}));const next=combineTooling(results);if(!disposed){setData(next);setUpdated(new Date().toLocaleString('th-TH'));setError('');}}
+ try{const results=await Promise.all(TOOLING_SHEETS.map(async sheet=>{const response=await fetch(`https://docs.google.com/spreadsheets/d/1GJT6p_Yfn7Lda-kYgH7-lFofOO0GOn1ZfwWjTlGXm2c/htmlview/sheet?headers=true&gid=${sheet.gid}&_=${Date.now()}`,{signal:controller!.signal,credentials:'omit',cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);return parseToolingHtml(await response.text(),sheet);}));const next=combineTooling(results);if(!disposed){setData(next);onData(next);setUpdated(new Date().toLocaleString('th-TH'));setError('');}}
  catch{if(!disposed)setError('โหลดข้อมูลไม่สำเร็จ กรุณาตรวจการเชื่อมต่อหรือสิทธิ์อ่าน Google Sheet / Unable to load. Check connection or Google Sheet access.');}
  finally{clearTimeout(timeout);busy=false;if(!disposed)setLoading(false);}};
- void load();const refresh=()=>{if(!document.hidden)void load();};const timer=setInterval(refresh,60000);window.addEventListener('focus',refresh);return()=>{disposed=true;controller?.abort();clearInterval(timer);window.removeEventListener('focus',refresh);};},[reload]);
+ void load();const refresh=()=>{if(!document.hidden)void load();};const timer=setInterval(refresh,60000);window.addEventListener('focus',refresh);return()=>{disposed=true;controller?.abort();clearInterval(timer);window.removeEventListener('focus',refresh);};},[reload,onData]);
  const rows=useMemo(()=>data?.records.filter(r=>(!sheetFilter||r.gid===sheetFilter)&&(!year||r.year===year)&&(!customer||r.values.Customer===customer)&&(!machine||r.values['Mech. No.']===machine)&&(!query||Object.values(r.values).join(' ').toLowerCase().includes(query.trim().toLowerCase())))||[],[data,customer,machine,query,sheetFilter,year]);
  useEffect(()=>setPage(0),[customer,machine,query,sheetFilter,year]);const maxPage=Math.max(0,Math.ceil(rows.length/50)-1),current=Math.min(page,maxPage);
  const options=(key:string)=>[...new Set(data?.records.map(r=>r.values[key]).filter(Boolean)||[])].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
