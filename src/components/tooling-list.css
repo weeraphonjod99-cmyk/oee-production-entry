@@ -3,3 +3,5 @@
 .tooling-images{display:flex;flex-wrap:wrap;gap:8px;min-width:150px}.tooling-images img{display:block;width:150px;height:110px;object-fit:contain;background:#fff;border:1px solid #dbe6e1;border-radius:6px}.tooling-images a:hover img{border-color:#176549}
 
 .tooling-subnav{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}.tooling-subnav button{padding:12px 18px;border:1px solid #bed5cc;border-radius:8px;background:#fff;color:#164b3b;font:inherit;cursor:pointer}.tooling-subnav button[aria-pressed="true"]{background:#195c47;color:#fff;border-color:#195c47}.tooling-subnav button:focus-visible{outline:3px solid #37a77b;outline-offset:3px}.tooling-workspace{min-width:0}
+
+.die-maintenance-frame{display:block;width:100%;height:calc(100vh - 220px);min-height:680px;border:1px solid #cee0d7;border-radius:12px;background:#f4f8f5}

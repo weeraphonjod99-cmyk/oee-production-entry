@@ -15,10 +15,9 @@ export function ToolingList(){
    <p>ยังไม่ได้เชื่อมต่อแหล่งข้อมูลการซ่อมแม่พิมพ์ / Tooling repair data source is not connected yet.</p>
    <p>หน้านี้สำหรับแสดงข้อมูลการซ่อมแม่พิมพ์ เมื่อเชื่อมต่อชีตบันทึกการซ่อม / This page will display repair records once a repair sheet is connected.</p>
   </section>}
-  {section==='maintenance'&&<section className="tooling-list" aria-label="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management">
-   <header><div><p>การบำรุงรักษาแม่พิมพ์ / Die Maintenance</p><h2>จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management</h2></div></header>
-   <p>ยังไม่ได้เชื่อมต่อแหล่งข้อมูลการบำรุงรักษาแม่พิมพ์ / Die maintenance data source is not connected yet.</p>
-  </section>}
+  <section hidden={section!=='maintenance'} aria-label="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management">
+   <iframe className="die-maintenance-frame" src="./JRTL_Die_Maintenance.html" title="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management" />
+  </section>
  </div>;
 }
 function ToolingRegister(){
