@@ -2628,6 +2628,7 @@ function appendFormattedOeeRow(log) {
 
   ensureOeeEntryTimestampColumns(sheet);
   ensureOeeTestColumn(sheet);
+  ensureOeeToolingNoColumn(sheet);
   const layout = getOeeLayout(sheet);
   const targetRow = findNextOeeInputRow(sheet, layout);
   ensureRowExists(sheet, targetRow);
@@ -2637,6 +2638,52 @@ function appendFormattedOeeRow(log) {
   writeOeeInputRow(sheet, layout, targetRow, log);
 
   return { sheetName: sheet.getName(), row: targetRow };
+}
+
+function findOeeToolingNoColumn(sheet) {
+  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+  for (let i = 0; i < headers.length; i++) {
+    const text = String(headers[i] || "").toLowerCase().replace(/[\s._\-/]/g, "");
+    if (text === "toolingno" || text === "toolingnumber" || text === "หมายเลขแม่พิมพ์toolingno") return i + 1;
+  }
+  return 0;
+}
+
+function ensureOeeToolingNoColumn(sheet) {
+  const existing = findOeeToolingNoColumn(sheet);
+  if (existing) return existing;
+  // Append after all existing content: fixed OEE input offsets and formulas stay intact.
+  const column = sheet.getLastColumn() + 1;
+  if (column > sheet.getMaxColumns()) sheet.insertColumnsAfter(sheet.getMaxColumns(), column - sheet.getMaxColumns());
+  sheet.getRange(OEE_HEADER_ROW, getOeeLayout(sheet).partNo).copyTo(sheet.getRange(OEE_HEADER_ROW, column), { formatOnly: true });
+  sheet.getRange(OEE_HEADER_ROW, column).setValue("หมายเลขแม่พิมพ์ / Tooling No.").setWrap(true);
+  sheet.setColumnWidth(column, 180);
+  sheet.getRange(OEE_FIRST_DATA_ROW, column, sheet.getMaxRows() - OEE_FIRST_DATA_ROW + 1, 1).setNumberFormat("@");
+  return column;
+}
+
+function migrateOeeToolingNoColumns() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const machineByName = getMachineMap();
+    const result = { checked: 0, added: 0, existing: 0, sheets: [], errors: [] };
+    getWorkbook().getSheets().forEach(function(sheet) {
+      if (!isOeeDataSheet(sheet, machineByName)) return;
+      result.checked++;
+      try {
+        const existing = findOeeToolingNoColumn(sheet);
+        const column = ensureOeeToolingNoColumn(sheet);
+        if (existing) result.existing++; else result.added++;
+        result.sheets.push({ name: sheet.getName(), gid: sheet.getSheetId(), cell: sheet.getRange(OEE_HEADER_ROW, column).getA1Notation() });
+      } catch (error) {
+        result.errors.push({ name: sheet.getName(), error: String(error) });
+      }
+    });
+    SpreadsheetApp.flush();
+    console.log(JSON.stringify(result));
+    return result;
+  } finally { lock.releaseLock(); }
 }
 
 function findNextOeeInputRow(sheet, layout) {
@@ -3373,6 +3420,9 @@ function writeOeeInputRow(sheet, layout, row, log) {
   sheet.getRange(row, layout.shift).setNumberFormat("@").setValue(String(toOriginalShift(log.shift) || ""));
   sheet.getRange(row, layout.productName).setNumberFormat("@").setValue(String(log.productName || ""));
   sheet.getRange(row, layout.partNo).setNumberFormat("@").setValue(String(log.partNo || ""));
+  // A copied template must never carry a previous production run's tooling number.
+  const toolingColumn = findOeeToolingNoColumn(sheet);
+  if (toolingColumn) sheet.getRange(row, toolingColumn).setNumberFormat("@").setValue(String(log.toolingNo || ""));
   if (layout.hasStep) {
     sheet.getRange(row, layout.step).setNumberFormat("@").setValue(String(log.step || "-"));
   }
