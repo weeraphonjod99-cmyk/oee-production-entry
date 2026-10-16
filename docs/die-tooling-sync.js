@@ -55,3 +55,8 @@ window.addEventListener('message',event=>{
   $('toolingSyncStatus').textContent='อัปเดตทะเบียนไม่สำเร็จ ข้อมูลเดิมยังอยู่ / Registry update failed; previous data retained';
  }
 });
+
+function diePartPictures(d){
+ const images=(toolingPictures.get(d.id)||[]).filter(u=>/^https:\/\/docs\.google\.com\/sheets-images-rt\//.test(u));
+ return images.length?images.map(u=>'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" aria-label="ดูรูปชิ้นงาน / View part picture"><img class="die-part-picture" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" src="'+esc(u)+'" alt="'+esc(d.partName||d.partNo)+'"></a>').join(''):'<span class="muted">ไม่มีรูปต้นทาง / No source image</span>';
+}
