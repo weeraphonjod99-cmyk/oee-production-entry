@@ -4657,7 +4657,7 @@ function App() {
               <Database size={18} /> รายการเครื่องจักร / Machine List
             </button>
           )}
-          {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> รายการแม่พิมพ์ / JRTL Tooling List</button>}
+          {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> Tooling Management System</button>}
           {canAccessTab(session, "users") && (
             <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")} type="button">
               <UserPlus size={18} /> ผู้ใช้งาน / Users
