@@ -5,6 +5,7 @@ export type AppSession = {
   displayName: string;
   role: AppRole;
   signedInAt: string;
+  dieSyncToken?: string;
 };
 
 export type AppUserSummary = {

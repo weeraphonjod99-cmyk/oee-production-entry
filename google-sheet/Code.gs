@@ -574,6 +574,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || "{}");
+    if (body.action === "syncDieMaintenance") return jsonResponse(syncDieMaintenance_(body.payload));
     if (body.action === "backupDieMaintenance") return jsonResponse(backupDieMaintenance_(body.payload));
     if (body.action === "appendLog") {
       const log = appendLog(body.payload || {});
@@ -2436,6 +2437,7 @@ function signInUser(payload) {
     username: user.username,
     displayName: user.displayName,
     role: user.role,
+    dieSyncToken: issueDieSyncToken_(user),
     signedInAt: new Date().toISOString(),
   };
 }
@@ -5738,4 +5740,72 @@ function backupDieMaintenance_(p) {
     SpreadsheetApp.flush();
     return {ok:true,backupId:p.backupId,receivedAt:receivedAt,parts:count};
   } finally {lock.releaseLock();}
+}
+
+// Shared by the browser and server tests. No clock-based last-write-wins.
+function canonicalDieData(data){
+ const out=JSON.parse(JSON.stringify(data)),ids={};
+ out.dies.forEach(d=>{if(d.toolingSource){const key=JSON.stringify([d.toolingSource.base,d.toolingSource.serial]);const id='source-'+Array.from(key).map(c=>c.codePointAt(0).toString(16)).join('-');ids[d.id]=id;d.id=id;}});
+ ['shots','checks','repairs'].forEach(k=>out[k].forEach(r=>{r.dieId=ids[r.dieId]||r.dieId;}));return out;
+}
+function mergeDieData(remote,base,local){
+ const result=JSON.parse(JSON.stringify(remote)),conflicts=[];
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),blank=v=>v===undefined||v===null||v===''||v===0;
+ for(const kind of ['dies','shots','checks','repairs']){
+  const rm=new Map(result[kind].map(r=>[r.id,r])),bm=new Map((base?.[kind]||[]).map(r=>[r.id,r])),lm=new Map(local[kind].map(r=>[r.id,r]));
+  for(const id of new Set([...bm.keys(),...lm.keys()])){
+   const b=bm.get(id),l=lm.get(id),r=rm.get(id);
+   if(base&&same(b,l))continue;
+   if(!l){if(same(r,b))rm.delete(id);else if(r)conflicts.push(kind+':'+id);continue;}
+   if(!r){if(!b)rm.set(id,l);else conflicts.push(kind+':'+id);continue;}
+   const merged={...r};
+   for(const key of new Set([...Object.keys(b||{}),...Object.keys(l)])){
+    if(key==='id'||same(l[key],r[key])||(base&&same(l[key],b?.[key])))continue;
+    if(!base&&kind==='dies'&&(key==='toolingSource'||blank(l[key])))continue;
+    if((base&&same(r[key],b?.[key]))||(!base&&blank(r[key]))) {if(l[key]===undefined)delete merged[key];else merged[key]=l[key];}
+    else conflicts.push(kind+':'+id+':'+key);
+   }
+   rm.set(id,merged);
+  }
+  result[kind]=Array.from(rm.values());
+ }
+ const dies=new Set(result.dies.map(d=>d.id));
+ for(const kind of ['shots','checks','repairs'])if(result[kind].some(r=>!dies.has(r.dieId)))conflicts.push('Missing die for history');
+ return {data:result,conflicts};
+}
+
+function issueDieSyncToken_(user) {
+ var props=PropertiesService.getScriptProperties(),secret=props.getProperty('DIE_SYNC_SECRET');
+ if(!secret){secret=Utilities.getUuid()+Utilities.getUuid();props.setProperty('DIE_SYNC_SECRET',secret);}
+ var body=Utilities.base64EncodeWebSafe(JSON.stringify({u:user.username,e:Date.now()+7*86400000}));
+ return body+'.'+Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret+user.passwordHash));
+}
+function requireDieSyncUser_(token){
+ var parts=String(token||'').split('.'),body;
+ try{body=JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString());}catch(e){throw Error('SYNC_LOGIN_REQUIRED');}
+ var user=getUserRows().map(function(r){return r.user;}).find(function(u){return u.username===body.u&&u.active!==false;});
+ var secret=PropertiesService.getScriptProperties().getProperty('DIE_SYNC_SECRET');
+ if(!user||!secret||body.e<Date.now()||parts[1]!==Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(parts[0],secret+user.passwordHash)))throw Error('SYNC_LOGIN_REQUIRED');
+ return user;
+}
+function syncDieMaintenance_(p){
+ var user=requireDieSyncUser_(p&&p.token),lock=LockService.getScriptLock();lock.waitLock(30000);
+ try{
+  var sheet=ensureSheet('die_maintenance_shared',['revision','updated_at','updated_by','part','parts','json']);
+  var rows=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,6).getValues():[],current={dies:[],shots:[],checks:[],repairs:[]},revision='',updatedAt='';
+  if(rows.length){var last=rows[rows.length-1];revision=String(last[0]);updatedAt=String(last[1]);var pieces=rows.filter(function(r){return String(r[0])===revision;});if(pieces.length!==Number(last[4]))throw Error('Incomplete shared revision');current=JSON.parse(pieces.sort(function(a,b){return a[3]-b[3];}).map(function(r){return String(r[5]).slice(5);}).join(''));}
+  if(!p.data)return {ok:true,data:current,revision:revision,updatedAt:updatedAt};
+  function valid(d){return d&&['dies','shots','checks','repairs'].every(function(k){return Array.isArray(d[k])&&d[k].every(function(r){return r&&typeof r.id==='string';})&&new Set(d[k].map(function(r){return r.id;})).size===d[k].length;});}
+  if(!valid(p.data)||(p.base&&!valid(p.base)))throw Error('Invalid sync data');
+  var local=canonicalDieData(p.data),base=p.base?canonicalDieData(p.base):null;
+  var merged=mergeDieData(current,base,local);
+  if(merged.conflicts.length)return {ok:false,conflict:true,conflicts:merged.conflicts.slice(0,20)};
+  var text=JSON.stringify(merged.data);if(text.length>1900000)throw Error('Shared data exceeds storage limit');
+  if(text!==JSON.stringify(current)){
+   revision=Utilities.getUuid();updatedAt=new Date().toISOString();var count=Math.ceil(text.length/40000),write=[];
+   for(var i=0;i<count;i++)write.push([revision,updatedAt,user.username,i+1,count,'json:'+text.slice(i*40000,(i+1)*40000)]);
+   var start=sheet.getLastRow()+1;ensureSheetSize(sheet,start+count-1,6);sheet.getRange(start,1,count,6).setNumberFormat('@').setValues(write);SpreadsheetApp.flush();
+  }
+  return {ok:true,data:merged.data,revision:revision,updatedAt:updatedAt};
+ }finally{lock.releaseLock();}
 }

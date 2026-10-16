@@ -20,7 +20,7 @@ export function ToolingList(){
    <p>หน้านี้สำหรับแสดงข้อมูลการซ่อมแม่พิมพ์ เมื่อเชื่อมต่อชีตบันทึกการซ่อม / This page will display repair records once a repair sheet is connected.</p>
   </section>}
   <section hidden={section!=='maintenance'} aria-label="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management">
-   <iframe ref={frame} onLoad={sendSource} className="die-maintenance-frame" src="./JRTL_Die_Maintenance.html" title="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management" />
+   <iframe ref={frame} onLoad={sendSource} className="die-maintenance-frame" src="./JRTL_Die_Maintenance.html?v=shared-sync-20261016" title="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management" />
   </section>
  </div>;
 }
