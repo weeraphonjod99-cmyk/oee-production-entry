@@ -2669,6 +2669,7 @@ function migrateOeeToolingNoColumns() {
     const machineByName = getMachineMap();
     const result = { checked: 0, added: 0, existing: 0, sheets: [], errors: [] };
     getWorkbook().getSheets().forEach(function(sheet) {
+      if (sheet.getName() === SUBMIT_HISTORY_SHEET) return;
       if (!isOeeDataSheet(sheet, machineByName)) return;
       result.checked++;
       try {
