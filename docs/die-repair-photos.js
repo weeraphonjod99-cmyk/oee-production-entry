@@ -45,6 +45,7 @@ $('repairForm').addEventListener('submit',event=>{
  const form=event.target,o=formObj(form);
  if(!die(o.dieId))return alert('เลือกแม่พิมพ์ / Select die');
  for(const k of ['downtime','cost']){o[k]=Number(o[k]);if(!Number.isFinite(o[k])||o[k]<0)return alert('ตัวเลขต้องไม่ติดลบ / Numbers must be non-negative');}
+ if(o.status==='เสร็จสิ้น / Closed'&&(!o.action.trim()||!repairPhotos.some(photoSafe)))return alert('ต้องมีรายงานการแก้ไขและรูปก่อนปิดงาน / Repair report and photo required to close');
  o.id=uid();o.photos=repairPhotos.map(p=>({...p}));
  const next={...db,repairs:[...db.repairs,o]},serialized=JSON.stringify(next);
  if(serialized.length>1900000){$('repairPhotoStatus').textContent='ข้อมูลเกินขนาดสำรอง Google Sheet กรุณาลดจำนวนรูปหรือขอเพิ่มพื้นที่ / Google Sheet backup limit reached. Reduce photos or request expanded storage.';return;}
