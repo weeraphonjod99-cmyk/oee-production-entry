@@ -2663,12 +2663,27 @@ function moveOeeToolingNoAfterPartNo() {
       if (sheet.getName() === SUBMIT_HISTORY_SHEET || !isOeeDataSheet(sheet, machineByName)) return;
       result.checked++;
       try {
+        // This legacy tab has its header on row 2. Align it with the shared row-3 layout.
+        if (sheet.getName() === "CNC-C4") {
+          const row2 = sheet.getRange(2,1,1,sheet.getLastColumn()).getDisplayValues()[0];
+          if (row2.some(function(v){return /^part\s*no\.?$/i.test(String(v).trim());})) {
+            const misplaced = findOeeToolingNoColumn(sheet);
+            if (!misplaced || String(row2[misplaced-1] || "").trim()) throw new Error("CNC-C4 requires header review");
+            sheet.getRange(3,misplaced).clearContent();
+            sheet.insertRowsBefore(2,1);
+            sheet.getRange(3,misplaced).setValue("หมายเลขแม่พิมพ์ / Tooling No.").setWrap(true);
+          }
+        }
         const source = ensureOeeToolingNoColumn(sheet);
         const partNo = getOeeLayout(sheet).partNo;
         const target = partNo + 1;
         if (source !== target) {
-          if (source < target) throw new Error("Unexpected Tooling No. before Part No.");
+          const crossing = sheet.getRange(1,1,2,sheet.getLastColumn()).getMergedRanges().filter(function(r){return r.getColumn()<target && r.getLastColumn()>=target;});
+          const merges = crossing.map(function(r){return {row:r.getRow(),column:r.getColumn(),rows:r.getNumRows(),columns:r.getNumColumns()};});
+          crossing.forEach(function(r){r.breakApart();});
           sheet.moveColumns(sheet.getRange(1, source, sheet.getMaxRows(), 1), target);
+          SpreadsheetApp.flush();
+          merges.forEach(function(m){sheet.getRange(m.row,m.column,m.rows,m.columns+1).merge();});
           result.moved++;
         }
         const layout = getOeeLayout(sheet);
@@ -2680,6 +2695,14 @@ function moveOeeToolingNoAfterPartNo() {
     console.log(JSON.stringify(result));
     return result;
   } finally { lock.releaseLock(); }
+}
+
+function auditOeeToolingPositions() {
+  const names = ["CNC-C4", "Bending #1", "Bending #2", "SW1 spot", "RV1", "RV2"];
+  getWorkbook().getSheets().forEach(function(sheet) {
+    if (names.indexOf(sheet.getName()) < 0) return;
+    console.log(JSON.stringify({name:sheet.getName(), headers:sheet.getRange(3,1,1,sheet.getLastColumn()).getDisplayValues()[0], merged:sheet.getRange(1,1,3,sheet.getLastColumn()).getMergedRanges().map(function(r){return r.getA1Notation();})}));
+  });
 }
 
 function ensureOeeToolingNoColumn(sheet) {
