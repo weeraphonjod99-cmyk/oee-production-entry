@@ -4654,7 +4654,7 @@ function App() {
           </button>
           {canAccessTab(session, "master") && (
             <button className={tab === "master" ? "active" : ""} onClick={() => setTab("master")} type="button">
-              <Database size={18} /> รายการเครื่องจักร / Machine List
+              <Database size={18} /> Machine Management System
             </button>
           )}
           {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> Tooling Management System</button>}
