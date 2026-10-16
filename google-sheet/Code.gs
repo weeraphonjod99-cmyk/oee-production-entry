@@ -2643,23 +2643,58 @@ function appendFormattedOeeRow(log) {
 function findOeeToolingNoColumn(sheet) {
   const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
   for (let i = 0; i < headers.length; i++) {
-    const text = String(headers[i] || "").toLowerCase().replace(/[\s._\-/]/g, "");
-    if (text === "toolingno" || text === "toolingnumber" || text === "หมายเลขแม่พิมพ์toolingno") return i + 1;
+    if (isOeeToolingNoHeader(headers[i])) return i + 1;
   }
   return 0;
+}
+
+function isOeeToolingNoHeader(value) {
+  const text = String(value || "").toLowerCase().replace(/[\s._\-/]/g, "");
+  return text === "toolingno" || text === "toolingnumber" || text === "หมายเลขแม่พิมพ์toolingno";
+}
+
+function moveOeeToolingNoAfterPartNo() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const machineByName = getMachineMap();
+    const result = { checked: 0, moved: 0, sheets: [], errors: [] };
+    getWorkbook().getSheets().forEach(function(sheet) {
+      if (sheet.getName() === SUBMIT_HISTORY_SHEET || !isOeeDataSheet(sheet, machineByName)) return;
+      result.checked++;
+      try {
+        const source = ensureOeeToolingNoColumn(sheet);
+        const partNo = getOeeLayout(sheet).partNo;
+        const target = partNo + 1;
+        if (source !== target) {
+          if (source < target) throw new Error("Unexpected Tooling No. before Part No.");
+          sheet.moveColumns(sheet.getRange(1, source, sheet.getMaxRows(), 1), target);
+          result.moved++;
+        }
+        const layout = getOeeLayout(sheet);
+        if (layout.toolingNo !== layout.partNo + 1) throw new Error("Tooling No. position verification failed");
+        result.sheets.push({ name: sheet.getName(), gid: sheet.getSheetId(), cell: sheet.getRange(OEE_HEADER_ROW, layout.toolingNo).getA1Notation() });
+      } catch (error) { result.errors.push({ name: sheet.getName(), error: String(error) }); }
+    });
+    SpreadsheetApp.flush();
+    console.log(JSON.stringify(result));
+    return result;
+  } finally { lock.releaseLock(); }
 }
 
 function ensureOeeToolingNoColumn(sheet) {
   const existing = findOeeToolingNoColumn(sheet);
   if (existing) return existing;
-  // Append after all existing content: fixed OEE input offsets and formulas stay intact.
+  // Create in a free column first, then move it with Sheets' reference-aware operation.
+  const target = getOeeLayout(sheet).partNo + 1;
   const column = sheet.getLastColumn() + 1;
   if (column > sheet.getMaxColumns()) sheet.insertColumnsAfter(sheet.getMaxColumns(), column - sheet.getMaxColumns());
   sheet.getRange(OEE_HEADER_ROW, getOeeLayout(sheet).partNo).copyTo(sheet.getRange(OEE_HEADER_ROW, column), { formatOnly: true });
   sheet.getRange(OEE_HEADER_ROW, column).setValue("หมายเลขแม่พิมพ์ / Tooling No.").setWrap(true);
   sheet.setColumnWidth(column, 180);
   sheet.getRange(OEE_FIRST_DATA_ROW, column, sheet.getMaxRows() - OEE_FIRST_DATA_ROW + 1, 1).setNumberFormat("@");
-  return column;
+  if (column !== target) sheet.moveColumns(sheet.getRange(1, column, sheet.getMaxRows(), 1), target);
+  return target;
 }
 
 function migrateOeeToolingNoColumns() {
@@ -2925,7 +2960,11 @@ function normalizeLooseSheetName(value) {
 }
 
 function getOeeLayout(sheet) {
-  const headers = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
+  const rawHeaders = sheet.getRange(OEE_HEADER_ROW, 1, 1, Math.min(sheet.getLastColumn(), 90)).getDisplayValues()[0];
+  const toolingIndex = rawHeaders.findIndex(isOeeToolingNoHeader);
+  // Calculate the established layout without the optional identifier, then map back.
+  // Supports both old trailing Tooling No. and the new position after Part No.
+  const headers = rawHeaders.filter(function(_header, index) { return index !== toolingIndex; });
   const hasEntryTimestamp = isOeeEntryTimestampHeader(headers[1], headers[2]);
   const hasEntryDetails = hasEntryTimestamp && isOeeEntryDetailsHeader(headers[3], headers[4], headers[5]);
   const hasEntryOrderNo = hasEntryDetails && isOeeOrderNoHeader(headers[6]);
@@ -2990,6 +3029,12 @@ function getOeeLayout(sheet) {
   layout.passRate = detected.passRate || layout.cavityQty + 4;
   layout.timeUtilizationRate = detected.timeUtilizationRate || layout.cavityQty + 5;
   layout.oeeRate = detected.oeeRate || layout.cavityQty + 6;
+  if (toolingIndex >= 0) {
+    Object.keys(layout).forEach(function(key) {
+      if (typeof layout[key] === "number" && layout[key] > toolingIndex) layout[key]++;
+    });
+  }
+  layout.toolingNo = toolingIndex + 1;
   return layout;
 }
 
