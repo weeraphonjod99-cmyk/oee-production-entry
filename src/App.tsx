@@ -1,3 +1,5 @@
+import {OnlineUsersBadge} from './components/OnlineUsersBadge';
+import type {OnlineUsersSummary} from './lib/api';
 import {ToolingList} from './components/ToolingList';
 import { DefectStatistics } from "./components/DefectStatistics";
 import { ProductionSearch } from "./components/ProductionSearch";
@@ -2064,6 +2066,8 @@ function App() {
   const capacityRefreshTick=useCapacityRefreshTick(tab==='capacity');
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const factoryAccess = useFactoryGeofence(Boolean(session));
+  const [onlineUsers,setOnlineUsers]=useState<NonNullable<OnlineUsersSummary['users']>>([]);
+  const [onlineUsersStale,setOnlineUsersStale]=useState(false);
   const [onlineUserCount, setOnlineUserCount] = useState(1);
   const [onlineUserUpdatedAt, setOnlineUserUpdatedAt] = useState("");
   const [localLogs, setLocalLogs] = useState<ProductionLog[]>([]);
@@ -2211,11 +2215,15 @@ function App() {
         });
         if (!cancelled) {
           setOnlineUserCount(Math.max(1, Number(online.onlineCount || 1)));
+          setOnlineUsers(online.users||[]);
+          setOnlineUsersStale(false);
           setOnlineUserUpdatedAt(online.updatedAt || new Date().toISOString());
         }
       } catch {
+        if(!cancelled)setOnlineUsersStale(true);
         if (!cancelled && !remoteEnabled) {
           setOnlineUserCount(1);
+          setOnlineUsers([{clientId:getOnlineClientId(),username:session.username,displayName:session.displayName,role:session.role,lastSeenAt:new Date().toISOString()}]);
           setOnlineUserUpdatedAt(new Date().toISOString());
         }
       } finally {
@@ -4675,12 +4683,7 @@ function App() {
             <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel / Production Entry</h1>
           </div>
           <div className="topbar-actions">
-            <div className="online-users-badge" title={onlineUserUpdatedAt ? `อัปเดตล่าสุด ${formatSharedStatusTime(onlineUserUpdatedAt)}` : "กำลังนับผู้ใช้งานออนไลน์"}>
-              <UserRound size={17} />
-              <span>ออนไลน์</span>
-              <strong>{formatNumber(onlineUserCount)}</strong>
-              <small>คน</small>
-            </div>
+            <OnlineUsersBadge count={onlineUserCount} users={onlineUsers} updatedAt={onlineUserUpdatedAt} stale={onlineUsersStale} />
             <button className="ghost-button" onClick={shareApp} type="button">
               <Share2 size={17} /> แบ่งปัน / Share
             </button>
