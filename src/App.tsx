@@ -1396,7 +1396,7 @@ function openProductionPdfReport(logs: ProductionLog[], filters: Filters, machin
           <thead><tr><th>ลำดับ / No.</th><th>วันที่บันทึก / Entry date</th><th>เวลาบันทึก / Entry time</th><th>วันที่ผลิต / Production date</th><th>เวลากะ / Shift time</th><th>เครื่องจักร / Machine</th><th>ชิ้นงาน / รหัสชิ้นงาน / Product / Part No.</th><th>งานดี / Good</th><th>งานเสีย / NG</th><th>งานทดลอง / Test</th><th>เวลาหยุด / Downtime</th></tr></thead>
           <tbody>${detailRowsHtml(logs)}</tbody>
         </table>
-        <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ OEE Production Entry</footer>
+        <footer>เอกสารนี้สร้างจากข้อมูลที่ถูกกรองในระบบ JRTL Production Management System (JRTL-PMS)</footer>
         <script>
           window.addEventListener("load", () => {
             window.focus();
@@ -4493,7 +4493,7 @@ function App() {
 
   const shareApp = async () => {
     const shareData = {
-      title: "OEE Production Entry",
+      title: "JRTL Production Management System (JRTL-PMS)",
       text: "เปิดระบบกรอกยอดผลิต OEE",
       url: productionShareUrl,
     };
@@ -4613,8 +4613,8 @@ function App() {
         <div className="brand-mark">
           <img alt="JR logo" className="brand-logo" src={brandLogoSrc} />
           <div>
-            <strong>Production</strong>
-            <span>การผลิต / Production</span>
+            <strong>JRTL-PMS</strong>
+            <span>JRTL Production Management System</span>
           </div>
         </div>
         <nav>
@@ -4679,8 +4679,8 @@ function App() {
       <main className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">บันทึกยอดผลิต / Production quantity entry</p>
-            <h1>ระบบกรอกยอดผลิตตามรุ่นใน Excel / Production Entry</h1>
+            <p className="eyebrow">ระบบบริหารจัดการการผลิต JRTL</p>
+            <h1>JRTL Production Management System (JRTL-PMS)</h1>
           </div>
           <div className="topbar-actions">
             <OnlineUsersBadge count={onlineUserCount} users={onlineUsers} updatedAt={onlineUserUpdatedAt} stale={onlineUsersStale} />
@@ -6046,7 +6046,7 @@ function FactoryGeofenceGate({ access, onLogout }: { access: FactoryGeofenceAcce
         <div className="login-brand">
           <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
-            <strong>Production</strong>
+            <strong>JRTL-PMS</strong>
             <span>พื้นที่ใช้งานโรงงาน / Factory zone access</span>
           </div>
         </div>
@@ -6118,7 +6118,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AppSession) => void
         <div className="login-brand">
           <img alt="JR logo" className="login-logo" src={brandLogoSrc} />
           <div>
-            <strong>Production</strong>
+            <strong>JRTL-PMS</strong>
             <span>เข้าใช้งานการผลิต / Production access</span>
           </div>
         </div>
