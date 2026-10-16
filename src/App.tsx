@@ -2063,7 +2063,7 @@ function useFactoryGeofence(active: boolean): FactoryGeofenceAccess {
 
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
-  const [machineSection, setMachineSection] = useState<'list' | 'maintenance'>('list');
+  const [machineSection, setMachineSection] = useState<'list' | 'maintenance' | 'repair'>('list');
   const capacityRefreshTick=useCapacityRefreshTick(tab==='capacity');
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const factoryAccess = useFactoryGeofence(Boolean(session));
@@ -5553,6 +5553,7 @@ function App() {
             <nav className="tooling-subnav" aria-label="เมนูเครื่องจักร / Machine menu">
               <button type="button" aria-pressed={machineSection === 'list'} onClick={() => setMachineSection('list')}>รายการเครื่องจักร / Machine List</button>
               <button type="button" aria-pressed={machineSection === 'maintenance'} onClick={() => setMachineSection('maintenance')}>แผนซ่อมบำรุง / Maintenance Plan</button>
+              <button type="button" aria-pressed={machineSection === 'repair'} onClick={() => setMachineSection('repair')}>รายการซ่อมเครื่องจักร / Machine Repair List</button>
             </nav>
             <div hidden={machineSection !== 'list'}>
             <EquipmentRegistry machines={machines} />
@@ -5566,6 +5567,10 @@ function App() {
             {machineSection === 'maintenance' && <section className="tooling-list" aria-label="แผนซ่อมบำรุง / Maintenance Plan">
               <header><div><p>การบำรุงรักษาเครื่องจักร / Machine Maintenance</p><h2>แผนซ่อมบำรุง / Maintenance Plan</h2></div></header>
               <p>ยังไม่ได้เชื่อมต่อข้อมูลแผนซ่อมบำรุง / Maintenance plan data is not connected yet.</p>
+            </section>}
+            {machineSection === 'repair' && <section className="tooling-list" aria-label="รายการซ่อมเครื่องจักร / Machine Repair List">
+              <header><div><p>การซ่อมเครื่องจักร / Machine Repair</p><h2>รายการซ่อมเครื่องจักร / Machine Repair List</h2></div></header>
+              <p>ยังไม่ได้เชื่อมต่อข้อมูลรายการซ่อมเครื่องจักร / Machine repair data is not connected yet.</p>
             </section>}
           </section>
         )}
