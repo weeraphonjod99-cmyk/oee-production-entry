@@ -1,0 +1,11 @@
+/* Keep the scrollbar within the viewport at browser zoom levels. */
+.workspace,.reports-layout{min-width:0}
+.production-report{max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+.pr-scroll{width:100%;min-width:0;max-height:65vh;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain;box-sizing:border-box}
+.pr-scroll thead th{z-index:1}
+.pr-scroll-hint{font-size:12px;color:#526e63;margin:8px 0}
+.pr-mode-select{display:none;margin:16px 0;font-size:13px;gap:7px}
+.pr-mode-select select{width:100%;min-width:0;max-width:100%;padding:10px;border:1px solid #bad1c3;border-radius:7px;background:white;font:inherit;color:inherit}
+@media(max-width:1200px){.pr-tabs{display:none}.pr-mode-select{display:grid}}
+@media print{.pr-scroll{max-height:none;overflow:visible}.pr-scroll-hint,.pr-mode-select{display:none}}
+
