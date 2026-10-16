@@ -2063,6 +2063,7 @@ function useFactoryGeofence(active: boolean): FactoryGeofenceAccess {
 
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
+  const [machineSection, setMachineSection] = useState<'list' | 'maintenance'>('list');
   const capacityRefreshTick=useCapacityRefreshTick(tab==='capacity');
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const factoryAccess = useFactoryGeofence(Boolean(session));
@@ -5550,8 +5551,10 @@ function App() {
         {tab === "master" && (
           <section className="table-view">
             <nav className="tooling-subnav" aria-label="เมนูเครื่องจักร / Machine menu">
-              <button type="button" aria-pressed="true">รายการเครื่องจักร / Machine List</button>
+              <button type="button" aria-pressed={machineSection === 'list'} onClick={() => setMachineSection('list')}>รายการเครื่องจักร / Machine List</button>
+              <button type="button" aria-pressed={machineSection === 'maintenance'} onClick={() => setMachineSection('maintenance')}>แผนซ่อมบำรุง / Maintenance Plan</button>
             </nav>
+            <div hidden={machineSection !== 'list'}>
             <EquipmentRegistry machines={machines} />
             <div className="master-stats">
               <Kpi label="เครื่องจักร / Machines" value={formatNumber(machines.length)} tone="green" />
@@ -5559,6 +5562,11 @@ function App() {
               <Kpi label="ประวัติต้นทาง / Seed logs" value={formatNumber(seedLogs.length)} tone="amber" />
             </div>
             <MasterTable products={canonicalProducts} />
+            </div>
+            {machineSection === 'maintenance' && <section className="tooling-list" aria-label="แผนซ่อมบำรุง / Maintenance Plan">
+              <header><div><p>การบำรุงรักษาเครื่องจักร / Machine Maintenance</p><h2>แผนซ่อมบำรุง / Maintenance Plan</h2></div></header>
+              <p>ยังไม่ได้เชื่อมต่อข้อมูลแผนซ่อมบำรุง / Maintenance plan data is not connected yet.</p>
+            </section>}
           </section>
         )}
 
