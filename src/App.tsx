@@ -5549,6 +5549,9 @@ function App() {
 
         {tab === "master" && (
           <section className="table-view">
+            <nav className="tooling-subnav" aria-label="เมนูเครื่องจักร / Machine menu">
+              <button type="button" aria-pressed="true">รายการเครื่องจักร / Machine List</button>
+            </nav>
             <EquipmentRegistry machines={machines} />
             <div className="master-stats">
               <Kpi label="เครื่องจักร / Machines" value={formatNumber(machines.length)} tone="green" />
