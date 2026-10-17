@@ -93,7 +93,7 @@ import {
 import { appendLocalLog, exportLogsCsv, exportMasterCsv, loadLocalLogs, saveLocalLogs, upsertLocalLog } from "./lib/storage";
 import type { EntryDraft, Machine, ProductionLog, ProductMaster, ProductionOrder } from "./types";
 
-type TabId = "tooling" | "defects" | "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
+type TabId = "spare" | "tooling" | "defects" | "productionSearch" | "employeeEntry" | "entry" | "capacity" | "dashboard" | "reports" | "history" | "master" | "users";
 
 type Filters = {
   machineId: string;
@@ -4658,6 +4658,7 @@ function App() {
             </button>
           )}
           {canAccessTab(session, "tooling") && <button className={tab === "tooling" ? "active" : ""} onClick={() => setTab("tooling")} type="button"><Database size={18} /> Tooling Management System</button>}
+          {canAccessTab(session, "spare") && <button className={tab === "spare" ? "active" : ""} onClick={() => setTab("spare")} type="button"><Database size={18} /> Spare Part Management System</button>}
           {canAccessTab(session, "users") && (
             <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")} type="button">
               <UserPlus size={18} /> ผู้ใช้งาน / Users
@@ -5518,6 +5519,7 @@ function App() {
           onRefresh={() => setReportRefresh(v => v+1)} />}
 
         {tab === "tooling" && <ToolingList />}
+        {tab === "spare" && <section className="tooling-list" aria-label="Spare Part Management System"><h2>Spare Part Management System</h2><p>การจัดการอะไหล่ / ยังไม่มีข้อมูลอะไหล่</p></section>}
         {tab === "defects" && <DefectStatistics logs={reportAllLogs} loading={reportDataLoading} error={reportDataError} onRefresh={() => setReportRefresh(v => v+1)} />}
         {tab === "history" && (
           <section className="table-view">
