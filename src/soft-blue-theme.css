@@ -31,4 +31,5 @@ body>header h1{color:#123e69;font-size:24px;font-weight:800}body>header small{co
 .shell .muted,.shell .footer{color:#5b738b}.shell .field input:focus,.shell .field select:focus,.shell .field textarea:focus{outline-color:#438cc4}
 @media(max-width:600px){.topbar{padding:14px}.topbar h1{font-size:22px}body>header h1{font-size:21px}}
 @media print{body,html,.workspace{background:#fff}.topbar{box-shadow:none}}
+.tooling-subnav button[aria-pressed="true"]{background:#246ba6;color:#fff;border-color:#246ba6}.fo-hero{background:linear-gradient(110deg,#d6eafb,#eef7ff);color:#173f68}.fo-hero h1{color:#123e69}.fo-hero p,.fo-period span,.fo-hero .fo-eyebrow{color:#456b8a}
 
