@@ -1,0 +1,546 @@
+{
+ "id": "factory1-bending",
+ "name": "เครื่องพับ / Bending",
+ "documents": [
+  {
+   "id": "2cb8ea4b710bfa83",
+   "sourceFile": "PM Machine Month โรง1/Bending/JRTL-PM-025-1-3Bending.xlsx",
+   "sheet": " SW1",
+   "kind": "record",
+   "machine": "SW1",
+   "name": "Spot welding",
+   "model": "YR-1-06VX225-A00",
+   "manufacturer": "KAIYUAN",
+   "documentNo": "JRTL-PM-002-1",
+   "frequency": "1 time/month",
+   "frequencyEvidence": "C6",
+   "warning": "ชีตเครื่องเชื่อมอยู่ในไฟล์ Bending — คงหมวดตามไฟล์ต้นฉบับ",
+   "items": [
+    {
+     "item": "1. Ground (zero) screw/สกรูสายดิน (ศูนย์)",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2. Terminal/เทอร์มินัล",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3. Ground (zero) wire insulation/ฉนวนสายดิน (ศูนย์)",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4. Power/กำลัง",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5. Cable terminal/ขั้วต่อสายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A12"
+    },
+    {
+     "item": "6. Power box/กล่องจ่ายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A13"
+    },
+    {
+     "item": "7. Cable insulation/ฉนวนหุ้มสายเคเบิล",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A14"
+    },
+    {
+     "item": "8. Power cord/สายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A15"
+    },
+    {
+     "item": "9. Welding cable/สายเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A16"
+    },
+    {
+     "item": "10. Wiring of spot welding machine/การเดินสายเครื่องเชื่อมจุด",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A17"
+    },
+    {
+     "item": "11. Protective cover/ฝาครอบป้องกัน",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A18"
+    },
+    {
+     "item": "12. Welding machine core/แกนเครื่องเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A19"
+    },
+    {
+     "item": "13. Coil and electrical parts/คอยล์และชิ้นส่วนไฟฟ้า",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A20"
+    },
+    {
+     "item": "14. Welding machine cooling fan/พัดลมระบายความร้อนเครื่องเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A21"
+    },
+    {
+     "item": "15. Each adjustment button/ปุ่มปรับตั้งค่าแต่ละปุ่ม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A22"
+    },
+    {
+     "item": "16.Adjust the handle/ปรับด้ามจับ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A23"
+    },
+    {
+     "item": "17. Each flag/",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A24"
+    },
+    {
+     "item": "18.indicator light/ไฟแสดงสถานะ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A25"
+    },
+    {
+     "item": "19. Hood /ฝา",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A26"
+    }
+   ]
+  },
+  {
+   "id": "3c17fefa7170970e",
+   "sourceFile": "PM Machine Month โรง1/Bending/JRTL-PM-025-1-3Bending.xlsx",
+   "sheet": "SW2",
+   "kind": "record",
+   "machine": "SW2",
+   "name": "Spot welding",
+   "model": "YR-A05CM2-100",
+   "manufacturer": "Panasonic",
+   "documentNo": "JRTL-PM-002-2",
+   "frequency": "1 time/month",
+   "frequencyEvidence": "C6",
+   "warning": "ชีตเครื่องเชื่อมอยู่ในไฟล์ Bending — คงหมวดตามไฟล์ต้นฉบับ",
+   "items": [
+    {
+     "item": "1. Ground (zero) screw/สกรูสายดิน (ศูนย์)",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2. Terminal/เทอร์มินัล",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3. Ground (zero) wire insulation/ฉนวนสายดิน (ศูนย์)",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4. Power/กำลัง",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5. Cable terminal/ขั้วต่อสายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A12"
+    },
+    {
+     "item": "6. Power box/กล่องจ่ายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A13"
+    },
+    {
+     "item": "7. Cable insulation/ฉนวนหุ้มสายเคเบิล",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A14"
+    },
+    {
+     "item": "8. Power cord/สายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A15"
+    },
+    {
+     "item": "9. Welding cable/สายเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A16"
+    },
+    {
+     "item": "10. Wiring of spot welding machine/การเดินสายเครื่องเชื่อมจุด",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A17"
+    },
+    {
+     "item": "11. Protective cover/ฝาครอบป้องกัน",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A18"
+    },
+    {
+     "item": "12. Welding machine core/แกนเครื่องเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A19"
+    },
+    {
+     "item": "13. Coil and electrical parts/คอยล์และชิ้นส่วนไฟฟ้า",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A20"
+    },
+    {
+     "item": "14. Welding machine cooling fan/พัดลมระบายความร้อนเครื่องเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A21"
+    },
+    {
+     "item": "15. Each adjustment button/ปุ่มปรับตั้งค่าแต่ละปุ่ม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A22"
+    },
+    {
+     "item": "16.Adjust the handle/ปรับด้ามจับ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A23"
+    },
+    {
+     "item": "17. Each flag/",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A24"
+    },
+    {
+     "item": "18.indicator light/ไฟแสดงสถานะ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A25"
+    },
+    {
+     "item": "19. Hood /ฝา",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A26"
+    }
+   ]
+  },
+  {
+   "id": "41e8ccf338c8cdfd",
+   "sourceFile": "PM Machine Month โรง1/Bending/JRTL-PM-025-1-3Bending.xlsx",
+   "sheet": "SW3",
+   "kind": "record",
+   "machine": "SW3",
+   "name": "Spot welding",
+   "model": "YR-A05CM2-100",
+   "manufacturer": "Panasonic",
+   "documentNo": "JRTL-PM-002-3",
+   "frequency": "1 time/month",
+   "frequencyEvidence": "C6",
+   "warning": "ชีตเครื่องเชื่อมอยู่ในไฟล์ Bending — คงหมวดตามไฟล์ต้นฉบับ",
+   "items": [
+    {
+     "item": "1. Ground (zero) screw/สกรูสายดิน (ศูนย์)",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2. Terminal/เทอร์มินัล",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3. Ground (zero) wire insulation/ฉนวนสายดิน (ศูนย์)",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4. Power/กำลัง",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5. Cable terminal/ขั้วต่อสายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A12"
+    },
+    {
+     "item": "6. Power box/กล่องจ่ายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A13"
+    },
+    {
+     "item": "7. Cable insulation/ฉนวนหุ้มสายเคเบิล",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A14"
+    },
+    {
+     "item": "8. Power cord/สายไฟ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A15"
+    },
+    {
+     "item": "9. Welding cable/สายเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A16"
+    },
+    {
+     "item": "10. Wiring of spot welding machine/การเดินสายเครื่องเชื่อมจุด",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A17"
+    },
+    {
+     "item": "11. Protective cover/ฝาครอบป้องกัน",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A18"
+    },
+    {
+     "item": "12. Welding machine core/แกนเครื่องเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A19"
+    },
+    {
+     "item": "13. Coil and electrical parts/คอยล์และชิ้นส่วนไฟฟ้า",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A20"
+    },
+    {
+     "item": "14. Welding machine cooling fan/พัดลมระบายความร้อนเครื่องเชื่อม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A21"
+    },
+    {
+     "item": "15. Each adjustment button/ปุ่มปรับตั้งค่าแต่ละปุ่ม",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A22"
+    },
+    {
+     "item": "16.Adjust the handle/ปรับด้ามจับ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A23"
+    },
+    {
+     "item": "17. Each flag/ป้ายแต่ละป้าย",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A24"
+    },
+    {
+     "item": "18.indicator light/ไฟแสดงสถานะ",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A25"
+    },
+    {
+     "item": "19. Hood /ฝา",
+     "method": "",
+     "standard": "",
+     "sourceCell": "A26"
+    }
+   ]
+  },
+  {
+   "id": "75a8e8d6010a1214",
+   "sourceFile": "PM Machine Month โรง1/Bending/JRTL-PM-025-1-3Bending.xlsx",
+   "sheet": "BD1",
+   "kind": "record",
+   "machine": "BD1",
+   "name": "เครื่องเชื่อม\nBending",
+   "model": "",
+   "manufacturer": "",
+   "documentNo": "JRTL-PM-025-1",
+   "frequency": "1เดือน/ครั้ง\nMonth/Time",
+   "frequencyEvidence": "C6",
+   "warning": "ชื่อเครื่องในต้นฉบับระบุ “เครื่องเชื่อม / Bending” — โปรดตรวจสอบประเภทก่อนใช้งาน",
+   "items": [
+    {
+     "item": "1.หน้าจอ, ปุ่มกด/Touch screen, keypad",
+     "method": "1.ปุ่มสัมผัสและไฟแสดงสถานะทำงานได้อย่างปกติ/The touch buttons and indicator lights are functioning properly.                     ",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2.สวิตซ์เท้า/Foot switch,สวิตซ์ปุ่มฉุกเฉิน/Emergency stop switch",
+     "method": "1.ตรวจสอบสวิตซ์เท้าใช้งานได้ปกติ/The foot switch is working normally.                                                                2.ตรวจสอบว่าปุ่มหยุดฉุกเฉินใช้งานปกติ/Check that the emergency stop switch is operating normally.",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3.แคมป์ล็อคใบมีดแม่พิมพ์/Mold blade locking clamp",
+     "method": "1.ตรวจสอบว่าแคมป์ล็อคใบมีดแม่พิมพ์สามารถล็อคใบมีดได้แน่นไม่หลวม/Check that the mold blade locking clamp securely locks the blade without being loose.",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4.น้ำมันไฮดรอลิค/Hydraulic oil ,กรองน้ำมันไฮดรอลิค/hydraulic oil filter",
+     "method": "1.ตรวจสอบระดับน้ำมันไฮดรอลิคอยู่ในระดับไม่น้อยกว่าขีด C /Check that the hydraulic oil level is not lower than line C.  2.ตรวจสอบกรองน้ำมันไฮดรอลิครั่วซึมหรืออุดตัน/Check the hydraulic oil filter for leaks or clogging.",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5.ลูกปืนรางรีเนียร์/Linear guide bearing ,รางStopper/stopper rail",
+     "method": "1.ตรวจสอบลูกปืนรางรีเนียร์ไม่สกปรกและมีจาระบี/Check that the linear guide bearings are clean and properly greased. 2.ตรวจสอบราง Stopper ไม่หลวมและสามารถสไลด์ ซ้าย-ขวา ได้อย่างราบลื่น/Check that the stopper rail is not loose and can slide left and right smoothly.",
+     "standard": "",
+     "sourceCell": "A12"
+    },
+    {
+     "item": "6.ตู้ควบคุมไฟฟ้า/Electrical control panel ,ไฟแสดงสถานะ/indicator light",
+     "method": "1.ตรวจสอบตู้ควบคุมไฟฟ้าทำงานปกติสามารถ เปิด-ปิด ได้ปกติ/Check that the electrical control panel operates normally and can be turned on and off properly.2.ไฟแสดงสถานะสามารถติดแสดงสถานะตอนเครื่องทำงานปกติ/The indicator light illuminates to show the machine is operating normally.",
+     "standard": "",
+     "sourceCell": "A13"
+    }
+   ]
+  },
+  {
+   "id": "3737e0e6eeac3a5e",
+   "sourceFile": "PM Machine Month โรง1/Bending/JRTL-PM-025-1-3Bending.xlsx",
+   "sheet": "BD2",
+   "kind": "record",
+   "machine": "BD2",
+   "name": "เครื่องเชื่อม\nBending",
+   "model": "",
+   "manufacturer": "",
+   "documentNo": "JRTL-PM-025-2",
+   "frequency": "1เดือน/ครั้ง\nMonth/Time",
+   "frequencyEvidence": "C6",
+   "warning": "ชื่อเครื่องในต้นฉบับระบุ “เครื่องเชื่อม / Bending” — โปรดตรวจสอบประเภทก่อนใช้งาน",
+   "items": [
+    {
+     "item": "1.หน้าจอ, ปุ่มกด/Touch screen, keypad",
+     "method": "1.ปุ่มสัมผัสและไฟแสดงสถานะทำงานได้อย่างปกติ/The touch buttons and indicator lights are functioning properly.                     ",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2.สวิตซ์เท้า/Foot switch,สวิตซ์ปุ่มฉุกเฉิน/Emergency stop switch",
+     "method": "1.ตรวจสอบสวิตซ์เท้าใช้งานได้ปกติ/The foot switch is working normally.                                                                2.ตรวจสอบว่าปุ่มหยุดฉุกเฉินใช้งานปกติ/Check that the emergency stop switch is operating normally.",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3.แคมป์ล็อคใบมีดแม่พิมพ์/Mold blade locking clamp",
+     "method": "1.ตรวจสอบว่าแคมป์ล็อคใบมีดแม่พิมพ์สามารถล็อคใบมีดได้แน่นไม่หลวม/Check that the mold blade locking clamp securely locks the blade without being loose.",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4.น้ำมันไฮดรอลิค/Hydraulic oil ,กรองน้ำมันไฮดรอลิค/hydraulic oil filter",
+     "method": "1.ตรวจสอบระดับน้ำมันไฮดรอลิคอยู่ในระดับไม่น้อยกว่าขีด C /Check that the hydraulic oil level is not lower than line C  2.ตรวจสอบกรองน้ำมันไฮดรอลิครั่วซึมหรืออุดตัน/Check the hydraulic oil filter for leaks or clogging.",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5.ลูกปืนรางรีเนียร์/Linear guide bearing ,รางStopper/stopper rail",
+     "method": "1.ตรวจสอบลูกปืนรางรีเนียร์ไม่สกปรกและมีจาระบี/Check that the linear guide bearings are clean and properly greased. 2.ตรวจสอบราง Stopper ไม่หลวมและสามารถสไลด์ ซ้าย-ขวา ได้อย่างราบลื่น/Check that the stopper rail is not loose and can slide left and right smoothly.",
+     "standard": "",
+     "sourceCell": "A12"
+    },
+    {
+     "item": "6.ตู้ควบคุมไฟฟ้า/Electrical control panel ,ไฟแสดงสถานะ/indicator light",
+     "method": "1.ตรวจสอบว่าฉนวนนำกระแสไฟหลวมและแตกหักหรือไม่/Inspect the electrical insulation for any signs of looseness or damage.",
+     "standard": "",
+     "sourceCell": "A13"
+    }
+   ]
+  },
+  {
+   "id": "057f6612ad731357",
+   "sourceFile": "PM Machine Month โรง1/Bending/JRTL-PM-025-1-3Bending.xlsx",
+   "sheet": "TP1 ",
+   "kind": "record",
+   "machine": "TP1",
+   "name": "เครื่องเชื่อม\nBending",
+   "model": "",
+   "manufacturer": "",
+   "documentNo": "JRTL-PM-025-3",
+   "frequency": "1เดือน/ครั้ง\nMonth/Time",
+   "frequencyEvidence": "C6",
+   "warning": "ชื่อเครื่องในต้นฉบับระบุ “เครื่องเชื่อม / Bending” — โปรดตรวจสอบประเภทก่อนใช้งาน",
+   "items": [
+    {
+     "item": "1. ปุ่มกด/Push button",
+     "method": "1.ปุ่มทำงานได้อย่างปกติ/The button is functioning as intended.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2.จิ๊กวางงาน/Work placement jig",
+     "method": "1.ตรวจสอบจิ๊กวางงานอยู่ในสถานะที่ตรงไม่เอียง/Verify that the work positioning jig is properly aligned and is not tilted.",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3.หัวจับดอกต๊าฟ/Tap holder",
+     "method": "1.ตรวจสอบว่าหัวจับดอกต๊าปสามารถจับดอกได้แน่นไม่หลวม/Verify that the tap holder securely grips the tap and that it is not loose.",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4.โซลินอลฉีดน้ำมัน/Oil injection solenoid valve",
+     "method": "1.ตรวจสอบโซลินอลทำงานปกติหรือไม่/Verify that the oil injection solenoid valve is functioning properly. 2.ตรวจนสอบสายน้ำมันรั่วหรืออุดตันหรือไม่/Inspect the oil line for any leakage or blockage.",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5.ปั้มดูดน้ำมัน/Oil suction pump",
+     "method": "1.ตรวจสอบว่าปั้มดูดน้ำมันทำงานปกติและมีเสียงผิดปกติหรือไม่/Verify that the oil suction pump is functioning properly and check for any abnormal noise.",
+     "standard": "",
+     "sourceCell": "A12"
+    }
+   ]
+  }
+ ]
+}

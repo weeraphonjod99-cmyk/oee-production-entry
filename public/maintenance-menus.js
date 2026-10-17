@@ -1,6 +1,7 @@
+import {factoryMenus,mountFactoryPlans} from './factory-pm-plans.js?v=20261017';
 import {mountPlanEditor,WELDING_PLAN_ID} from './machine-maintenance-plan.js?v=20261017';
 const KEY='jrtl_machine_maintenance_menus_v1';
-function readMenus(){const raw=localStorage.getItem(KEY);const value=raw?JSON.parse(raw):[];if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');if(!value.some(m=>m.id===WELDING_PLAN_ID))value.unshift({id:WELDING_PLAN_ID,name:"แผนเครื่องเชื่อม 2026 / Welding Machine"});return value;}
+function readMenus(){const raw=localStorage.getItem(KEY);const value=raw?JSON.parse(raw):[];if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');if(!value.some(m=>m.id===WELDING_PLAN_ID))value.unshift({id:WELDING_PLAN_ID,name:"แผนเครื่องเชื่อม 2026 / Welding Machine"});for(const m of [...factoryMenus].reverse())if(!value.some(v=>v.id===m.id))value.unshift(m);return value;}
 function mountMenus(section){
  if(section.querySelector('.maintenance-menus'))return;
  const root=document.createElement('div');root.className='maintenance-menus';section.append(root);
@@ -26,7 +27,7 @@ function mountMenus(section){
  for(const item of menus){const b=document.createElement('button');b.type='button';b.textContent=item.name;b.setAttribute('aria-pressed',String(active===item.id));b.onclick=()=>{active=item.id;render()};nav.append(b);}
  const item=menus.find(m=>m.id===active);
  const h=document.createElement('h4');h.textContent=item?item.name:'ยังไม่มีเมนู — กด “เพิ่มเมนู” เพื่อเริ่มต้น';panel.append(h);
- if(item){const rename=document.createElement('button');rename.type='button';rename.textContent='แก้ไขชื่อ / Rename';rename.onclick=()=>open(item.id);panel.append(rename);mountPlanEditor(panel,item.id);}
+ if(item){const rename=document.createElement('button');rename.type='button';rename.textContent='แก้ไขชื่อ / Rename';rename.onclick=()=>open(item.id);panel.append(rename);if(factoryMenus.some(m=>m.id===item.id))mountFactoryPlans(panel,item.id);else mountPlanEditor(panel,item.id);}
  add.disabled=!!loadError;message.textContent=loadError;
  }
  add.onclick=()=>open(null);
@@ -42,4 +43,3 @@ function mountMenus(section){
 let queued=false;
 const update=()=>{document.querySelectorAll('section[aria-label="แผนซ่อมบำรุง / Maintenance Plan"]').forEach(mountMenus)};
 new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;update()})}).observe(document.getElementById('root'),{subtree:true,childList:true});update();
-

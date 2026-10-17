@@ -1,0 +1,70 @@
+{
+ "id": "factory1-stamping",
+ "name": "เครื่องปั๊ม / Stamping",
+ "documents": [
+  {
+   "id": "e4a348360def53ca",
+   "sourceFile": "PM Machine Month โรง1/Stamping/JRTL-PM-001-1-3 Punch Mech three level maintenance record(1).xlsx",
+   "sheet": "Press Month (ไทย)",
+   "kind": "record",
+   "machine": "",
+   "name": "กด\nPress",
+   "model": "",
+   "manufacturer": "",
+   "documentNo": "JRTL-PM-001-01",
+   "frequency": "1เดือน/ครั้ง\nMonth/Time",
+   "frequencyEvidence": "C6",
+   "warning": "ต้นฉบับไม่ระบุหมายเลขเครื่อง เป็นแบบฟอร์มกลาง กรุณาระบุเครื่องก่อนบันทึก",
+   "items": [
+    {
+     "item": "1.อุปกรณ์จ่ายน้ำมัน\n  Oil supply device",
+     "method": "ยืนยันว่าชิ้นส่วนที่สำคัญสำหรับการจ่ายน้ำมันปกติหรือไม่\nConfirmation of necessary oil supply and fat supply",
+     "standard": "",
+     "sourceCell": "A8"
+    },
+    {
+     "item": "2.การตรวจสอบความตึงของสายพาน  ของมอเตอร์หลัก\nChecking the tension of \nthe V belt of the main motor",
+     "method": "ปรับตำแหน่งฐานมอเตอร์ ดูอุปกรณ์ไดรฟ์มอเตอร์หลัก ความตึงของสายพาน        Adjust the position of the motor base, see the drive device, the main motor, the tension of the belt.",
+     "standard": "",
+     "sourceCell": "A9"
+    },
+    {
+     "item": "3.การตรวจสอบด้วยสายตาของระบบขับเคลื่อนลูกเบี้ยวหมุน\nVisual inspection of rotating cam drive system",
+     "method": "ล็อค ซ่อมแซม\nLock, repair",
+     "standard": "",
+     "sourceCell": "A10"
+    },
+    {
+     "item": "4.การระบายน้ำในแต่ละจุดระบายน้ำ\n  Drainage at each drainage location",
+     "method": "การระบายน้ำจากวาล์วหยุดที่จุดรวมการระบายน้ำของฐาน\nStop valve drainage from the drainage center of the base",
+     "standard": "",
+     "sourceCell": "A11"
+    },
+    {
+     "item": "5..ภาชนะรับแรงดัน Pressure vessel\nวาล์วระบายแรงดันอากาศ Air pressure safety valve",
+     "method": "ตรวจสอบและทำความสะอาด Check, clean up\nการเคลื่อนไหวปกติ Normal operation",
+     "standard": "",
+     "sourceCell": "A12"
+    },
+    {
+     "item": "6.ส่วนของเครื่องส่ง feeding machine",
+     "method": "1.ทำความสะอาดเครื่องส่งวัสดุ\n2.ตรวจสอบว่าสกรูในแต่ละส่วนของเครื่องส่งเหล็กหลวมหรือไม่\n3.ทำความสะอาดลูกกลิ้งส่งและเกียร์ของมัน\n4.ตรวจสอบว่าอุปกรณ์ปล่อยเคลื่อนที่มีการรั่วไหลหรือไม่ และวาล์วแม่เหล็กไฟฟ้าทำงานปกติหรือไม่\n1. Clean the feeder\n2. Check if the fastening bolts of each part of the feeder are loose\n3. Clean the feed roller and its gears\n4. Check if the pneumatic release device is leaking and the solenoid valve is working properly",
+     "standard": "",
+     "sourceCell": "A13"
+    },
+    {
+     "item": "7.เครื่องปรับระดับ Leveling Machine",
+     "method": "1.ทำความสะอาดและปรับระดับล้อส่งวัสดุ\n2.ล้อหมุนมีความเรียบหรือไม่\n3.การเคลื่อนไหวปกติหรือไม่\n1. Clean and level the feed roller\n2. Check if the roller is flat\n3. Check if all actions are normal    ",
+     "standard": "",
+     "sourceCell": "A14"
+    },
+    {
+     "item": "8.ชั้นวางวัสดุ Material shelf",
+     "method": "1.ทำความสะอาดวัสดุและจัดระเบียบให้เรียบร้อย                           2.สายเบรกมีการศึกหรอหรือไม่                                                  3.น้ำมันไฮดรอลิกตรงตามข้อกำหนดหรือไม่                               4.การเคลื่อนไหวของแต่ล่ะส่วนมีเสียงผิดปกติหรือไม่            1.Clean the material rack                                                       2.Check if the brake belt is worn                                        3.Check if the hydraulic oil is sufficient                                4.Check if there are any abnormal sounds when eact part is moving ",
+     "standard": "",
+     "sourceCell": "A15"
+    }
+   ]
+  }
+ ]
+}
