@@ -6,16 +6,18 @@ export function ToolingList(){
  const frame=useRef<HTMLIFrameElement>(null);
  const sendSource=()=>{if(source)frame.current?.contentWindow?.postMessage({type:'jrtl-tooling-source-v1',records:source.records},window.location.origin);};
  useEffect(()=>{sendSource();},[source]);
- const [section,setSection]=useState<'list'|'maintenance'>('list');
+ const [section,setSection]=useState<'list'|'maintenance'|'spare'>('list');
  return <div className="tooling-workspace">
   <nav className="tooling-subnav" aria-label="เมนูแม่พิมพ์ / Tooling menu">
    <button type="button" aria-pressed={section==='list'} onClick={()=>setSection('list')}>ทะเบียนแม่พิมพ์ / Tooling List</button>
    <button type="button" aria-pressed={section==='maintenance'} onClick={()=>setSection('maintenance')}>จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management</button>
+   <button type="button" aria-pressed={section==='spare'} onClick={()=>setSection('spare')}>การจัดการอะไหล่ / Spare Part Management</button>
   </nav>
   <div hidden={section!=='list'}><ToolingRegister onData={setSource} /></div>
   <section hidden={section!=='maintenance'} aria-label="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management">
    <iframe ref={frame} onLoad={sendSource} className="die-maintenance-frame" src="./JRTL_Die_Maintenance.html?v=shared-sync-20261016" title="จัดการบำรุงรักษาแม่พิมพ์ / Die Maintenance Management" />
   </section>
+  <section className="tooling-list" hidden={section!=='spare'} aria-label="การจัดการอะไหล่ / Spare Part Management"><h2>การจัดการอะไหล่ / Spare Part Management</h2><p>ยังไม่มีข้อมูลอะไหล่ / No spare part records yet.</p></section>
  </div>;
 }
 function ToolingRegister({onData}:{onData:(data:ToolingData)=>void}){
