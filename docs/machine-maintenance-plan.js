@@ -11,14 +11,14 @@ export function mountPlanEditor(host,id){
  const state=el('p',null,'mp-save-state');state.setAttribute('role','status');
  try{stored=localStorage.getItem(key);plan=stored?JSON.parse(stored):initialPlan(id);if(plan.version!==1||!Array.isArray(plan.rows)||!plan.rows.every(r=>Array.isArray(r.months)&&r.months.length===12))throw Error();}catch{root.append(el('p','อ่านแผนที่บันทึกไม่ได้ จึงหยุดแก้ไขเพื่อป้องกันข้อมูลเดิมถูกทับ'));return;}
  function persist(){
-  try{if(blocked)throw Error('ข้อมูลเปลี่ยนจากอีกแท็บ กรุณาเปิดหน้านี้ใหม่ก่อนแก้ไข');if(localStorage.getItem(key)!==stored){blocked=true;throw Error('ข้อมูลเปลี่ยนจากอีกแท็บ กรุณาเปิดหน้านี้ใหม่ก่อนแก้ไข');}const next=JSON.stringify(plan);localStorage.setItem(key,next);stored=next;state.textContent='บันทึกในเบราว์เซอร์แล้ว • '+new Date().toLocaleTimeString('th-TH');state.classList.remove('mp-error');}
+  try{if(blocked)throw Error('ข้อมูลเปลี่ยนจากอีกแท็บ กรุณาเปิดหน้านี้ใหม่ก่อนแก้ไข');if(localStorage.getItem(key)!==stored){blocked=true;throw Error('ข้อมูลเปลี่ยนจากอีกแท็บ กรุณาเปิดหน้านี้ใหม่ก่อนแก้ไข');}const next=JSON.stringify(plan);localStorage.setItem(key,next);stored=next;window.dispatchEvent(new Event('machine-pm-saved'));state.textContent='บันทึกในเบราว์เซอร์แล้ว • '+new Date().toLocaleTimeString('th-TH');state.classList.remove('mp-error');}
   catch(e){state.textContent='ยังไม่ได้บันทึก: '+e.message;state.classList.add('mp-error');}
  }
  function field(value,label,set,multi=false){const input=el(multi?'textarea':'input');input.value=value||'';input.setAttribute('aria-label',label);input.maxLength=multi?600:160;input.addEventListener('input',()=>{set(input.value);persist()});return input;}
  const meta=el('div',null,'mp-meta');
  for(const [key,label] of [['title','ชื่อแผน / Plan Title'],['year','ปี / Year'],['documentNo','เลขที่เอกสาร / Document No.']]){const l=el('label',label);l.append(field(plan[key],label,v=>plan[key]=v));meta.append(l)}
  const note=el('p','นำเข้าจากภาพที่ให้มาเฉพาะ 13 รายการที่มองเห็น • โปรดตรวจสอบรุ่นและสัญลักษณ์กับต้นฉบับก่อนใช้งาน สัญลักษณ์ ○ ● △ คงตามภาพ ไม่ได้ใช้ยืนยันการซ่อมจริง','mp-source-note');
- const storage=el('p','แก้ไขช่องข้อมูลแล้วบันทึกอัตโนมัติในเบราว์เซอร์นี้ ยังไม่ซิงก์กับ Google Sheet หรืออุปกรณ์อื่น','mp-source-note');
+ const storage=el('p','แก้ไขช่องข้อมูลแล้วบันทึกอัตโนมัติในเบราว์เซอร์นี้ สำรอง Google Sheet อัตโนมัติเมื่อเชื่อมต่อสำเร็จ (ดูสถานะด้านล่าง)','mp-source-note');
  const tools=el('div',null,'mp-actions');const add=el('button','+ เพิ่มเครื่องจักร / Add Machine');add.type='button';add.onclick=()=>{plan.rows.push({id:crypto.randomUUID(),machine:'',name:'',model:'',first:'',second:'',third:'',months:months.map(()=>({plan:'',result:''})),calibration:'',calibrationResult:'',note:''});persist();renderRows()};
  const backup=el('button','ดาวน์โหลดสำรอง JSON / Backup');backup.type='button';backup.onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify(plan,null,2)],{type:'application/json'}));const a=el('a');a.href=u;a.download='machine-maintenance-plan-'+String(plan.year).replace(/[^0-9]/g,'')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};tools.append(add,backup);
  const wrap=el('div',null,'mp-table-scroll');wrap.tabIndex=0;wrap.setAttribute('aria-label','ตารางแผนซ่อมบำรุง เลื่อนซ้ายขวาและขึ้นลงได้');const table=el('table'),thead=el('thead'),head=el('tr'),tbody=el('tbody');
@@ -29,4 +29,3 @@ export function mountPlanEditor(host,id){
  for(const key of ['calibration','calibrationResult','note']){const td=el('td');td.append(field(row[key],`${key} แถว ${index+1}`,v=>row[key]=v,true));tr.append(td)}tbody.append(tr)}}
  root.append(meta,note,storage,tools,state,el('p','เลื่อนตารางซ้าย–ขวาเพื่อดูครบทุกเดือน / Scroll horizontally for all months'),wrap);renderRows();state.textContent=stored?'เปิดข้อมูลที่บันทึกไว้แล้ว':'ข้อมูลตั้งต้นจากภาพ — ระบบจะบันทึกเมื่อแก้ไข';
 }
-

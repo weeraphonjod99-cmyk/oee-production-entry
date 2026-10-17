@@ -1,5 +1,6 @@
-import {factoryMenus,mountFactoryPlans} from './factory-pm-plans.js?v=20261017';
-import {mountPlanEditor,WELDING_PLAN_ID} from './machine-maintenance-plan.js?v=20261017';
+import {mountMachineBackup} from './machine-pm-backup.js?v=20261017-backup';
+import {factoryMenus,mountFactoryPlans} from './factory-pm-plans.js?v=20261017-backup';
+import {mountPlanEditor,WELDING_PLAN_ID} from './machine-maintenance-plan.js?v=20261017-backup';
 const KEY='jrtl_machine_maintenance_menus_v1';
 function readMenus(){const raw=localStorage.getItem(KEY);const value=raw?JSON.parse(raw):[];if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');if(!value.some(m=>m.id===WELDING_PLAN_ID))value.unshift({id:WELDING_PLAN_ID,name:"แผนเครื่องเชื่อม 2026 / Welding Machine"});for(const m of [...factoryMenus].reverse())if(!value.some(v=>v.id===m.id))value.unshift(m);return value;}
 function mountMenus(section){
@@ -20,6 +21,7 @@ function mountMenus(section){
  const save=document.createElement('button');save.type='submit';save.textContent='บันทึก / Save';
  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='ยกเลิก / Cancel';cancel.onclick=()=>dialog.close();
  form.append(title,label,error,save,cancel);dialog.append(form);root.append(heading,add,nav,panel,message,note,dialog);
+ mountMachineBackup(root);
  let editId=null;
  function open(id){editId=id;title.textContent=id?'แก้ไขชื่อเมนู / Rename Menu':'เพิ่มเมนู / Add Menu';input.value=menus.find(m=>m.id===id)?.name||'';error.textContent='';dialog.showModal();input.focus();}
  function render(){
@@ -35,7 +37,7 @@ function mountMenus(section){
  e.preventDefault();const name=input.value.trim();if(!name){error.textContent='กรุณากรอกชื่อเมนู';return;}
  try{const latest=readMenus();if(editId&&!latest.some(m=>m.id===editId))throw Error('ไม่พบเมนูที่ต้องการแก้ไข กรุณาเปิดหน้าใหม่');
  if(latest.some(m=>m.id!==editId&&m.name.trim().toLocaleLowerCase()===name.toLocaleLowerCase()))throw Error('มีชื่อเมนูนี้แล้ว กรุณาใช้ชื่ออื่น');
- const id=editId||crypto.randomUUID();const next=editId?latest.map(m=>m.id===id?{...m,name}:m):[...latest,{id,name}];localStorage.setItem(KEY,JSON.stringify(next));menus=next;active=id;dialog.close();render();message.textContent='บันทึกชื่อเมนูแล้ว';
+ const id=editId||crypto.randomUUID();const next=editId?latest.map(m=>m.id===id?{...m,name}:m):[...latest,{id,name}];localStorage.setItem(KEY,JSON.stringify(next));window.dispatchEvent(new Event('machine-pm-saved'));menus=next;active=id;dialog.close();render();message.textContent='บันทึกชื่อเมนูแล้ว';
  }catch(err){error.textContent=err.message||'บันทึกไม่สำเร็จ';}
  };
  render();

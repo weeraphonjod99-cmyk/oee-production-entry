@@ -5,7 +5,7 @@ export async function mountFactoryPlans(host,id){
  let group;try{const r=await fetch('./'+id+'.json?v=20261017');if(!r.ok)throw Error();group=await r.json();if(!Array.isArray(group.documents))throw Error();}catch{root.textContent='โหลดแผนไม่สำเร็จ กรุณาเปิดเมนูนี้ใหม่';return;}
  if(!root.isConnected)return;root.replaceChildren();
  const note=make('p',`${group.documents.length} แบบฟอร์มจาก ZIP • แยกตามไฟล์และชีต ไม่รวมฉบับซ้ำ/Rev. เข้าด้วยกัน • รอบหลัก: 1 ครั้งต่อเดือน`);
- const info=make('p','ข้อมูลจาก PM Machine Month โรง1.zip • แก้ไขและบันทึกอัตโนมัติในเบราว์เซอร์นี้ ยังไม่ซิงก์ Google Sheet','fp-note');
+ const info=make('p','ข้อมูลจาก PM Machine Month โรง1.zip • แก้ไขและบันทึกอัตโนมัติในเบราว์เซอร์นี้ ดูสถานะสำรอง Google Sheet ด้านล่าง','fp-note');
  const label=make('label','เลือกแบบฟอร์ม / Select Form');const select=make('select');select.setAttribute('aria-label','เลือกแบบฟอร์ม / Select Form');
  group.documents.forEach((d,i)=>{const o=make('option',`${d.machine||'แบบฟอร์มกลาง'} • ${d.sheet} • ${d.documentNo} • ${d.kind==='standard'?'มาตรฐาน / Standard':'แบบตรวจ / Checklist'}`);o.value=i;select.append(o)});label.append(select);
  const monthLabel=make('label','เดือนที่บันทึก / Record Month');const month=make('input');month.type='month';const now=new Date();month.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');monthLabel.append(month);
@@ -15,7 +15,7 @@ export async function mountFactoryPlans(host,id){
  const key='jrtl_factory_pm_v1:'+source.id+':'+month.value;let data,stored,failed=false;
  try{stored=localStorage.getItem(key);data=stored?JSON.parse(stored):JSON.parse(JSON.stringify(source));if(!Array.isArray(data.items)||data.items.length!==source.items.length)throw Error();}catch{form.textContent='อ่านข้อมูลที่บันทึกไว้ไม่ได้ กรุณาตรวจสอบก่อนแก้ไข';return;}
  const status=make('p',stored?'เปิดข้อมูลที่บันทึกไว้แล้ว':'ยังไม่มีผลตรวจสำหรับเดือนนี้','fp-status');status.setAttribute('role','status');
- function save(){try{if(failed||localStorage.getItem(key)!==stored){failed=true;throw Error('มีข้อมูลใหม่จากอีกแท็บ กรุณาเปิดแบบฟอร์มใหม่');}const next=JSON.stringify(data);localStorage.setItem(key,next);stored=next;status.textContent='บันทึกในเบราว์เซอร์แล้ว • '+new Date().toLocaleTimeString('th-TH');status.classList.remove('fp-error');}catch(e){status.textContent='ยังไม่ได้บันทึก: '+e.message;status.classList.add('fp-error')}}
+ function save(){try{if(failed||localStorage.getItem(key)!==stored){failed=true;throw Error('มีข้อมูลใหม่จากอีกแท็บ กรุณาเปิดแบบฟอร์มใหม่');}const next=JSON.stringify(data);localStorage.setItem(key,next);stored=next;window.dispatchEvent(new Event('machine-pm-saved'));status.textContent='บันทึกในเบราว์เซอร์แล้ว • '+new Date().toLocaleTimeString('th-TH');status.classList.remove('fp-error');}catch(e){status.textContent='ยังไม่ได้บันทึก: '+e.message;status.classList.add('fp-error')}}
  function input(value,aria,onChange,type='text'){const e=make(type==='textarea'?'textarea':'input');if(type!=='textarea')e.type=type;e.value=value||'';e.setAttribute('aria-label',aria);e.addEventListener('input',()=>{onChange(e.value);save()});return e}
  const provenance=make('details');provenance.append(make('summary','ไฟล์ต้นทางและรอบบำรุงรักษา / Source and Frequency'),make('p',source.sourceFile+' • Sheet: '+source.sheet),make('p','รอบต้นฉบับ: '+source.frequency),make('p',source.frequencyEvidence));form.append(provenance);
  if(source.warning)form.append(make('p',source.warning,'fp-warning'));
