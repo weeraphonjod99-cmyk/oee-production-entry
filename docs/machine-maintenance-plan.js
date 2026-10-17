@@ -5,11 +5,11 @@ export function initialPlan(id){
 }
 const months=['ม.ค. / Jan','ก.พ. / Feb','มี.ค. / Mar','เม.ย. / Apr','พ.ค. / May','มิ.ย. / Jun','ก.ค. / Jul','ส.ค. / Aug','ก.ย. / Sep','ต.ค. / Oct','พ.ย. / Nov','ธ.ค. / Dec'];
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e};
-export function mountPlanEditor(host,id){
+export function mountPlanEditor(host,id,seed=null){
  const key='jrtl_machine_plan_v1:'+id;let plan,stored,blocked=false;
  const root=el('div',null,'machine-plan-editor');host.append(root);
  const state=el('p',null,'mp-save-state');state.setAttribute('role','status');
- try{stored=localStorage.getItem(key);plan=stored?JSON.parse(stored):initialPlan(id);if(plan.version!==1||!Array.isArray(plan.rows)||!plan.rows.every(r=>Array.isArray(r.months)&&r.months.length===12))throw Error();}catch{root.append(el('p','อ่านแผนที่บันทึกไม่ได้ จึงหยุดแก้ไขเพื่อป้องกันข้อมูลเดิมถูกทับ'));return;}
+ try{stored=localStorage.getItem(key);plan=stored?JSON.parse(stored):JSON.parse(JSON.stringify(seed||initialPlan(id)));if(plan.version!==1||!Array.isArray(plan.rows)||!plan.rows.every(r=>Array.isArray(r.months)&&r.months.length===12))throw Error();}catch{root.append(el('p','อ่านแผนที่บันทึกไม่ได้ จึงหยุดแก้ไขเพื่อป้องกันข้อมูลเดิมถูกทับ'));return;}
  function persist(){
   try{if(blocked)throw Error('ข้อมูลเปลี่ยนจากอีกแท็บ กรุณาเปิดหน้านี้ใหม่ก่อนแก้ไข');if(localStorage.getItem(key)!==stored){blocked=true;throw Error('ข้อมูลเปลี่ยนจากอีกแท็บ กรุณาเปิดหน้านี้ใหม่ก่อนแก้ไข');}const next=JSON.stringify(plan);localStorage.setItem(key,next);stored=next;window.dispatchEvent(new Event('machine-pm-saved'));state.textContent='บันทึกในเบราว์เซอร์แล้ว • '+new Date().toLocaleTimeString('th-TH');state.classList.remove('mp-error');}
   catch(e){state.textContent='ยังไม่ได้บันทึก: '+e.message;state.classList.add('mp-error');}
@@ -18,14 +18,16 @@ export function mountPlanEditor(host,id){
  const meta=el('div',null,'mp-meta');
  for(const [key,label] of [['title','ชื่อแผน / Plan Title'],['year','ปี / Year'],['documentNo','เลขที่เอกสาร / Document No.']]){const l=el('label',label);l.append(field(plan[key],label,v=>plan[key]=v));meta.append(l)}
  const note=el('p','นำเข้าจากภาพที่ให้มาเฉพาะ 13 รายการที่มองเห็น • โปรดตรวจสอบรุ่นและสัญลักษณ์กับต้นฉบับก่อนใช้งาน สัญลักษณ์ ○ ● △ คงตามภาพ ไม่ได้ใช้ยืนยันการซ่อมจริง','mp-source-note');
+ if(seed)note.textContent='ต้นฉบับ: '+seed.sourceArchive+' • '+seed.sourceFile+' • '+seed.sourceSheet+' • สัญลักษณ์ผลดำเนินการคงตามไฟล์ต้นฉบับ';
  const storage=el('p','แก้ไขช่องข้อมูลแล้วบันทึกอัตโนมัติในเบราว์เซอร์นี้ สำรอง Google Sheet อัตโนมัติเมื่อเชื่อมต่อสำเร็จ (ดูสถานะด้านล่าง)','mp-source-note');
  const tools=el('div',null,'mp-actions');const add=el('button','+ เพิ่มเครื่องจักร / Add Machine');add.type='button';add.onclick=()=>{plan.rows.push({id:crypto.randomUUID(),machine:'',name:'',model:'',first:'',second:'',third:'',months:months.map(()=>({plan:'',result:''})),calibration:'',calibrationResult:'',note:''});persist();renderRows()};
  const backup=el('button','ดาวน์โหลดสำรอง JSON / Backup');backup.type='button';backup.onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify(plan,null,2)],{type:'application/json'}));const a=el('a');a.href=u;a.download='machine-maintenance-plan-'+String(plan.year).replace(/[^0-9]/g,'')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};tools.append(add,backup);
  const wrap=el('div',null,'mp-table-scroll');wrap.tabIndex=0;wrap.setAttribute('aria-label','ตารางแผนซ่อมบำรุง เลื่อนซ้ายขวาและขึ้นลงได้');const table=el('table'),thead=el('thead'),head=el('tr'),tbody=el('tbody');
  const columns=[['machine','M/C No.'],['name','ชื่อเครื่อง / Name'],['model','รุ่น / Model'],['first','ระดับ 1 / First Level'],['second','ระดับ 2 / Secondary Level'],['third','ระดับ 3 / Third Level']];
- columns.forEach(([,label])=>head.append(el('th',label)));months.forEach(m=>head.append(el('th',m)));head.append(el('th','สอบเทียบประจำปี / Annual Calibration'),el('th','ผลสอบเทียบ / Calibration Result'),el('th','หมายเหตุ / Notes'));thead.append(head);table.append(thead,tbody);wrap.append(table);
+ columns.forEach(([,label])=>head.append(el('th',label)));months.forEach(m=>head.append(el('th',m)));if(seed){for(let i=0;i<4;i++)head.append(el('th',(seed.tailTitle||'เพิ่มเติม')+' • '+(seed.tailHeaders[i]||'ช่อง '+(i+1))));head.append(el('th','หมายเหตุ / Notes'));}else head.append(el('th','สอบเทียบประจำปี / Annual Calibration'),el('th','ผลสอบเทียบ / Calibration Result'),el('th','หมายเหตุ / Notes'));thead.append(head);table.append(thead,tbody);wrap.append(table);
  function renderRows(){tbody.replaceChildren();for(const [index,row] of plan.rows.entries()){const tr=el('tr');for(const [key,label] of columns){const td=el('td');td.append(field(row[key],`${label} แถว ${index+1}`,v=>row[key]=v,key==='third'));tr.append(td)}
  row.months.forEach((month,m)=>{const td=el('td',null,'mp-month');for(const [key,label] of [['plan','แผน'],['result','ผล']]){const l=el('label',label);l.append(field(month[key],`${row.machine||index+1} ${months[m]} ${label}`,v=>month[key]=v));td.append(l)}tr.append(td)});
- for(const key of ['calibration','calibrationResult','note']){const td=el('td');td.append(field(row[key],`${key} แถว ${index+1}`,v=>row[key]=v,true));tr.append(td)}tbody.append(tr)}}
- root.append(meta,note,storage,tools,state,el('p','เลื่อนตารางซ้าย–ขวาเพื่อดูครบทุกเดือน / Scroll horizontally for all months'),wrap);renderRows();state.textContent=stored?'เปิดข้อมูลที่บันทึกไว้แล้ว':'ข้อมูลตั้งต้นจากภาพ — ระบบจะบันทึกเมื่อแก้ไข';
+ if(seed){row.tail ||= ['','','',''];row.tail.forEach((v,i)=>{const td=el('td');td.append(field(v,'ข้อมูลเพิ่มเติม '+(i+1)+' แถว '+(index+1),v=>row.tail[i]=v,true));tr.append(td)});}
+ for(const key of (seed?['note']:['calibration','calibrationResult','note'])){const td=el('td');td.append(field(row[key],`${key} แถว ${index+1}`,v=>row[key]=v,true));tr.append(td)}tbody.append(tr)}}
+ root.append(meta,note,storage,tools,state,el('p','เลื่อนตารางซ้าย–ขวาเพื่อดูครบทุกเดือน / Scroll horizontally for all months'),wrap);renderRows();if(seed?.legend)root.append(el('p',seed.legend));state.textContent=stored?'เปิดข้อมูลที่บันทึกไว้แล้ว':'ข้อมูลต้นฉบับ — ระบบจะบันทึกเมื่อแก้ไข';
 }

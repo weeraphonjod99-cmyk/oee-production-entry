@@ -1,890 +1,1365 @@
 {
- "id": "factory1-walding",
- "name": "เครื่องเชื่อม / Welding",
- "documents": [
-  {
-   "id": "08474d724bd77479",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": " SW1",
-   "kind": "record",
-   "machine": "SW1",
-   "name": "Spot welding",
-   "model": "YR-1-06VX225-A00",
-   "manufacturer": "KAIYUAN",
-   "documentNo": "JRTL-PM-002-1",
-   "frequency": "1 time/month",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
+  "sourceArchive": "Machine โรง1.zip",
+  "documents": [
     {
-     "item": "1. Ground (zero) screw/สกรูสายดิน (ศูนย์)",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A8"
+      "version": 1,
+      "id": "factory1-walding-2025",
+      "title": "Welding Machine  Maintenance Plan in  2025",
+      "year": "2025",
+      "documentNo": "JRTL-PM-002",
+      "sourceFile": "Machine/JRTL-PM-002 Welding Machine  Maintenance Plan1.xlsx",
+      "sourceSheet": "Welding Machine -25",
+      "sourceArchive": "Machine โรง1.zip",
+      "rows": [
+        {
+          "id": "factory1-walding-2025-5",
+          "machine": "SW1",
+          "name": "Spot Welding",
+          "model": "DTB7 100",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2025-6",
+          "machine": "SW2",
+          "name": "Spot Welding",
+          "model": "YR-A05C",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2025-7",
+          "machine": "SW3",
+          "name": "Spot Welding",
+          "model": "YR-A05C",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2025-8",
+          "machine": "SW4",
+          "name": "Spot Welding",
+          "model": "WL-MFSQ-90K*2",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Quarterly",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2025-9",
+          "machine": "▲RW1",
+          "name": "Robot Welding",
+          "model": "TM-1400G3",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Quarterly",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2025-10",
+          "machine": "▲RW2",
+          "name": "Robot Welding",
+          "model": "TM-1400G4",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Quarterly",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n◇",
+              "result": "●♦"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2025-11",
+          "machine": "▲RW3",
+          "name": "Robot Spot Welding",
+          "model": "YRC1000 SP165",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Quarterly",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        }
+      ],
+      "tailHeaders": [
+        "2025-Dec.",
+        "",
+        "2026",
+        ""
+      ],
+      "tailTitle": "Third Level Maintenance Plan & Completion",
+      "legend": "Note: The mark ○ is the completion period of the plan, and ● is completed. ☆We need to continue according to production status. ▲ as the key equipment. (The equipment with a high risk factor, which has a decisive requirement for product quality and has special characteristics in the production process, is the key equipment)\nFrequency symbol description: Once/Year:△; Once/Half a year:□; Once/Quarterly:◇; Once/Month:○"
     },
     {
-     "item": "2. Terminal/เทอร์มินัล",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3. Ground (zero) wire insulation/ฉนวนสายดิน (ศูนย์)",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4. Power/กำลัง",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5. Cable terminal/ขั้วต่อสายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6. Power box/กล่องจ่ายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7. Cable insulation/ฉนวนหุ้มสายเคเบิล",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8. Power cord/สายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A15"
-    },
-    {
-     "item": "9. Welding cable/สายเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A16"
-    },
-    {
-     "item": "10. Wiring of spot welding machine/การเดินสายเครื่องเชื่อมจุด",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A17"
-    },
-    {
-     "item": "11. Protective cover/ฝาครอบป้องกัน",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A18"
-    },
-    {
-     "item": "12. Welding machine core/แกนเครื่องเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A19"
-    },
-    {
-     "item": "13. Coil and electrical parts/คอยล์และชิ้นส่วนไฟฟ้า",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A20"
-    },
-    {
-     "item": "14. Welding machine cooling fan/พัดลมระบายความร้อนเครื่องเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A21"
-    },
-    {
-     "item": "15. Each adjustment button/ปุ่มปรับตั้งค่าแต่ละปุ่ม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A22"
-    },
-    {
-     "item": "16.Adjust the handle/ปรับด้ามจับ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A23"
-    },
-    {
-     "item": "17. Each flag/",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A24"
-    },
-    {
-     "item": "18.indicator light/ไฟแสดงสถานะ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A25"
-    },
-    {
-     "item": "19. Hood /ฝา",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A26"
+      "version": 1,
+      "id": "factory1-walding-2026",
+      "title": "Welding Machine  Maintenance Plan in  2026",
+      "year": "2026",
+      "documentNo": "JRTL-PM-002",
+      "sourceFile": "Machine/JRTL-PM-002 Welding Machine  Maintenance Plan1.xlsx",
+      "sourceSheet": "Welding Machine -26",
+      "sourceArchive": "Machine โรง1.zip",
+      "rows": [
+        {
+          "id": "factory1-walding-2026-5",
+          "machine": "SW1",
+          "name": "Spot Welding",
+          "model": "DTB7 100",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-6",
+          "machine": "SW2",
+          "name": "Spot Welding",
+          "model": "YR-A05C",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○\n",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○\n",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-7",
+          "machine": "SW3",
+          "name": "Spot Welding",
+          "model": "YR-A05C",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-8",
+          "machine": "SW4",
+          "name": "Spot Welding",
+          "model": "WL-MFSQ-90K*2",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-9",
+          "machine": "SW5",
+          "name": "Spot Welding",
+          "model": "WL-MFSQ-90K*3",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-10",
+          "machine": "SW6",
+          "name": "Spot Welding",
+          "model": "DTBZ-80",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-11",
+          "machine": "SW7",
+          "name": "Spot Welding",
+          "model": "JW-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-12",
+          "machine": "SW8",
+          "name": "Spot Welding",
+          "model": "RSN-100",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-13",
+          "machine": "▲RW1",
+          "name": "Robot Welding",
+          "model": "TM-1400G3",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Quarterly",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-14",
+          "machine": "▲RW2",
+          "name": "Robot Welding",
+          "model": "TM-1400G4",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Quarterly",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-15",
+          "machine": "▲RW3",
+          "name": "Robot Spot Welding",
+          "model": "YRC1000 SP165",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/year.Suppliers to miantenance and Calibration",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-16",
+          "machine": "RW3-GD",
+          "name": "Grinding M/C",
+          "model": "MFG745D-6RS1.0-4",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-walding-2026-17",
+          "machine": "RW3-WC",
+          "name": "Water chiller M/C",
+          "model": "DIC030ASH-LE2",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "/",
+            "",
+            "/",
+            ""
+          ],
+          "note": ""
+        }
+      ],
+      "tailHeaders": [
+        "(Third-Party calibration)",
+        "",
+        "",
+        ""
+      ],
+      "tailTitle": "การสอบเทียบประจำปี/Annual calibration",
+      "legend": "สัญลักษณ์ ○ แสดงถึงช่วงเวลาดำเนินการที่วางแผนไว้ ● หมายถึงเสร็จสมบูรณ์ ☆ หมายถึงต้องดำเนินการเพิ่มเติมตามสถานะการผลิต และ ▲ แสดงถึงอุปกรณ์ที่สำคัญ (อุปกรณ์ที่มีปัจจัยเสี่ยงสูง ข้อกำหนดที่สำคัญสำหรับคุณภาพของผลิตภัณฑ์ และลักษณะเฉพาะในกระบวนการผลิต)\nคำอธิบายความถี่ของสัญลักษณ์: รายปี: △; รายครึ่งปี: □; รายไตรมาส: ◇; รายเดือน: ○"
     }
-   ]
-  },
-  {
-   "id": "21547e7a4f84d1f1",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW1 A1",
-   "kind": "record",
-   "machine": "SW1",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-1 Rev.1",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly. 2.กดปุ่มสตาร์ทหนึ่งปุ่มเครื่องจะต้องไม่ทำงาน(ถ้าเครื่องทำงานแสดงว่าเครื่องผิดปกติ/Pressing only one start button must not cause the machine to operate. If the machine starts running when only one start button is pressed, this indicates an abnormal condition.",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.โฟลว์สวิตซ์/Flow Switch",
-     "method": "1.ตรวจสอบว่าโฟลว์สวิตซ์สามารถควบคุมอัตราการไหลของน้ำได้ปกติหรือไม่/Check whether the flow switch can control the water flow rate properly.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.กล้องจับงาน/Workpiece inspection camera",
-     "method": "1.ตรวจสอบกล้องทำงานปกติหรือไม่ หน้าจอกล้องแสดงสถานะ OK,NG ปกติ/Check whether the camera is operating normally. The camera screen displays the status “OK” or “NG” as normal.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor ",
-     "method": "1.ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.ฮูดดูดควัน/Fume Extraction Hood",
-     "method": "1.ตรวจสอบว่าฮูดดูดควันทำงานปกติหรือไม่/Check whether the fume extraction hood is operating normally.   2.ท่ออากาศอุดตันและสกปรกหรือไม่/         Check whether the air duct is clogged or dirty.",
-     "standard": "",
-     "sourceCell": "A15"
-    }
-   ]
-  },
-  {
-   "id": "b81d5bb88a4ccf04",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW2",
-   "kind": "record",
-   "machine": "SW2",
-   "name": "Spot welding",
-   "model": "YR-A05CM2-100",
-   "manufacturer": "Panasonic",
-   "documentNo": "JRTL-PM-002-2",
-   "frequency": "1 time/month",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1. Ground (zero) screw/สกรูสายดิน (ศูนย์)",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2. Terminal/เทอร์มินัล",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3. Ground (zero) wire insulation/ฉนวนสายดิน (ศูนย์)",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4. Power/กำลัง",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5. Cable terminal/ขั้วต่อสายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6. Power box/กล่องจ่ายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7. Cable insulation/ฉนวนหุ้มสายเคเบิล",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8. Power cord/สายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A15"
-    },
-    {
-     "item": "9. Welding cable/สายเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A16"
-    },
-    {
-     "item": "10. Wiring of spot welding machine/การเดินสายเครื่องเชื่อมจุด",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A17"
-    },
-    {
-     "item": "11. Protective cover/ฝาครอบป้องกัน",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A18"
-    },
-    {
-     "item": "12. Welding machine core/แกนเครื่องเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A19"
-    },
-    {
-     "item": "13. Coil and electrical parts/คอยล์และชิ้นส่วนไฟฟ้า",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A20"
-    },
-    {
-     "item": "14. Welding machine cooling fan/พัดลมระบายความร้อนเครื่องเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A21"
-    },
-    {
-     "item": "15. Each adjustment button/ปุ่มปรับตั้งค่าแต่ละปุ่ม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A22"
-    },
-    {
-     "item": "16.Adjust the handle/ปรับด้ามจับ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A23"
-    },
-    {
-     "item": "17. Each flag/",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A24"
-    },
-    {
-     "item": "18.indicator light/ไฟแสดงสถานะ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A25"
-    },
-    {
-     "item": "19. Hood /ฝา",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A26"
-    }
-   ]
-  },
-  {
-   "id": "d5b242fb84a53dc1",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW2 A1",
-   "kind": "record",
-   "machine": "SW2",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-2 Rev.1",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly. 2.กดปุ่มสตาร์ทหนึ่งปุ่มเครื่องจะต้องไม่ทำงาน(ถ้าเครื่องทำงานแสดงว่าเครื่องผิดปกติ/Pressing only one start button must not cause the machine to operate. If the machine starts running when only one start button is pressed, this indicates an abnormal condition.",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.โรตามิเตอร์/Rotameter",
-     "method": "1.ตรวจสอบว่าโรตามิเตอร์ทำงารปกติและอยู่ในค่าที่กำหนดหรือไม่/Check whether the rotameter is functioning correctly and confirm that the reading is within the specified limits.                 2.น้ำในโรมิเตอร์สกปรกหรือไม่/Check whether the water in the rotameter is contaminated.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor",
-     "method": "1.ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.กล่องใส่งานอัตโนมัติ/Automatic workpiece box.",
-     "method": "1.ตรวจสอบว่ากล่องใส่งานอัตโนมัติ เปิด-ปิด ออโต้หรือไม่และตั้งเวลา เปิด-ปิดได้ปกติ/Check whether the automatic workpiece box operates in auto open/close mode and whether the open/close timing can be set and functions properly.",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.ฮูดดูดควัน/Fume Extraction Hood",
-     "method": "1.ตรวจสอบว่าฮูดดูดควันทำงานปกติหรือไม่/Check whether the fume extraction hood is operating normally. 2.ท่ออากาศอุดตันและสกปรกหรือไม่ /Check            whether the air duct is clogged or dirty.",
-     "standard": "",
-     "sourceCell": "A15"
-    }
-   ]
-  },
-  {
-   "id": "7a8f0d34f9a017bb",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW3",
-   "kind": "record",
-   "machine": "SW3",
-   "name": "Spot welding",
-   "model": "YR-A05CM2-100",
-   "manufacturer": "Panasonic",
-   "documentNo": "JRTL-PM-002-3",
-   "frequency": "1 time/month",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1. Ground (zero) screw/สกรูสายดิน (ศูนย์)",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2. Terminal/เทอร์มินัล",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3. Ground (zero) wire insulation/ฉนวนสายดิน (ศูนย์)",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4. Power/กำลัง",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5. Cable terminal/ขั้วต่อสายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6. Power box/กล่องจ่ายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7. Cable insulation/ฉนวนหุ้มสายเคเบิล",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8. Power cord/สายไฟ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A15"
-    },
-    {
-     "item": "9. Welding cable/สายเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A16"
-    },
-    {
-     "item": "10. Wiring of spot welding machine/การเดินสายเครื่องเชื่อมจุด",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A17"
-    },
-    {
-     "item": "11. Protective cover/ฝาครอบป้องกัน",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A18"
-    },
-    {
-     "item": "12. Welding machine core/แกนเครื่องเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A19"
-    },
-    {
-     "item": "13. Coil and electrical parts/คอยล์และชิ้นส่วนไฟฟ้า",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A20"
-    },
-    {
-     "item": "14. Welding machine cooling fan/พัดลมระบายความร้อนเครื่องเชื่อม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A21"
-    },
-    {
-     "item": "15. Each adjustment button/ปุ่มปรับตั้งค่าแต่ละปุ่ม",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A22"
-    },
-    {
-     "item": "16.Adjust the handle/ปรับด้ามจับ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A23"
-    },
-    {
-     "item": "17. Each flag/ป้ายแต่ละป้าย",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A24"
-    },
-    {
-     "item": "18.indicator light/ไฟแสดงสถานะ",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A25"
-    },
-    {
-     "item": "19. Hood /ฝา",
-     "method": "",
-     "standard": "",
-     "sourceCell": "A26"
-    }
-   ]
-  },
-  {
-   "id": "5df2b3c812661446",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW3 A1",
-   "kind": "record",
-   "machine": "SW3",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-3 Rev.1",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly. 2.กดปุ่มสตาร์ทหนึ่งปุ่มเครื่องจะต้องไม่ทำงาน(ถ้าเครื่องทำงานแสดงว่าเครื่องผิดปกติ/Pressing only one start button must not cause the machine to operate. If the machine starts running when only one start button is pressed, this indicates an abnormal condition.",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.โรตามิเตอร์/Rotameter",
-     "method": "1.ตรวจสอบว่าโรตามิเตอร์ทำงารปกติและอยู่ในค่าที่กำหนดหรือไม่/Check whether the rotameter is functioning correctly and confirm that the reading is within the specified limits. 2.น้ำในโรมิเตอร์สกปรกหรือไม่/Check whether the water in the rotameter is contaminated.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor",
-     "method": "1.ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.กล่องใส่งานอัตโนมัติ/Automatic workpiece box.",
-     "method": "1.ตรวจสอบว่ากล่องใส่งานอัตโนมัติ เปิด-ปิด ออโต้หรือไม่และตั้งเวลา เปิด-ปิดได้ปกติ/Check whether the automatic workpiece box operates in auto open/close mode and whether the open/close timing can be set and functions properly.",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.ฮูดดูดควัน/Fume Extraction Hood",
-     "method": "1.ตรวจสอบว่าฮูดดูดควันทำงานปกติหรือไม่/Check whether the fume extraction hood is operating normally.2.ท่ออากาศอุดตันและสกปรกหรือไม่/         Check whether the air duct is clogged or dirty.",
-     "standard": "",
-     "sourceCell": "A15"
-    }
-   ]
-  },
-  {
-   "id": "3c52b058bb3715a4",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW4 ",
-   "kind": "record",
-   "machine": "SW4",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-4",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly.           ",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.รางลูกปืนรีเนียร์/Linear Guide Rail",
-     "method": "1.ตรวจสอบลูกปืนรางรีเนียร์ทุกตัวทำงานปกติหรือไม่/Inspect all linear guide bearings to ensure they are operating normally. 2.ตรวจสอบจาระบีลูกปืนรางรีเนียร์หมดหรือไม่/Inspect the linear guide bearings and replenish the grease if necessary.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.ฉนวนนำกระแสไฟฟ้า/electrical conductor",
-     "method": "1.ตรวจสอบว่าฉนวนนำกระแสไฟหลวมและแตกหักหรือไม่/Inspect the electrical insulation for any signs of looseness or damage.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.กระบอกสูบ/Pneumatic cylinder",
-     "method": "1.ตรวจสอบว่ากระบอกสูบทุกตัวทำงานปกติหรือไม่/Verify that all cylinders are functioning properly.",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.ลูกปืนบอลสกรู/Ball bearing of the ball screw assembly",
-     "method": "1.ตรวจสอบว่าลูกปืนบอลสกรูทำงานผิดปกติหรือไม่/Check whether the ball screw bearing is operating abnormally. 2.สต็อปเปอร์ลูกปืนบอลสกรูอยู่ในตำแหน่งหรือไม่/Verify that the ball screw bearing stopper is in the correct position.",
-     "standard": "",
-     "sourceCell": "A15"
-    }
-   ]
-  },
-  {
-   "id": "33c2afc0d0260448",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW5",
-   "kind": "record",
-   "machine": "SW5",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-5",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly.           ",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.รางลูกปืนรีเนียร์/Linear Guide Rail",
-     "method": "1.ตรวจสอบลูกปืนรางรีเนียร์ทุกตัวทำงานปกติหรือไม่/Inspect all linear guide bearings to ensure they are operating normally. 2.ตรวจสอบจาระบีลูกปืนรางรีเนียร์หมดหรือไม่/Inspect the linear guide bearings and replenish the grease if necessary.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.ฉนวนนำกระแสไฟฟ้า/electrical conductor",
-     "method": "1.ตรวจสอบว่าฉนวนนำกระแสไฟหลวมและแตกหักหรือไม่/Inspect the electrical insulation for any signs of looseness or damage.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.กระบอกสูบ/Pneumatic cylinder",
-     "method": "1.ตรวจสอบว่ากระบอกสูบทุกตัวทำงานปกติหรือไม่/Verify that all cylinders are functioning properly.",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.ลูกปืนบอลสกรู/Ball bearing of the ball screw assembly",
-     "method": "1.ตรวจสอบว่าลูกปืนบอลสกรูทำงานผิดปกติหรือไม่/Check whether the ball screw bearing is operating abnormally. 2.สต็อปเปอร์ลูกปืนบอลสกรูอยู่ในตำแหน่งหรือไม่/Verify that the ball screw bearing stopper is in the correct position.",
-     "standard": "",
-     "sourceCell": "A15"
-    }
-   ]
-  },
-  {
-   "id": "2cbf258e926d2b21",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW6 ",
-   "kind": "record",
-   "machine": "SW6",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-6",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.  2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly.           ",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.รางลูกปืนรีเนียร์/Linear Guide Rail",
-     "method": "1.ตรวจสอบลูกปืนรางรีเนียร์ทุกตัวทำงานปกติหรือไม่/Inspect all linear guide bearings to ensure they are operating normally. 2.ตรวจสอบจาระบีลูกปืนรางรีเนียร์หมดหรือไม่/Inspect the linear guide bearings and replenish the grease if necessary.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.ฉนวนนำกระแสไฟฟ้า/electrical conductor",
-     "method": "1.ตรวจสอบว่าฉนวนนำกระแสไฟหลวมและแตกหักหรือไม่/Inspect the electrical insulation for any signs of looseness or damage.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor",
-     "method": "1.ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.โรตามิเตอร์/Rotameter",
-     "method": "1.ตรวจสอบว่าโรตามิเตอร์ทำงารปกติและอยู่ในค่าที่กำหนดหรือไม่/Check whether the rotameter is functioning correctly and confirm that the reading is within the specified limits. 2.น้ำในโรมิเตอร์สกปรกหรือไม่/Check whether the water in the rotameter is contaminated.",
-     "standard": "",
-     "sourceCell": "A15"
-    }
-   ]
-  },
-  {
-   "id": "dbdeef550cefc7a0",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW7",
-   "kind": "record",
-   "machine": "SW7",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-7",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.                                           2.ตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop indication on the touch screen to identify the location where the emergency stop was activated, and verify whether the emergency stop button has been pressed or is damaged.",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.ซีเล็คเตอร์สวิตซ์/Selector Switch",
-     "method": "1.ตรวจสอบว่าสวิตซ์ใช้งานปกติ หลวมหรือชำรุดหรือไม่/Check whether the switch is functioning properly and whether it is loose or damaged.",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.แรงดันอากาศ/Air pressure",
-     "method": "1.ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.ปุ่มกดสตาร์ท/Start Button",
-     "method": "1.ตรวจสอบปุ่มกดสตาร์ททำงานปกติหรือไม่/Please check whether the start button is functioning properly.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.วาวล์เปิดปิดน้ำหล่อเย็น/Cooling Water On/Off Valve",
-     "method": "1.ตรวจสอบว่าวาวล์สามารถเปิดปิดได้หรือไม่/Check whether the valve can be opened and closed properly.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.ฉนวนนำกระแสไฟฟ้า/electrical conductor",
-     "method": "1.ตรวจสอบว่าฉนวนนำกระแสไฟหลวมและแตกหักหรือไม่/Inspect the electrical insulation for any signs of looseness or damage.",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.สวิตซ์แรงดันดิจิตอล/Digital Pressure Switch",
-     "method": "1.สวิตว์แรงดันดิจิตอลสามารถควบคุมแรงดันลมไม่ให้เกินหรือต่ำกว่าแรงดันลมที่ตั้งค่าไว้(เมื่อแรงดันลมต่ำหรือสูงกว่าค่าที่ตั้งไว้เครื่องแจ้งเตือนหรือไม่/The digital pressure switch is capable of controlling air pressure to ensure that it does not exceed or fall below the preset pressure value. An alarm is activated when the air pressure rises above or drops below the preset threshold.",
-     "standard": "",
-     "sourceCell": "A14"
-    }
-   ]
-  },
-  {
-   "id": "6e2f9879b9aed87c",
-   "sourceFile": "PM Machine Month โรง1/walding/JRTL-PM-002-1-8 Spot EquipmentMachine PM Resume.xlsx",
-   "sheet": "SW8",
-   "kind": "record",
-   "machine": "SW8",
-   "name": "เครื่องเชื่อม\nSPOT WELDING",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-002-8",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.หน้าจอ, ปุ่มกด/Touch screen, keypad",
-     "method": "1.ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.                                           ",
-     "standard": "",
-     "sourceCell": "A8"
-    },
-    {
-     "item": "2.สายเชื่อม,สายแก๊ส/Welding Cable,Gas Hose",
-     "method": "1.ตรวจสอบสายเชื่อมชำรุดขาดหรือไม่/Check whether the welding cable is damaged or broken.                                  2.ตรวจสอบสายแก๊สชำรุดรั่วซึมหรือไม่/Check whether the gas hose is damaged or leaking.",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.เกจวัดแรงดันแก๊ส/Gas Pressure Gauge",
-     "method": "1.ตรวจสอบว่าเกจวัดแรงดันใช้งานได้ปกติและรั่วซึมหรือไม่/Check whether the gas pressure gauge is functioning properly and is free from leaks.                                           2.ตรวจสอบเกจวัดแรงดันสามารถปรับแรงดันได้หรือไม่/Check whether the gas pressure gauge can be adjusted properly.",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.เบรกเกอร์,พัดลมระบายความร้อน/Circuit Breaker,Cooling Fan",
-     "method": "1.ตรวจสอบเบรกเกอร์สามารถใช้งานได้ปกติหรือไม่/Check whether the circuit breaker is operating normally.           2.ตรวจสอบพัดลมระบายความร้อนของตู้เชื่อมทำงานปกติหรือไม่/Check whether the welding machine cooling fan is operating normally.",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5.หัวเชื่อมเลเซอร์แบบมือถิอ/Handheld Laser Weld Head",
-     "method": "1.ตรวจสอบว่าหัวเชื่อมเลเซอร์แบบมือถือทำงานปกติหรือไม่/Check whether the handheld laser welding head is operating normally.                                                               2.มีแก๊สรั่วซึมหรือไม่/Check for any gas leakage.",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.ฉนวนนำกระแสไฟฟ้า/electrical conductor",
-     "method": "1.ตรวจสอบว่าฉนวนนำกระแสไฟหลวมและแตกหักหรือไม่/Inspect the electrical insulation for any signs of looseness or damage.",
-     "standard": "",
-     "sourceCell": "A13"
-    }
-   ]
-  }
- ]
+  ]
 }

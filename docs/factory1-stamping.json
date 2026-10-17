@@ -1,70 +1,3741 @@
 {
- "id": "factory1-stamping",
- "name": "เครื่องปั๊ม / Stamping",
- "documents": [
-  {
-   "id": "e4a348360def53ca",
-   "sourceFile": "PM Machine Month โรง1/Stamping/JRTL-PM-001-1-3 Punch Mech three level maintenance record(1).xlsx",
-   "sheet": "Press Month (ไทย)",
-   "kind": "record",
-   "machine": "",
-   "name": "กด\nPress",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-001-01",
-   "frequency": "1เดือน/ครั้ง\nMonth/Time",
-   "frequencyEvidence": "C6",
-   "warning": "ต้นฉบับไม่ระบุหมายเลขเครื่อง เป็นแบบฟอร์มกลาง กรุณาระบุเครื่องก่อนบันทึก",
-   "items": [
+  "sourceArchive": "Machine โรง1.zip",
+  "documents": [
     {
-     "item": "1.อุปกรณ์จ่ายน้ำมัน\n  Oil supply device",
-     "method": "ยืนยันว่าชิ้นส่วนที่สำคัญสำหรับการจ่ายน้ำมันปกติหรือไม่\nConfirmation of necessary oil supply and fat supply",
-     "standard": "",
-     "sourceCell": "A8"
+      "version": 1,
+      "id": "factory1-stamping-2025",
+      "title": "Press Machine Maintenance Plan in  2025",
+      "year": "2025",
+      "documentNo": "JRTL-PM-001",
+      "sourceFile": "Machine/JRTL-PM-001 Press Machine Maintenance Plan1.xlsx",
+      "sourceSheet": "Press Machine 25",
+      "sourceArchive": "Machine โรง1.zip",
+      "rows": [
+        {
+          "id": "factory1-stamping-2025-5",
+          "machine": "Y1",
+          "name": "Press",
+          "model": "OCP-80",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-6",
+          "machine": "Y2",
+          "name": "Press",
+          "model": "MHS-80",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-7",
+          "machine": "Y3",
+          "name": "Press",
+          "model": "OCP-110",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-8",
+          "machine": "Y4",
+          "name": "Press",
+          "model": "SN1-110",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-9",
+          "machine": "Y5",
+          "name": "Press",
+          "model": "OCP-110",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-10",
+          "machine": "▲Y6",
+          "name": "Press",
+          "model": "STD-150",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Half year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "△○",
+              "result": "▲●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-11",
+          "machine": "▲Y7",
+          "name": "Press",
+          "model": "GTX-300",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Half year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "△○",
+              "result": "▲●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-12",
+          "machine": "▲Y8",
+          "name": "Press",
+          "model": "GTX-500",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Half year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "△○",
+              "result": "▲●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-13",
+          "machine": "Y9",
+          "name": "Press",
+          "model": "OCP-110E\n（single die）",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-14",
+          "machine": "Y10",
+          "name": "Press",
+          "model": "OCP-260(single die)",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-15",
+          "machine": "Y11",
+          "name": "Press",
+          "model": "APA-200(single die)",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "▲  ●",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-16",
+          "machine": "S1",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300A",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-17",
+          "machine": "S2",
+          "name": "Servo Roller Feeder",
+          "model": "NCF-200H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-18",
+          "machine": "S3",
+          "name": "Servo Roller Feeder",
+          "model": "NCF-200B",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-19",
+          "machine": "S4",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300A",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-20",
+          "machine": "S5",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300A",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-21",
+          "machine": "S6",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300MH",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-22",
+          "machine": "S7",
+          "name": "Servo Roller Feeder",
+          "model": "SP-TBSM",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-23",
+          "machine": "S8",
+          "name": "Servo Roller Feeder",
+          "model": "MAC4-600H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-24",
+          "machine": "T1",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "WUL-300",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-25",
+          "machine": "T2",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "BML-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-26",
+          "machine": "T3",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "BML-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-27",
+          "machine": "T4",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "BML-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-28",
+          "machine": "T5",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "WUL-300B",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-29",
+          "machine": "T6",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "WUL-300B",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-30",
+          "machine": "T7",
+          "name": "Three in one \nMaterial Leveler",
+          "model": "ISOVG46",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2025-31",
+          "machine": "T8",
+          "name": "Three in one \nMaterial Leveler",
+          "model": "MAC4-600H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        }
+      ],
+      "tailHeaders": [
+        "(Third-Party calibration)",
+        "",
+        "",
+        ""
+      ],
+      "tailTitle": "การสอบเทียบประจำปี/Annual calibration",
+      "legend": "สัญลักษณ์ ○ แสดงถึงช่วงเวลาดำเนินการที่วางแผนไว้ ● หมายถึงเสร็จสมบูรณ์ ☆ หมายถึงต้องดำเนินการเพิ่มเติมตามสถานะการผลิต และ ▲ แสดงถึงอุปกรณ์ที่สำคัญ (อุปกรณ์ที่มีปัจจัยเสี่ยงสูง ข้อกำหนดที่สำคัญสำหรับคุณภาพของผลิตภัณฑ์ และลักษณะเฉพาะในกระบวนการผลิต)\nคำอธิบายความถี่ของสัญลักษณ์: รายปี: △; รายครึ่งปี: □; รายไตรมาส: ◇; รายเดือน: ○"
     },
     {
-     "item": "2.การตรวจสอบความตึงของสายพาน  ของมอเตอร์หลัก\nChecking the tension of \nthe V belt of the main motor",
-     "method": "ปรับตำแหน่งฐานมอเตอร์ ดูอุปกรณ์ไดรฟ์มอเตอร์หลัก ความตึงของสายพาน        Adjust the position of the motor base, see the drive device, the main motor, the tension of the belt.",
-     "standard": "",
-     "sourceCell": "A9"
-    },
-    {
-     "item": "3.การตรวจสอบด้วยสายตาของระบบขับเคลื่อนลูกเบี้ยวหมุน\nVisual inspection of rotating cam drive system",
-     "method": "ล็อค ซ่อมแซม\nLock, repair",
-     "standard": "",
-     "sourceCell": "A10"
-    },
-    {
-     "item": "4.การระบายน้ำในแต่ละจุดระบายน้ำ\n  Drainage at each drainage location",
-     "method": "การระบายน้ำจากวาล์วหยุดที่จุดรวมการระบายน้ำของฐาน\nStop valve drainage from the drainage center of the base",
-     "standard": "",
-     "sourceCell": "A11"
-    },
-    {
-     "item": "5..ภาชนะรับแรงดัน Pressure vessel\nวาล์วระบายแรงดันอากาศ Air pressure safety valve",
-     "method": "ตรวจสอบและทำความสะอาด Check, clean up\nการเคลื่อนไหวปกติ Normal operation",
-     "standard": "",
-     "sourceCell": "A12"
-    },
-    {
-     "item": "6.ส่วนของเครื่องส่ง feeding machine",
-     "method": "1.ทำความสะอาดเครื่องส่งวัสดุ\n2.ตรวจสอบว่าสกรูในแต่ละส่วนของเครื่องส่งเหล็กหลวมหรือไม่\n3.ทำความสะอาดลูกกลิ้งส่งและเกียร์ของมัน\n4.ตรวจสอบว่าอุปกรณ์ปล่อยเคลื่อนที่มีการรั่วไหลหรือไม่ และวาล์วแม่เหล็กไฟฟ้าทำงานปกติหรือไม่\n1. Clean the feeder\n2. Check if the fastening bolts of each part of the feeder are loose\n3. Clean the feed roller and its gears\n4. Check if the pneumatic release device is leaking and the solenoid valve is working properly",
-     "standard": "",
-     "sourceCell": "A13"
-    },
-    {
-     "item": "7.เครื่องปรับระดับ Leveling Machine",
-     "method": "1.ทำความสะอาดและปรับระดับล้อส่งวัสดุ\n2.ล้อหมุนมีความเรียบหรือไม่\n3.การเคลื่อนไหวปกติหรือไม่\n1. Clean and level the feed roller\n2. Check if the roller is flat\n3. Check if all actions are normal    ",
-     "standard": "",
-     "sourceCell": "A14"
-    },
-    {
-     "item": "8.ชั้นวางวัสดุ Material shelf",
-     "method": "1.ทำความสะอาดวัสดุและจัดระเบียบให้เรียบร้อย                           2.สายเบรกมีการศึกหรอหรือไม่                                                  3.น้ำมันไฮดรอลิกตรงตามข้อกำหนดหรือไม่                               4.การเคลื่อนไหวของแต่ล่ะส่วนมีเสียงผิดปกติหรือไม่            1.Clean the material rack                                                       2.Check if the brake belt is worn                                        3.Check if the hydraulic oil is sufficient                                4.Check if there are any abnormal sounds when eact part is moving ",
-     "standard": "",
-     "sourceCell": "A15"
+      "version": 1,
+      "id": "factory1-stamping-2026",
+      "title": "Press Machine Maintenance Plan in  2026",
+      "year": "2026",
+      "documentNo": "JRTL-PM-001",
+      "sourceFile": "Machine/JRTL-PM-001 Press Machine Maintenance Plan1.xlsx",
+      "sourceSheet": "Press Machine 26",
+      "sourceArchive": "Machine โรง1.zip",
+      "rows": [
+        {
+          "id": "factory1-stamping-2026-5",
+          "machine": "Y1",
+          "name": "Press",
+          "model": "OCP-80",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-6",
+          "machine": "Y2",
+          "name": "Press",
+          "model": "MHS-80",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-7",
+          "machine": "Y3",
+          "name": "Press",
+          "model": "OCP-110",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-8",
+          "machine": "Y4",
+          "name": "Press",
+          "model": "SN1-110",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-9",
+          "machine": "Y5",
+          "name": "Press",
+          "model": "OCP-110",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-10",
+          "machine": "▲Y6",
+          "name": "Press",
+          "model": "STD-150",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Half year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "△○",
+              "result": "▲●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "△○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-11",
+          "machine": "▲Y7",
+          "name": "Press",
+          "model": "GTX-300",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Half year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "△○",
+              "result": "▲●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "△○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-12",
+          "machine": "▲Y8",
+          "name": "Press",
+          "model": "GTX-500",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Half year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "△○",
+              "result": "▲●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "△○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-13",
+          "machine": "Y9",
+          "name": "Press",
+          "model": "OCP-110E\n（single die）",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-14",
+          "machine": "Y10",
+          "name": "Press",
+          "model": "OCP-260(single die)",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-15",
+          "machine": "Y11",
+          "name": "Press",
+          "model": "APA-200(single die)",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-16",
+          "machine": "Y12",
+          "name": "Press",
+          "model": "OCP-200(single die)",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-17",
+          "machine": "Y13",
+          "name": "Press",
+          "model": "C1N-110(single die)",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-18",
+          "machine": "S1",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300A",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-19",
+          "machine": "S2",
+          "name": "Servo Roller Feeder",
+          "model": "NCF-200H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-20",
+          "machine": "S3",
+          "name": "Servo Roller Feeder",
+          "model": "NCF-200B",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-21",
+          "machine": "S4",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300A",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-22",
+          "machine": "S5",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300A",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-23",
+          "machine": "S6",
+          "name": "Servo Roller Feeder",
+          "model": "SAF-300MH",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-24",
+          "machine": "S7",
+          "name": "Servo Roller Feeder",
+          "model": "SP-TBSM",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-25",
+          "machine": "S8",
+          "name": "Servo Roller Feeder",
+          "model": "MAC4-600H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-26",
+          "machine": "T1",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "WUL-300",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-27",
+          "machine": "T2",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "BML-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-28",
+          "machine": "T3",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "BML-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-29",
+          "machine": "T4",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "BML-200",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-30",
+          "machine": "T5",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "WUL-300B",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-31",
+          "machine": "T6",
+          "name": "Two in one \nMaterial Leveler",
+          "model": "WUL-300B",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-32",
+          "machine": "T7",
+          "name": "Three in one \nMaterial Leveler",
+          "model": "ISOVG46",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-stamping-2026-33",
+          "machine": "T8",
+          "name": "Three in one \nMaterial Leveler",
+          "model": "MAC4-600H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "Once/Year",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "−",
+            "",
+            "−",
+            ""
+          ],
+          "note": ""
+        }
+      ],
+      "tailHeaders": [
+        "(Third-Party calibration)",
+        "",
+        "",
+        ""
+      ],
+      "tailTitle": "การสอบเทียบประจำปี/Annual calibration",
+      "legend": "สัญลักษณ์ ○ แสดงถึงช่วงเวลาดำเนินการที่วางแผนไว้ ● หมายถึงเสร็จสมบูรณ์ ☆ หมายถึงต้องดำเนินการเพิ่มเติมตามสถานะการผลิต และ ▲ แสดงถึงอุปกรณ์ที่สำคัญ (อุปกรณ์ที่มีปัจจัยเสี่ยงสูง ข้อกำหนดที่สำคัญสำหรับคุณภาพของผลิตภัณฑ์ และลักษณะเฉพาะในกระบวนการผลิต)\nคำอธิบายความถี่ของสัญลักษณ์: รายปี: △; รายครึ่งปี: □; รายไตรมาส: ◇; รายเดือน: ○"
     }
-   ]
-  }
- ]
+  ]
 }

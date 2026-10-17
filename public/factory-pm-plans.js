@@ -1,31 +1,12 @@
-const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e};
+import {mountPlanEditor} from './machine-maintenance-plan.js?v=machine-zip-20261017';
 export const factoryMenus=[['factory1-bending','โรง 1 • เครื่องพับ / Bending'],['factory1-riveting','โรง 1 • เครื่องย้ำหมุด / Riveting'],['factory1-stamping','โรง 1 • เครื่องปั๊ม / Stamping'],['factory1-walding','โรง 1 • เครื่องเชื่อม / Welding']].map(([id,name])=>({id,name}));
 export async function mountFactoryPlans(host,id){
- const root=make('div',null,'factory-pm');host.append(root);root.textContent='กำลังโหลดแผนจากไฟล์ / Loading plans…';
- let group;try{const r=await fetch('./'+id+'.json?v=20261017');if(!r.ok)throw Error();group=await r.json();if(!Array.isArray(group.documents))throw Error();}catch{root.textContent='โหลดแผนไม่สำเร็จ กรุณาเปิดเมนูนี้ใหม่';return;}
- if(!root.isConnected)return;root.replaceChildren();
- const note=make('p',`${group.documents.length} แบบฟอร์มจาก ZIP • แยกตามไฟล์และชีต ไม่รวมฉบับซ้ำ/Rev. เข้าด้วยกัน • รอบหลัก: 1 ครั้งต่อเดือน`);
- const info=make('p','ข้อมูลจาก PM Machine Month โรง1.zip • แก้ไขและบันทึกอัตโนมัติในเบราว์เซอร์นี้ ดูสถานะสำรอง Google Sheet ด้านล่าง','fp-note');
- const label=make('label','เลือกแบบฟอร์ม / Select Form');const select=make('select');select.setAttribute('aria-label','เลือกแบบฟอร์ม / Select Form');
- group.documents.forEach((d,i)=>{const o=make('option',`${d.machine||'แบบฟอร์มกลาง'} • ${d.sheet} • ${d.documentNo} • ${d.kind==='standard'?'มาตรฐาน / Standard':'แบบตรวจ / Checklist'}`);o.value=i;select.append(o)});label.append(select);
- const monthLabel=make('label','เดือนที่บันทึก / Record Month');const month=make('input');month.type='month';const now=new Date();month.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');monthLabel.append(month);
- const controls=make('div',null,'fp-controls');controls.append(label,monthLabel);const form=make('div');root.append(note,info,controls,form);select.onchange=render;month.onchange=render;
- function render(){
- form.replaceChildren();const source=group.documents[Number(select.value)];if(!/^\d{4}-\d{2}$/.test(month.value)){form.textContent='กรุณาเลือกเดือนที่บันทึก';return;}
- const key='jrtl_factory_pm_v1:'+source.id+':'+month.value;let data,stored,failed=false;
- try{stored=localStorage.getItem(key);data=stored?JSON.parse(stored):JSON.parse(JSON.stringify(source));if(!Array.isArray(data.items)||data.items.length!==source.items.length)throw Error();}catch{form.textContent='อ่านข้อมูลที่บันทึกไว้ไม่ได้ กรุณาตรวจสอบก่อนแก้ไข';return;}
- const status=make('p',stored?'เปิดข้อมูลที่บันทึกไว้แล้ว':'ยังไม่มีผลตรวจสำหรับเดือนนี้','fp-status');status.setAttribute('role','status');
- function save(){try{if(failed||localStorage.getItem(key)!==stored){failed=true;throw Error('มีข้อมูลใหม่จากอีกแท็บ กรุณาเปิดแบบฟอร์มใหม่');}const next=JSON.stringify(data);localStorage.setItem(key,next);stored=next;window.dispatchEvent(new Event('machine-pm-saved'));status.textContent='บันทึกในเบราว์เซอร์แล้ว • '+new Date().toLocaleTimeString('th-TH');status.classList.remove('fp-error');}catch(e){status.textContent='ยังไม่ได้บันทึก: '+e.message;status.classList.add('fp-error')}}
- function input(value,aria,onChange,type='text'){const e=make(type==='textarea'?'textarea':'input');if(type!=='textarea')e.type=type;e.value=value||'';e.setAttribute('aria-label',aria);e.addEventListener('input',()=>{onChange(e.value);save()});return e}
- const provenance=make('details');provenance.append(make('summary','ไฟล์ต้นทางและรอบบำรุงรักษา / Source and Frequency'),make('p',source.sourceFile+' • Sheet: '+source.sheet),make('p','รอบต้นฉบับ: '+source.frequency),make('p',source.frequencyEvidence));form.append(provenance);
- if(source.warning)form.append(make('p',source.warning,'fp-warning'));
- const cycle=make('div',null,'fp-cycle');cycle.append(make('strong','รอบบำรุงรักษา: '+data.frequency));form.append(cycle);
- const grid=make('div',null,'fp-grid');for(const [k,l,t] of [['machine','หมายเลขเครื่อง / Machine No.'],['name','ชื่อเครื่อง / Machine Name'],['model','รุ่น / Model'],['documentNo','เลขที่เอกสาร / Document No.'],['frequency','รอบบำรุงรักษา / Frequency'],['manufacturer','ผู้ผลิต / Manufacturer'],['doneDate','วันที่ดำเนินการ / Maintenance Date','date'],['nextDate','กำหนดครั้งถัดไป / Next Due Date','date'],['technician','ผู้ดำเนินการ / Technician'],['supervisor','ผู้ตรวจรับ / Supervisor']]){const label=make('label',l);label.append(input(data[k],l,v=>{data[k]=v;if(k==='frequency')cycle.firstChild.textContent='รอบบำรุงรักษา: '+v},t));grid.append(label)}form.append(grid,status);
- const wrap=make('div',null,'fp-scroll');wrap.tabIndex=0;wrap.setAttribute('aria-label','รายการตรวจบำรุงรักษา');const table=make('table'),thead=make('thead'),tr=make('tr'),tbody=make('tbody');['รายการตรวจ / Check Item','วิธีตรวจ / Method','มาตรฐาน / Standard','ผลตรวจ / Result','หมายเหตุ / Notes'].forEach(l=>tr.append(make('th',l)));thead.append(tr);
- data.items.forEach((item,i)=>{const row=make('tr');for(const k of ['item','method','standard']){const td=make('td');td.append(input(item[k],`${k} ข้อ ${i+1}`,v=>item[k]=v,'textarea'));row.append(td)}
- const result=make('select');result.setAttribute('aria-label',`ผลตรวจ ข้อ ${i+1}`);for(const [v,l] of [['','ยังไม่ตรวจ'],['good','ดี / Good'],['service','ต้องซ่อม / Service'],['replace','เปลี่ยน / Replace'],['na','ไม่เกี่ยวข้อง / N/A']]){const o=make('option',l);o.value=v;result.append(o)}result.value=item.result||'';result.onchange=()=>{item.result=result.value;save()};const td=make('td');td.append(result);row.append(td);const nt=make('td');nt.append(input(item.note,`หมายเหตุ ข้อ ${i+1}`,v=>item.note=v,'textarea'));row.append(nt);tbody.append(row)});table.append(thead,tbody);wrap.append(table);form.append(wrap);
- const conclusion=make('label','สรุปผลบำรุงรักษา / Conclusion');conclusion.append(input(data.conclusion,'สรุปผลบำรุงรักษา / Conclusion',v=>data.conclusion=v,'textarea'));form.append(conclusion);
- const download=make('button','ดาวน์โหลดสำรอง JSON / Backup');download.type='button';download.onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify({...data,recordMonth:month.value},null,2)],{type:'application/json'}));const a=make('a');a.href=u;a.download=`PM-${source.id}-${month.value}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};form.append(download);
- }
- render();
+ const root=document.createElement('div');root.className='factory-pm';host.append(root);
+ try{const r=await fetch('./'+id+'.json?v=machine-zip-20261017');if(!r.ok)throw Error('โหลดข้อมูลไม่สำเร็จ');const group=await r.json();if(!root.isConnected)return;
+ const note=document.createElement('p');note.textContent='แผนจาก Machine โรง1.zip • เลือกปีเพื่อดูและแก้ไขข้อมูล • ใช้แทนชุด PM Machine Month โรง1.zip';
+ const label=document.createElement('label');label.textContent='เลือกปีแผน / Plan Year';const select=document.createElement('select');select.setAttribute('aria-label','เลือกปีแผน / Plan Year');
+ for(const d of group.documents){const o=document.createElement('option');o.value=d.id;o.textContent=d.year+' • '+d.sourceSheet+' • '+d.rows.length+' รายการ';select.append(o)}
+ select.value=[...group.documents].sort((a,b)=>Number(b.year)-Number(a.year))[0].id;label.append(select);const panel=document.createElement('div');root.append(note,label,panel);
+ function render(){panel.replaceChildren();const d=group.documents.find(d=>d.id===select.value);mountPlanEditor(panel,'machine-zip-v1:'+d.id,d)}select.onchange=render;render();
+ }catch(e){root.textContent='โหลดแผนไม่สำเร็จ กรุณาเปิดเมนูใหม่ • '+e.message;}
 }

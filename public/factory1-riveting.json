@@ -1,334 +1,309 @@
 {
- "id": "factory1-riveting",
- "name": "เครื่องย้ำหมุด / Riveting",
- "documents": [
-  {
-   "id": "6ee5b67bf37eae1c",
-   "sourceFile": "PM Machine Month โรง1/Riveting/RV1/JRTL-PM- Monthly Maintenance Record of Welding Production Line Robots in 2026(1).xlsx",
-   "sheet": "RV1",
-   "kind": "monthly",
-   "machine": "RV1",
-   "name": "Riveting",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-020-1 Rev.0",
-   "frequency": "1 ครั้ง/เดือน / Monthly",
-   "frequencyEvidence": "C1: Monthly Maintenance Record for Riveting Machine/บันทึกการบำรุงรักษารายเดือนเครื่องย้ำหมุด",
-   "warning": "",
-   "items": [
+  "sourceArchive": "Machine โรง1.zip",
+  "documents": [
     {
-     "item": "1.อุปกรณ์ความปลอดภัย/Safety equipment",
-     "method": "ตรวจสอบหน้าจอตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop monitoring screen on the touchscreen to confirm the location where the emergency stop occurred, and confirm whether the emergency stop button was pressed or damaged.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "E4"
+      "version": 1,
+      "id": "factory1-riveting-2025",
+      "title": "Riveting Machine  Maintenance Plan in  2025",
+      "year": "2025",
+      "documentNo": "JRTL-PM-003",
+      "sourceFile": "Machine/JRTL-PM-003 Riveting Machine  Maintenance Plan.xlsx",
+      "sourceSheet": "Riveting Machine -25",
+      "sourceArchive": "Machine โรง1.zip",
+      "rows": [
+        {
+          "id": "factory1-riveting-2025-5",
+          "machine": "RV1",
+          "name": "Rivet",
+          "model": "KSY-50H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-riveting-2025-6",
+          "machine": "RV2",
+          "name": "Rivet",
+          "model": "KSY-50H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            }
+          ],
+          "tail": [
+            "△-Dec.",
+            "▲",
+            "□-Jun.\n□-Dec.",
+            ""
+          ],
+          "note": ""
+        }
+      ],
+      "tailHeaders": [
+        "2024-Dec.",
+        "",
+        "2025",
+        ""
+      ],
+      "tailTitle": "Third Level Maintenance Plan & Completion",
+      "legend": "Note: The mark ○ is the completion period of the plan, and ● is completed. ☆We need to continue according to production status. ▲ as the key equipment. (The equipment with a high risk factor, which has a decisive requirement for product quality and has special characteristics in the production process, is the key equipment)\nFrequency symbol description: Once/Year:△; Once/Half a year:□; Once/Quarterly:◇; Once/Month:○"
     },
     {
-     "item": "2.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor ",
-     "method": "ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "F4"
-    },
-    {
-     "item": "3.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "G4"
-    },
-    {
-     "item": "4.แรงดันอากาศ/Air pressure",
-     "method": "ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "H4"
-    },
-    {
-     "item": "5.ซีเล็คเตอร์สวิตซ์/Selector Switch",
-     "method": "ตรวจสอบว่าสวิตซ์ใช้งานปกติ หลวมหรือชำรุดหรือไม่/Check whether the switch is functioning properly and whether it is loose or damaged.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "I4"
-    },
-    {
-     "item": "6.การทำงานของปั้มไฮดรอลิค/The operation of the hydraulic pump",
-     "method": "ตรวจสอบว่าปั้มไฮดรอลิคทำงานปกติหรือมีเสียงผิดปกติหรือไม่/Check whether the hydraulic pump is operating normally or if there is any abnormal noise.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "J4"
-    },
-    {
-     "item": "7.เซ็นเซ็นเซอร์/Sensor",
-     "method": "1.ตรวจสอบว่าเซ็นเซอร์ ตรวจจับความช้าเร็วเครื่องทำงานปกติหรือไม่ 2.ตรวจสอบว่าเซ็นเซอร์ตรวจจับระยะการกดทำงานปกติหรือไม่/1.Check whether the sensor that detects machine speed is functioning properly.\n2.Check whether the sensor that detects pressing distance is functioning properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "K4"
-    },
-    {
-     "item": "8.เกจวัดระดับน้ำมัน/Oil level gauge.",
-     "method": "ตรวจสอบเกจวัดระดับน้ำมันให้ระดับน้ำมันอยู่ในระยะกลางๆของเกจ ไม่มากและน้อยเกินไป/Check the oil level gauge and ensure that the oil level is maintained at the midpoint of the gauge, neither too high nor too low.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "L4"
-    },
-    {
-     "item": "9.เกจวัดแรงดันน้ำมันไฮดรอลิค/Hydraulic oil pressure gauge.",
-     "method": "ตรวจสอบว่าเกจวัดแรงดันกดของเครื่องสามารถวัดแรงดันได้ปกติหรือไม่/Check whether the machine pressure gauge can measure pressure normally.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "M4"
-    },
-    {
-     "item": "10.กล่องใส่งานอัตโนมัติ/Automatic workpiece box.",
-     "method": "ตรวจสอบว่ากล่องใส่งานอัตโนมัติ เปิด-ปิด ออโต้หรือไม่และตั้งเวลา เปิด-ปิดได้ปกติ/Check whether the automatic workpiece box operates in auto open/close mode and whether the open/close timing can be set and functions properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "N4"
-    },
-    {
-     "item": "11.กล้องจับงาน/Workpiece inspection camera",
-     "method": "ตรวจสอบว่ากล้องสามารถจับหมุดได้ เช่น ใส่หมุด 1ข้างหรือลืมใส่หมุดกล้องสามารถตรวจจับความผิดปกติได้/Verify that the camera can detect the pins correctly. For example, if only one pin is inserted or a pin is missing, the camera can detect the abnormal condition.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "O4"
+      "version": 1,
+      "id": "factory1-riveting-2026",
+      "title": "Riveting Machine  Maintenance Plan in  2026",
+      "year": "2026",
+      "documentNo": "JRTL-PM-003",
+      "sourceFile": "Machine/JRTL-PM-003 Riveting Machine  Maintenance Plan.xlsx",
+      "sourceSheet": "Riveting Machine -26",
+      "sourceArchive": "Machine โรง1.zip",
+      "rows": [
+        {
+          "id": "factory1-riveting-2026-5",
+          "machine": "RV1",
+          "name": "Rivet",
+          "model": "KSY-50H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        },
+        {
+          "id": "factory1-riveting-2026-6",
+          "machine": "RV2",
+          "name": "Rivet",
+          "model": "KSY-50H",
+          "first": "Once/Day",
+          "second": "Once/Month",
+          "third": "/",
+          "months": [
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": "●"
+            },
+            {
+              "plan": "○",
+              "result": ""
+            },
+            {
+              "plan": "○",
+              "result": ""
+            }
+          ],
+          "tail": [
+            "△  ○",
+            "",
+            "",
+            ""
+          ],
+          "note": ""
+        }
+      ],
+      "tailHeaders": [
+        "(Third-Party calibration)",
+        "",
+        "",
+        ""
+      ],
+      "tailTitle": "การสอบเทียบประจำปี/Annual calibration",
+      "legend": "Note: The mark ○ is the completion period of the plan, and ● is completed. ☆We need to continue according to production status. ▲ as the key equipment. (The equipment with a high risk factor, which has a decisive requirement for product quality and has special characteristics in the production process, is the key equipment)\nFrequency symbol description: Once/Year:△; Once/Half a year:□; Once/Quarterly:◇; Once/Month:○"
     }
-   ]
-  },
-  {
-   "id": "e69b734d27d6870c",
-   "sourceFile": "PM Machine Month โรง1/Riveting/RV1/มาตรฐานการบำรุงรักษา Riveting maintenance standards(1).xlsx",
-   "sheet": "RV1",
-   "kind": "standard",
-   "machine": "RV1",
-   "name": "Riveting",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-020",
-   "frequency": "ใช้ร่วมกับแบบบันทึกรายเดือน / Monthly record",
-   "frequencyEvidence": "อ้างอิงแบบบันทึกรายเดือน RV1 ในโฟลเดอร์เดียวกัน; มาตรฐานฉบับนี้ไม่ระบุความถี่แยก",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.อุปกรณ์ความปลอดภัย/Safety equipment",
-     "method": "ตรวจสอบหน้าจอตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop monitoring screen on the touchscreen to confirm the location where the emergency stop occurred, and confirm whether the emergency stop button was pressed or damaged.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "B9"
-    },
-    {
-     "item": "2.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor ",
-     "method": "ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "F9"
-    },
-    {
-     "item": "3.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "J9"
-    },
-    {
-     "item": "4.แรงดันอากาศ/Air pressure",
-     "method": "ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "M9"
-    },
-    {
-     "item": "5.ซีเล็คเตอร์สวิตซ์/Selector Switch",
-     "method": "ตรวจสอบว่าสวิตว์ทำงานได้อย่างปกติ/Check whether the switch is operating normally.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "Q9"
-    },
-    {
-     "item": "6.การทำงานของปั้มไฮดรอลิค/The operation of the hydraulic pump",
-     "method": "ตรวจสอบว่าปั้มไฮดรอลิคทำงานปกติหรือมีเสียงผิดปกติหรือไม่/Check whether the hydraulic pump is operating normally or if there is any abnormal noise.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "W9"
-    },
-    {
-     "item": "7.เซ็นเซ็นเซอร์/Sensor",
-     "method": "ตรวจสอบเซ็นเซอร์ตรวจจับความช้าเร็วของเครื่องและตรวจสอบเซ็นเซอร์ตรวจจับระยะการกดของเครื่องว่าทำงานปกติหรือไม่/Check whether the machine speed detection sensor and the machine stroke detection sensor are operating normally.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "Z9"
-    },
-    {
-     "item": "8.เกจวัดระดับน้ำมัน/Oil level gauge.",
-     "method": "ตรวจสอบว่าน้ำมันอยู่ในระดับที่กำหนดหรือไม่/Check whether the oil level is within the specified range.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "B14"
-    },
-    {
-     "item": "9.เกจวัดแรงดันน้ำมันไฮดรอลิค/Hydraulic oil pressure gauge.",
-     "method": "ตรวจสอบว่าเกจวัดแรงดันน้ำมันไฮดรอลิควัดค่าแรงกดได้ปกติ/Check whether the hydraulic oil pressure gauge is functioning normally and accurately measuring pressure.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "F14"
-    },
-    {
-     "item": "10.กล่องใส่งานอัตโนมัติ/Automatic workpiece box.",
-     "method": "ตรวจสอบกล่องอัตโนมัติสามารถใช้งานได้ปกติ/Check whether the automatic box is functioning properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "J14"
-    },
-    {
-     "item": "11.กล้องจับงาน/Workpiece inspection camera",
-     "method": "ตรวจสอบกล้องทำงานปกติหรือไม่/Check whether the camera is functioning properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "M14"
-    }
-   ]
-  },
-  {
-   "id": "df6084e61d1dadee",
-   "sourceFile": "PM Machine Month โรง1/Riveting/RV2/JRTL-PM-021 (RV2)มาตรฐานการบำรุงรักษาเครื่องย้ำหมุด.xlsx",
-   "sheet": "RV2",
-   "kind": "standard",
-   "machine": "RV2",
-   "name": "Riveting",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-021",
-   "frequency": "ใช้ร่วมกับแบบบันทึกรายเดือน / Monthly record",
-   "frequencyEvidence": "อ้างอิงแบบบันทึกรายเดือน RV2 ในโฟลเดอร์เดียวกัน; มาตรฐานฉบับนี้ไม่ระบุความถี่แยก",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.อุปกรณ์ความปลอดภัย/Safety equipment",
-     "method": "ตรวจสอบหน้าจอตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop monitoring screen on the touchscreen to confirm the location where the emergency stop occurred, and confirm whether the emergency stop button was pressed or damaged.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "B9"
-    },
-    {
-     "item": "2.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor ",
-     "method": "ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "F9"
-    },
-    {
-     "item": "3.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "J9"
-    },
-    {
-     "item": "4.แรงดันอากาศ/Air pressure",
-     "method": "ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "M9"
-    },
-    {
-     "item": "5.ซีเล็คเตอร์สวิตซ์/Selector Switch",
-     "method": "ตรวจสอบว่าสวิตว์ทำงานได้อย่างปกติ/Check whether the switch is operating normally.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "Q9"
-    },
-    {
-     "item": "6.การทำงานของปั้มไฮดรอลิค/The operation of the hydraulic pump",
-     "method": "ตรวจสอบว่าปั้มไฮดรอลิคทำงานปกติหรือมีเสียงผิดปกติหรือไม่/Check whether the hydraulic pump is operating normally or if there is any abnormal noise.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "W9"
-    },
-    {
-     "item": "7.เซ็นเซ็นเซอร์/Sensor",
-     "method": "ตรวจสอบเซ็นเซอร์ตรวจจับความช้าเร็วของเครื่องและตรวจสอบเซ็นเซอร์ตรวจจับระยะการกดของเครื่องว่าทำงานปกติหรือไม่/Check whether the machine speed detection sensor and the machine stroke detection sensor are operating normally.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "Z9"
-    },
-    {
-     "item": "8.เกจวัดระดับน้ำมัน/Oil level gauge.",
-     "method": "ตรวจสอบว่าน้ำมันอยู่ในระดับที่กำหนดหรือไม่/Check whether the oil level is within the specified range.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "B14"
-    },
-    {
-     "item": "9.เกจวัดแรงดันน้ำมันไฮดรอลิค/Hydraulic oil pressure gauge.",
-     "method": "ตรวจสอบว่าเกจวัดแรงดันน้ำมันไฮดรอลิควัดค่าแรงกดได้ปกติ/Check whether the hydraulic oil pressure gauge is functioning normally and accurately measuring pressure.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "F14"
-    },
-    {
-     "item": "10.กล่องใส่งานอัตโนมัติ/Automatic workpiece box.",
-     "method": "ตรวจสอบกล่องอัตโนมัติสามารถใช้งานได้ปกติ/Check whether the automatic box is functioning properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "J14"
-    },
-    {
-     "item": "11.กล้องจับงาน/Workpiece inspection camera",
-     "method": "ตรวจสอบกล้องทำงานปกติหรือไม่ หน้าจอกล้องแสดงสถานะ OK,NG ปกติ/Check whether the camera is operating normally. The camera screen displays the status “OK” or “NG” as normal.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "M14"
-    }
-   ]
-  },
-  {
-   "id": "600143d42900b99d",
-   "sourceFile": "PM Machine Month โรง1/Riveting/RV2/JRTL-PM-021-1 (RV2)Monthly Maintenance Record of Welding Production Line Robots in 2026(1).xlsx",
-   "sheet": "RV2",
-   "kind": "monthly",
-   "machine": "RV2",
-   "name": "Riveting",
-   "model": "",
-   "manufacturer": "",
-   "documentNo": "JRTL-PM-021-1 Rev.0",
-   "frequency": "1 ครั้ง/เดือน / Monthly",
-   "frequencyEvidence": "C1: Monthly Maintenance Record for Riveting Machine /บันทึกการบำรุงรักษารายเดือนเครื่องย้ำหมุด",
-   "warning": "",
-   "items": [
-    {
-     "item": "1.อุปกรณ์ความปลอดภัย/Safety equipment",
-     "method": "ตรวจสอบหน้าจอตรวจสอบการหยุดฉุกเฉินบนหน้าจอสัมผัสเพื่อยืนยันตำแหน่งที่เกิดการหยุดฉุกเฉิน และตรวจสอบว่าปุ่มหยุดฉุกเฉินถูกกดหรือชำรุดหรือไม่/Check the emergency stop monitoring screen on the touchscreen to confirm the location where the emergency stop occurred, and confirm whether the emergency stop button was pressed or damaged.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "E4"
-    },
-    {
-     "item": "2.เซ็นเซอร์ตรวจจับพื้นที่/Area sensor ",
-     "method": "ตรวจจับการเข้าไปในเซ็นเซอร์ตรวจจับพื้นที่– รีเซ็ตโดยอัตโนมัติเมื่อไม่มีสิ่งกีดขว้าง/Detects entry into the area using the sensor – automatically resets when there are no obstacles.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "F4"
-    },
-    {
-     "item": "3.หน้าจอสัมผัส, ปุ่มกด/Touch screen, keypad",
-     "method": "ปุ่มและไฟแสดงสถานะทำงานได้อย่างปกติ/The buttons and indicator lights are working properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "G4"
-    },
-    {
-     "item": "4.แรงดันอากาศ/Air pressure",
-     "method": "ตรวจสอบว่าแรงดันอากาศหลักของสายการผลิตลดลงหรือไม่ หากลดลง ให้ตรวจสอบว่าท่ออากาศชำรุดหรือมีส่วนโค้งงอผิดปกติหรือไม่ ซึ่งอาจทำให้แรงดันอากาศไม่คงที่/Check if the main air pressure on the production line has decreased. If it has, check for damaged or abnormally bent air hoses, which may be causing unstable air pressure.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "H4"
-    },
-    {
-     "item": "5.ซีเล็คเตอร์สวิตซ์/Selector Switch",
-     "method": "ตรวจสอบว่าสวิตซ์ใช้งานปกติ หลวมหรือชำรุดหรือไม่/Check whether the switch is functioning properly and whether it is loose or damaged.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "I4"
-    },
-    {
-     "item": "6.การทำงานของปั้มไฮดรอลิค/The operation of the hydraulic pump",
-     "method": "ตรวจสอบว่าปั้มไฮดรอลิคทำงานปกติหรือมีเสียงผิดปกติหรือไม่/Check whether the hydraulic pump is operating normally or if there is any abnormal noise.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "J4"
-    },
-    {
-     "item": "7.เซ็นเซ็นเซอร์/Sensor",
-     "method": "1.ตรวจสอบว่าเซ็นเซอร์ ตรวจจับความช้าเร็วเครื่องทำงานปกติหรือไม่ 2.ตรวจสอบว่าเซ็นเซอร์ตรวจจับระยะการกดทำงานปกติหรือไม่/1.Check whether the sensor that detects machine speed is functioning properly.\n2.Check whether the sensor that detects pressing distance is functioning properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "K4"
-    },
-    {
-     "item": "8.เกจวัดระดับน้ำมัน/Oil level gauge.",
-     "method": "ตรวจสอบเกจวัดระดับน้ำมันให้ระดับน้ำมันอยู่ในระยะกลางๆของเกจ ไม่มากและน้อยเกินไป/Check the oil level gauge and ensure that the oil level is maintained at the midpoint of the gauge, neither too high nor too low.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "L4"
-    },
-    {
-     "item": "9.เกจวัดแรงดันน้ำมันไฮดรอลิค/Hydraulic oil pressure gauge.",
-     "method": "ตรวจสอบว่าเกจวัดแรงดันกดของเครื่องสามารถวัดแรงดันได้ปกติหรือไม่/Check whether the machine pressure gauge can measure pressure normally.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "M4"
-    },
-    {
-     "item": "10.กล่องใส่งานอัตโนมัติ/Automatic workpiece box.",
-     "method": "ตรวจสอบว่ากล่องใส่งานอัตโนมัติ เปิด-ปิด ออโต้หรือไม่และตั้งเวลา เปิด-ปิดได้ปกติ/Check whether the automatic workpiece box operates in auto open/close mode and whether the open/close timing can be set and functions properly.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "N4"
-    },
-    {
-     "item": "11.กล้องจับงาน/Workpiece inspection camera",
-     "method": "ตรวจสอบว่ากล้องสามารถจับงาน NG ได้หรือไม่ เช่น ใส่ชิ้นงานผิดฝั่งกล้องสามารถจับ NG ได้ และหากลืมใส่ชิ้นงานจาก Step1 กล้องสามารถตรวจจับความผิดปกติได้/Verify that the camera can detect NG conditions correctly. For example, if the workpiece is inserted in the wrong orientation, the camera can identify it as NG. In addition, if the workpiece from Step 1 is missing, the camera can detect the abnormal condition.",
-     "standard": "ตรวจสอบด้วยสายตา/Inspect visually.",
-     "sourceCell": "O4"
-    }
-   ]
-  }
- ]
+  ]
 }

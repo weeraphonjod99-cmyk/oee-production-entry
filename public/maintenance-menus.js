@@ -1,8 +1,8 @@
-import {mountMachineBackup} from './machine-pm-backup.js?v=20261017-backup';
-import {factoryMenus,mountFactoryPlans} from './factory-pm-plans.js?v=20261017-backup';
-import {mountPlanEditor,WELDING_PLAN_ID} from './machine-maintenance-plan.js?v=20261017-backup';
+import {mountMachineBackup} from './machine-pm-backup.js?v=machine-zip-20261017';
+import {factoryMenus,mountFactoryPlans} from './factory-pm-plans.js?v=machine-zip-20261017';
+import {mountPlanEditor,WELDING_PLAN_ID} from './machine-maintenance-plan.js?v=machine-zip-20261017';
 const KEY='jrtl_machine_maintenance_menus_v1';
-function readMenus(){const raw=localStorage.getItem(KEY);const value=raw?JSON.parse(raw):[];if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');if(!value.some(m=>m.id===WELDING_PLAN_ID))value.unshift({id:WELDING_PLAN_ID,name:"แผนเครื่องเชื่อม 2026 / Welding Machine"});for(const m of [...factoryMenus].reverse())if(!value.some(v=>v.id===m.id))value.unshift(m);return value;}
+function readMenus(){const raw=localStorage.getItem(KEY);const value=raw?JSON.parse(raw):[];if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');const oldIndex=value.findIndex(m=>m.id===WELDING_PLAN_ID);if(oldIndex>=0)value.splice(oldIndex,1);for(const m of [...factoryMenus].reverse())if(!value.some(v=>v.id===m.id))value.unshift(m);return value;}
 function mountMenus(section){
  if(section.querySelector('.maintenance-menus'))return;
  const root=document.createElement('div');root.className='maintenance-menus';section.append(root);
