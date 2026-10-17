@@ -1,5 +1,6 @@
+import {mountPlanEditor,WELDING_PLAN_ID} from './machine-maintenance-plan.js?v=20261017';
 const KEY='jrtl_machine_maintenance_menus_v1';
-function readMenus(){const raw=localStorage.getItem(KEY);if(!raw)return [];const value=JSON.parse(raw);if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');return value;}
+function readMenus(){const raw=localStorage.getItem(KEY);const value=raw?JSON.parse(raw):[];if(!Array.isArray(value)||!value.every(x=>typeof x.id==='string'&&typeof x.name==='string'))throw Error('ข้อมูลเมนูไม่ถูกต้อง');if(!value.some(m=>m.id===WELDING_PLAN_ID))value.unshift({id:WELDING_PLAN_ID,name:"แผนเครื่องเชื่อม 2026 / Welding Machine"});return value;}
 function mountMenus(section){
  if(section.querySelector('.maintenance-menus'))return;
  const root=document.createElement('div');root.className='maintenance-menus';section.append(root);
@@ -25,7 +26,7 @@ function mountMenus(section){
  for(const item of menus){const b=document.createElement('button');b.type='button';b.textContent=item.name;b.setAttribute('aria-pressed',String(active===item.id));b.onclick=()=>{active=item.id;render()};nav.append(b);}
  const item=menus.find(m=>m.id===active);
  const h=document.createElement('h4');h.textContent=item?item.name:'ยังไม่มีเมนู — กด “เพิ่มเมนู” เพื่อเริ่มต้น';panel.append(h);
- if(item){const rename=document.createElement('button');rename.type='button';rename.textContent='แก้ไขชื่อ / Rename';rename.onclick=()=>open(item.id);const p=document.createElement('p');p.textContent='ยังไม่มีรายการแผนซ่อมบำรุงในเมนูนี้';panel.append(rename,p);}
+ if(item){const rename=document.createElement('button');rename.type='button';rename.textContent='แก้ไขชื่อ / Rename';rename.onclick=()=>open(item.id);panel.append(rename);mountPlanEditor(panel,item.id);}
  add.disabled=!!loadError;message.textContent=loadError;
  }
  add.onclick=()=>open(null);
