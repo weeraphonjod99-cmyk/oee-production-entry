@@ -1,0 +1,34 @@
+/* JRTL soft blue theme: preserve red/amber/green operational status colors. */
+:root,html,body{background:#f2f7fc;color:#243d54}
+.workspace,.app-shell{background:#f2f7fc}
+.side-nav{background:linear-gradient(180deg,#e0effc,#edf5fc);color:#173f66;border-right:1px solid #c4daed}
+.brand-mark strong{color:#113b66}.brand-mark span,.user-panel span{color:#456783}
+.side-nav button{color:#244d70}.side-nav button:hover{background:#d0e5f8;color:#143f68}
+.side-nav button.active,.side-nav button.employee-entry,.side-nav button.employee-entry.active,.side-nav button.employee-entry:hover{background:#2264a3;color:#fff;box-shadow:0 3px 9px #2165a31a}
+.nav-icon-badge{color:#2264a3}.user-panel,.connection{background:#f7fbff;border-color:#c2d8eb;color:#254d6e}.user-panel svg{color:#3977ad}
+.topbar{background:#fff;border:1px solid #d5e4f1;border-left:5px solid #367fb9;border-radius:12px;padding:18px 20px;box-shadow:0 3px 14px #264e7310}
+h1,.topbar h1{color:#123e69;font-weight:800;line-height:1.4}.eyebrow{color:#547695}
+h2,h3{color:#184b76;font-weight:750}.production-report h2,.equipment-heading h2{border-left:4px solid #4a93c8;padding-left:12px}
+.primary-button,.tooling-subnav button.active,.pr-tabs button[aria-pressed=true]{background:#246ba6;color:#fff;border-color:#246ba6}
+.tooling-subnav button{border-color:#bdd5e9;color:#245576;background:#fff}.tooling-subnav button.active{color:#fff;background:#246ba6}
+.ghost-button{border-color:#c9dceb;color:#244d70;background:#fff}
+.production-report,.equipment-registry,.analysis-panel,.data-table-wrap{border-color:#d0e1ef}
+.pr-source,.pr-formula,.equipment-counts>div,.equipment-oee{background:#edf5fc}
+.pr-scroll thead th,.data-table-wrap thead th{background:#e7f1fa;color:#254f72}
+input,select,textarea{accent-color:#246ba6}input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline-color:#3b86bf}
+/* Embedded maintenance application */
+body>header{background:linear-gradient(110deg,#d6eafb,#eef7ff);color:#173f68;border-bottom:1px solid #b9d6ed;padding:22px}
+body>header h1{color:#123e69;font-size:24px;font-weight:800}body>header small{color:#3e6484}body>header #today{color:#315c7e}
+.shell{color:#243d54}.shell .card,.shell .panel{border-color:#d1e2f0;box-shadow:0 3px 14px #264e7308}
+.shell .card{border-top:3px solid #5799cd}.shell .card b{color:#205c91}.shell .card span{color:#52708b}
+.shell .panel h2,.shell h2,.shell h3{color:#174873;font-weight:750}
+.shell .tabs button,.shell .secondary,.storage-note .secondary{background:#e6f1fb;color:#235780;border-color:#bed7ec}
+.shell button,.shell .btn,.shell .tabs button.active{background:#246ba6;color:white;border-color:#246ba6}
+.shell .tabs button:not(.active),.shell button.secondary{background:#e6f1fb;color:#235780}
+.shell button.danger{background:#c33740}.shell button.warnbtn{background:#a25a0e}
+.shell th{background:#e7f1fa;color:#264f70}.shell .progress{background:#e5eef7}.shell .progress>div{background:#468bc1}
+.shell details summary{color:#276b9e}.source-details{background:#f0f6fc}.die-part-picture,.repair-preview{border-color:#cddfec}
+.shell .muted,.shell .footer{color:#5b738b}.shell .field input:focus,.shell .field select:focus,.shell .field textarea:focus{outline-color:#438cc4}
+@media(max-width:600px){.topbar{padding:14px}.topbar h1{font-size:22px}body>header h1{font-size:21px}}
+@media print{body,html,.workspace{background:#fff}.topbar{box-shadow:none}}
+
