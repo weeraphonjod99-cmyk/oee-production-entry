@@ -4,7 +4,7 @@ const source=fs.readFileSync('public/die-sync-merge.js','utf8')+'\n'+fs.readFile
  const base={dies:[{id:'d',baseline:0,interval:100}],shots:[],checks:[],repairs:[]};
  const remote=structuredClone(base);remote.shots.push({id:'other-user-shot',dieId:'d',qty:25});
  const nodes={},events={},storage=new Map([['session',JSON.stringify({dieSyncToken:'test'})]]);let calls=0,renders=0,summaries=0,interval;
- const node=id=>nodes[id]??=( {textContent:'',after(){},addEventListener(t,f){events[id+':'+t]=f;},setAttribute(){}} );
+ const node=id=>nodes[id]??=( {textContent:'',elements:{username:{value:''}},after(){},addEventListener(t,f){events[id+':'+t]=f;},setAttribute(){}} );
  const context={KEY:'db',db:structuredClone(base),DIE_BACKUP_URL:'test',console,AbortController,Set,Date,JSON,
  localStorage:{getItem:k=>k==='oee-production-session-v1'?storage.get('session'):null,setItem:(k,v)=>storage.set(k,v)},
  document:{hidden:false,createElement:()=>node('banner'),addEventListener(t,f){events[t]=f;},querySelector:()=>null},
