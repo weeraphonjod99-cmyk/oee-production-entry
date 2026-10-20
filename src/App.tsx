@@ -6,6 +6,7 @@ import { ProductionSearch } from "./components/ProductionSearch";
 import { ReliabilitySummary } from "./components/ReliabilitySummary";
 import {CapacitySourceStatus,useCapacityRefreshTick} from './components/CapacitySourceStatus';
 import {capacityMachineKey} from './lib/productionReport';
+import {currentDashboardWeek, advanceDashboardWeek} from './lib/dashboardWeek';
 import { StampingMachinePhoto } from "./components/StampingMachinePhoto";
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import { ProductionReport } from "./components/ProductionReport";
@@ -2084,7 +2085,26 @@ function App() {
   const [historySearch, setHistorySearch] = useState("");
   const deferredProductSearch = useDeferredValue(productSearch);
   const deferredHistorySearch = useDeferredValue(historySearch);
-  const [dashboardFilters, setDashboardFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
+  const [dashboardFilters, setDashboardFilters] = useState<Filters>(() => ({ machineId: "", shift: "", ...currentDashboardWeek() }));
+  useEffect(() => {
+    let previous = currentDashboardWeek();
+    const refreshWeek = () => {
+      const next = currentDashboardWeek();
+      if (next.from !== previous.from) {
+        const old = previous;
+        setDashboardFilters(filters => advanceDashboardWeek(filters, old, next));
+        previous = next;
+      }
+    };
+    const timer = window.setInterval(refreshWeek, 30000);
+    window.addEventListener("focus", refreshWeek);
+    document.addEventListener("visibilitychange", refreshWeek);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshWeek);
+      document.removeEventListener("visibilitychange", refreshWeek);
+    };
+  }, []);
   const [reportFilters, setReportFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [historyFilters, setHistoryFilters] = useState<Filters>({ machineId: "", shift: "", from: "", to: "" });
   const [dashboardProductionCapacity, setDashboardProductionCapacity] = useState<ProductionCapacityData | null>(null);
@@ -6878,6 +6898,7 @@ function FiltersBar({
           <p>{selectedMachineLabel} · {filters.shift ? shiftLabel(filters.shift) : "ทุกกะ"} · {activeFilterCount > 0 ? `${activeFilterCount} ตัวกรอง` : "ยังไม่กรองข้อมูล"}</p>
         </div>
         <div className="filter-quick-actions">
+          <button type="button" onClick={() => updateFilters(currentDashboardWeek())}>สัปดาห์นี้ / This Week</button>
           <button type="button" onClick={() => updateFilters({ from: today, to: today })}>วันนี้ / Today</button>
           <button type="button" onClick={() => updateFilters({ from: "", to: "" })}>ทุกวัน / All Dates</button>
           <button type="button" onClick={() => setFilters({ machineId: "", machineIds: [], shift: "", from: "", to: "" })}>ล้างทั้งหมด / Clear All</button>
