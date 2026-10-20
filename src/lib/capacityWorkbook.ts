@@ -7,7 +7,7 @@ const text=(v:unknown)=>String(v??'').trim();
 const key=(v:unknown)=>text(v).toLowerCase().replace(/[^a-z0-9]/g,'');
 const num=(v:unknown)=>{if(v===null||v===undefined||text(v)==='')return undefined;const n=Number(v);return Number.isFinite(n)&&n>=0?n:undefined;};
 const ratio=(v:unknown)=>{const n=Number(text(v).replace('%',''));return n>1?n/100:n;};
-export function capacityGroup(name:string){const t=name.toUpperCase(),ton=t.match(/(\d+)\s*T/);if(ton)return ton[1]+'T';for(const g of ['CNC','BENDING','RIVETING','TAPPING','SORTING','RW','SW'])if(t.includes(g))return g;if(/^RV\d/.test(t))return 'RIVETING';return 'ASSEMBLY';}
+export function capacityGroup(name:string){const t=name.trim().toUpperCase(),ton=t.match(/(\d+)\s*T/);if(ton)return ton[1]+'T';for(const g of ['CNC','BENDING','RIVETING','TAPPING','SORTING','RW','SW'])if(t.includes(g))return g;if(/^RV\s*\d/ .test(t))return 'RIVETING';return 'ASSEMBLY';}
 
 export function capacityFromSheets(sheets:CapacitySheet[],fetchedAt=new Date().toISOString()):ProductionCapacityData {
  const machines:ProductionCapacityData['machines']=[];
