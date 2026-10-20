@@ -5490,7 +5490,7 @@ function App() {
             selectedPercent={productionCapacityPercent}
             setSearch={setProductionCapacitySearch}
             setSelectedGroup={(value) => {
-              setProductionCapacityGroup(!value || value.toUpperCase() === "OTHER" || value === "ทั้งหมด" ? "80T" : value);
+              setProductionCapacityGroup(value);
               setProductionCapacityMachine("");
               setProductionCapacityPart("");
             }}
@@ -8579,11 +8579,11 @@ function ProductionCapacityView({
     return Array.from(groupSet).sort((a, b) => PRODUCTION_CAPACITY_GROUP_OPTIONS.indexOf(a) - PRODUCTION_CAPACITY_GROUP_OPTIONS.indexOf(b));
   }, [data]);
 
-  const groupValue = selectedGroup && groups.includes(selectedGroup) ? selectedGroup : "80T";
+  const groupValue = selectedGroup && groups.includes(selectedGroup) ? selectedGroup : "";
   const machines = useMemo(() => {
     const source = data?.machines ?? [];
     return source
-      .filter((machine) => machine.group === groupValue)
+      .filter((machine) => !groupValue || machine.group === groupValue)
       .sort((a, b) => a.machineName.localeCompare(b.machineName));
   }, [data, groupValue]);
 
@@ -8665,6 +8665,7 @@ function ProductionCapacityView({
         <label>
           กลุ่มเครื่อง / Machine Group
           <select value={groupValue} onChange={(event) => setSelectedGroup(event.target.value)}>
+            <option value="">ทั้งหมด / All</option>
             {groups.map((group) => (
               <option key={group} value={group}>
                 {group}
