@@ -1,0 +1,11 @@
+const ts=require('typescript'),fs=require('fs'),assert=require('assert/strict');
+require.extensions['.ts']=(m,f)=>m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{esModuleInterop:true,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,f);
+const {monthlySummary,monthlyTrend,monthlyToday}=require('../src/lib/monthlyReport.ts');
+const log={date:'2026-10-02',machineName:'M1',normalMinutes:300,goodQty:90,ngQty:10,testQty:5,inspectionMinutes:50,moldRepairMinutes:20,meetingMinutes:130};
+const logs=[log,{...log,date:'2026-09-01'},{...log,machineName:'M2'},{...log,date:'2026-10-30'}];
+const s=monthlySummary(logs,'2026-10','M1','2026-10-21');assert.equal(s.rows.length,1);assert.equal(s.total,105);assert.equal(s.downtime,70);assert.equal(s.run,300);assert.equal(s.oee,300/370*.9);assert.equal(s.losses[0].minutes,50);
+assert.equal(monthlySummary(logs,'2026-10','','2026-10-21').rows.length,2);
+assert.equal(monthlySummary(logs,'2026-08','','2026-10-21').oee,null);
+assert.deepEqual(monthlyTrend(logs,'2026-01','','2026-10-21').map(x=>x.month),['2025-08','2025-09','2025-10','2025-11','2025-12','2026-01']);
+assert.equal(monthlyToday(new Date('2026-10-20T17:00:00Z')),'2026-10-21');
+console.log('Month/machine filters, current-month cutoff, existing OEE formula, loss totals, missing months and year rollover passed');

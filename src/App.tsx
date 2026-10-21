@@ -7,6 +7,8 @@ import { ReliabilitySummary } from "./components/ReliabilitySummary";
 import {CapacitySourceStatus,useCapacityRefreshTick} from './components/CapacitySourceStatus';
 import {capacityMachineKey} from './lib/productionReport';
 import {currentDashboardWeek, advanceDashboardWeek} from './lib/dashboardWeek';
+import {MonthlyProductionReport} from './components/MonthlyProductionReport';
+import './monthly-report.css';
 import { StampingMachinePhoto } from "./components/StampingMachinePhoto";
 import { EquipmentRegistry } from "./components/EquipmentRegistry";
 import { ProductionReport } from "./components/ProductionReport";
@@ -5463,6 +5465,7 @@ function App() {
 
         {tab === "dashboard" && (
           <section className="dashboard-layout">
+            <MonthlyProductionReport logs={allLogs} />
             <div className="kpi-grid">
               <Kpi label="งานดี / Good" value={formatNumber(summary.good)} tone="green" />
               <Kpi label="งานเสีย / NG" value={formatNumber(summary.ng)} tone="red" />
