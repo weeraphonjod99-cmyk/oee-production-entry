@@ -1,3 +1,4 @@
+import {RetainedMenu} from './components/RetainedMenu';
 import {CustomerComplaints} from './components/CustomerComplaints';
 import {OnlineUsersBadge} from './components/OnlineUsersBadge';
 import type {OnlineUsersSummary} from './lib/api';
@@ -5465,7 +5466,7 @@ function App() {
           </section>
         )}
 
-        {tab === "dashboard" && (
+        {<RetainedMenu active={tab === "dashboard"}>{tab === "dashboard" ? (
           <section className="dashboard-layout">
             <MonthlyProductionReport logs={allLogs} />
             <div className="kpi-grid">
@@ -5500,9 +5501,9 @@ function App() {
             <MachineRanking logs={dashboardLogs} machines={machines} />
             <Trend logs={dashboardLogs} />
           </section>
-        )}
+        ) : null}</RetainedMenu>}
 
-        {tab === "capacity" && (
+        {<RetainedMenu active={tab === "capacity"}>{tab === "capacity" ? (
           <ProductionCapacityView
             data={productionCapacity}
             error={productionCapacityError}
@@ -5526,28 +5527,28 @@ function App() {
             setSelectedPart={setProductionCapacityPart}
             setSelectedPercent={setProductionCapacityPercent}
           />
-        )}
+        ) : null}</RetainedMenu>}
 
-        {tab === "reports" && (
+        {<RetainedMenu active={tab === "reports"}>{tab === "reports" ? (
           <section className="reports-layout">
             <FiltersBar filters={reportFilters} machines={machines} setFilters={setReportFilters} />
             <div className="analysis-panel"><button type="button" className="ghost-button" disabled={reportDataLoading} onClick={() => setReportRefresh(v => v+1)}>{reportDataLoading ? "กำลังโหลดประวัติการผลิต…" : "โหลดประวัติการผลิตใหม่"}</button><p>รายงานใช้ประวัติจากชีตสูงสุด 100,000 รายการ รวมรายการในระบบตามตัวกรอง</p>{reportDataError && <p role="alert">{reportDataError}</p>}</div>
             {reportEmptyMessage && <FilterEmptyNotice latestDate={reportAvailableDateRange?.lastDate} message={reportEmptyMessage} onClearDates={clearReportDates} onUseLatest={useLatestReportDate} />}
             <ProductionReport logs={reportDataLoading ? [] : reportLogs} machines={machines} products={canonicalProducts} />
           </section>
-        )}
+        ) : null}</RetainedMenu>}
 
-        {tab === "productionSearch" && <ProductionSearch
+        {<RetainedMenu active={tab === "productionSearch"}>{tab === "productionSearch" ? <ProductionSearch
           logs={reportDataLoading ? [] : (reportRemoteLogs || []).map(log => withCanonicalMachineName(log, machineNameById))}
           loading={reportDataLoading}
           error={!remoteEnabled ? "ยังไม่ได้เชื่อมต่อ Google Sheet" : reportDataError}
-          onRefresh={() => setReportRefresh(v => v+1)} />}
+          onRefresh={() => setReportRefresh(v => v+1)} /> : null}</RetainedMenu>}
 
-        {tab === "tooling" && <ToolingList />}
-        {tab === "complaints" && <CustomerComplaints session={session} />}
-        {tab === "spare" && <section className="tooling-list" aria-label="Spare Part Management System"><h2>Spare Part Management System</h2><p>การจัดการอะไหล่ / ยังไม่มีข้อมูลอะไหล่</p></section>}
-        {tab === "defects" && <DefectStatistics logs={reportAllLogs} loading={reportDataLoading} error={reportDataError} onRefresh={() => setReportRefresh(v => v+1)} />}
-        {tab === "history" && (
+        {<RetainedMenu active={tab === "tooling"}>{tab === "tooling" ? <ToolingList /> : null}</RetainedMenu>}
+        {<RetainedMenu active={tab === "complaints"}>{tab === "complaints" ? <CustomerComplaints session={session} /> : null}</RetainedMenu>}
+        {<RetainedMenu active={tab === "spare"}>{tab === "spare" ? <section className="tooling-list" aria-label="Spare Part Management System"><h2>Spare Part Management System</h2><p>การจัดการอะไหล่ / ยังไม่มีข้อมูลอะไหล่</p></section> : null}</RetainedMenu>}
+        {<RetainedMenu active={tab === "defects"}>{tab === "defects" ? <DefectStatistics logs={reportAllLogs} loading={reportDataLoading} error={reportDataError} onRefresh={() => setReportRefresh(v => v+1)} /> : null}</RetainedMenu>}
+        {<RetainedMenu active={tab === "history"}>{tab === "history" ? (
           <section className="table-view">
             <FiltersBar filters={historyFilters} machines={machines} setFilters={setHistoryFilters} />
             {historyEmptyMessage && (
@@ -5574,9 +5575,9 @@ function App() {
             </div>
             <LogsTable logs={searchedHistory} onEdit={editLog} />
           </section>
-        )}
+        ) : null}</RetainedMenu>}
 
-        {tab === "master" && (
+        {<RetainedMenu active={tab === "master"}>{tab === "master" ? (
           <section className="table-view">
             <nav className="tooling-subnav" aria-label="เมนูเครื่องจักร / Machine menu">
               <button type="button" aria-pressed={machineSection === 'list'} onClick={() => setMachineSection('list')}>รายการเครื่องจักร / Machine List</button>
@@ -5601,9 +5602,9 @@ function App() {
               <p>ยังไม่ได้เชื่อมต่อข้อมูลรายการซ่อมเครื่องจักร / Machine repair data is not connected yet.</p>
             </section>}
           </section>
-        )}
+        ) : null}</RetainedMenu>}
 
-        {tab === "users" && <UsersAdmin currentUsername={session.username} />}
+        {<RetainedMenu active={tab === "users"}>{tab === "users" ? <UsersAdmin currentUsername={session.username} /> : null}</RetainedMenu>}
       </main>
 
       {confirmSaveDialog && (
