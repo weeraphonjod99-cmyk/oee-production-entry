@@ -16,7 +16,6 @@ function customerComplaints_(p){
    ['customer','part','problem','occurredAt','due','team','owner','priority'].forEach(function(k){c[k]=required(r[k],k);});
    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(c.occurredAt)||!/^\d{4}-\d{2}-\d{2}$/.test(c.due))throw Error('วันที่ไม่ถูกต้อง');
    if(c.due<c.occurredAt.slice(0,10))throw Error('กำหนดเสร็จต้องไม่ก่อนวันที่พบปัญหา');
-   var owner=getUserRows().map(function(r){return r.user;}).find(function(u){return u.username===c.owner&&u.active!==false;});if(!owner)throw Error('ไม่พบ Username ผู้รับผิดชอบที่ใช้งานอยู่');
    c.photos=r.photos||[];if(!Array.isArray(c.photos)||c.photos.length>3)throw Error('แนบได้สูงสุด 3 รูป');c.photos=c.photos.map(function(photo){if(!photo||typeof photo.data!=='string'||photo.data.length>90000||!/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/=]+$/.test(photo.data))throw Error('ข้อมูลรูปภาพไม่ถูกต้อง');return {name:String(photo.name||'photo').slice(0,150),data:photo.data};});
    event='บันทึกและเปิดแผนแก้ไข';
   }else{
