@@ -736,7 +736,7 @@ function CustomerComplaints({ session }) {
     const visible = cases.filter(c => (!filter || c.status === filter) && [c.id, c.customer, c.part, c.problem, c.owner, c.team].join(' ').toLowerCase().includes(query.toLowerCase()));
     return k.createElement("section", { className: "monthly-report", "aria-label": "Customer Complaints" },
         k.createElement("h2", null, "\u0E01\u0E32\u0E23\u0E23\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E19\u0E08\u0E32\u0E01\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32 / Customer Complaints"),
-        k.createElement("p", null, "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02 \u2192 \u0E17\u0E35\u0E21\u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E30\u0E2A\u0E48\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19 \u2192 \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A \u2192 \u0E1B\u0E34\u0E14\u0E1B\u0E31\u0E0D\u0E2B\u0E32"),
+        k.createElement("p", null, "\u0E01\u0E23\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E41\u0E25\u0E30\u0E41\u0E19\u0E1A\u0E23\u0E39\u0E1B \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 Google Sheet \u2192 \u0E41\u0E2A\u0E14\u0E07\u0E1A\u0E19 Dashboard"),
         k.createElement("p", { role: "status" }, message),
         !connected && k.createElement("p", null, "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E23\u0E48\u0E27\u0E21: \u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E19 Dashboard \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E2D\u0E14\u0E28\u0E39\u0E19\u0E22\u0E4C \u00B7 \u0E40\u0E01\u0E47\u0E1A\u0E09\u0E1A\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07\u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E44\u0E14\u0E49 \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E07\u0E32\u0E19\u0E43\u0E2B\u0E49\u0E17\u0E35\u0E21\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49"),
         k.createElement("div", { className: "mr-controls" },
@@ -749,15 +749,15 @@ function CustomerComplaints({ session }) {
         tab === 'new' && k.createElement("form", { className: "mr-form", onSubmit: async (e) => { e.preventDefault(); const id = crypto.randomUUID(); const rows = await mutate('create', { record: { ...draft, id } }); if (rows) {
                 setDraft(emptyCase());
                 localStorage.removeItem('jrtl-complaint-draft-v1');
-                const created = rows.find(c => c.id === id);
-                if (created)
-                    open(created);
+                setQuery('');
+                setFilter('');
+                setTab('dashboard');
             } } },
             k.createElement("h3", null, "\u0E01\u0E32\u0E23\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E23\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E19"),
             k.createElement("p", null,
                 "\u0E1C\u0E39\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01: ",
                 session.displayName,
-                " \u00B7 \u0E2B\u0E25\u0E31\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E08\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02\u0E02\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E19\u0E35\u0E49"),
+                " \u00B7 \u0E2B\u0E25\u0E31\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E08\u0E30\u0E41\u0E2A\u0E14\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1A\u0E19 Dashboard"),
             k.createElement("div", { className: "mr-fields" },
                 [['customer', 'ลูกค้า', 'text'], ['part', 'ชิ้นงาน / Part No.', 'text'], ['occurredAt', 'วันเวลาที่พบปัญหา (ประเทศไทย)', 'datetime-local'], ['team', 'ทีมรับผิดชอบ', 'text'], ['owner', 'ชื่อผู้รับผิดชอบ (แสดงในระบบ)', 'text'], ['due', 'กำหนดแก้ไขเสร็จ', 'date']].map(([key, label, type]) => k.createElement("label", { key: key },
                     label,
@@ -778,13 +778,13 @@ function CustomerComplaints({ session }) {
                     k.createElement("img", { src: photo.data, alt: photo.name, style: { width: 180, height: 130, objectFit: 'contain' } }),
                     k.createElement("figcaption", null, photo.name),
                     k.createElement("button", { type: "button", disabled: busy || photoBusy, onClick: () => removePhoto(i) }, "\u0E19\u0E33\u0E23\u0E39\u0E1B\u0E2D\u0E2D\u0E01"))))),
-            k.createElement("button", { disabled: busy || photoBusy, type: "submit" }, "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02"),
+            k.createElement("button", { disabled: busy || photoBusy, type: "submit" }, "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E25\u0E07 Google Sheet"),
             k.createElement("p", { role: "status" }, message),
             k.createElement("p", null, "\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E23\u0E31\u0E1A\u0E1C\u0E34\u0E14\u0E0A\u0E2D\u0E1A\u0E43\u0E0A\u0E49\u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E23\u0E30\u0E1A\u0E1A \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E1A\u0E31\u0E0D\u0E0A\u0E35 \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E2A\u0E48\u0E07\u0E01\u0E32\u0E23\u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19"),
             k.createElement("p", null, "\u0E09\u0E1A\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E19\u0E35\u0E49 \u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 Google Sheet \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08")),
         tab === 'detail' && chosen && k.createElement("section", { className: "mr-actions" },
             k.createElement("h3", null,
-                "\u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02 / Corrective Action \u2014 ",
+                "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E23\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E19 \u2014 ",
                 chosen.id),
             k.createElement("p", null,
                 chosen.customer,
@@ -888,7 +888,7 @@ function CustomerComplaints({ session }) {
                                 overdue(c) && k.createElement("b", null, " \u00B7 \u0E40\u0E01\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14")),
                             k.createElement("td", null, c.status),
                             k.createElement("td", null,
-                                k.createElement("button", { onClick: () => open(c) }, "\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02")))),
+                                k.createElement("button", { onClick: () => open(c) }, "\u0E14\u0E39\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14")))),
                         !visible.length && k.createElement("tr", null,
                             k.createElement("td", { colSpan: 7 }, connected ? 'ยังไม่มีรายการที่ตรงตัวกรอง' : 'ยังโหลดข้อมูลร่วมไม่ได้')))))));
 }
