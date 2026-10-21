@@ -574,6 +574,10 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents || "{}");
+    if (body.action === "customerComplaints") return jsonResponse(customerComplaints_(body.payload));
+    if (body.action === "backupMachineMaintenance") return jsonResponse(backupMachineMaintenance_(body.payload));
+    if (body.action === "listMachineMaintenanceBackups") return jsonResponse(listMachineMaintenanceBackups_(body.payload));
+    if (body.action === "getMachineMaintenanceBackup") return jsonResponse(getMachineMaintenanceBackup_(body.payload));
     if (body.action === "syncDieMaintenance") return jsonResponse(syncDieMaintenance_(body.payload));
     if (body.action === "backupDieMaintenance") return jsonResponse(backupDieMaintenance_(body.payload));
     if (body.action === "appendLog") {

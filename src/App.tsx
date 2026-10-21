@@ -1,3 +1,4 @@
+import {CustomerComplaints} from './components/CustomerComplaints';
 import {OnlineUsersBadge} from './components/OnlineUsersBadge';
 import type {OnlineUsersSummary} from './lib/api';
 import {ToolingList} from './components/ToolingList';
@@ -5543,7 +5544,7 @@ function App() {
           onRefresh={() => setReportRefresh(v => v+1)} />}
 
         {tab === "tooling" && <ToolingList />}
-        {tab === "complaints" && <section className="tooling-list" aria-label="Customer Complaints"><h2>การร้องเรียนจากลูกค้า / Customer Complaints</h2><p>ยังไม่ได้เชื่อมต่อข้อมูลการร้องเรียนจากลูกค้า / Complaint data is not connected yet.</p></section>}
+        {tab === "complaints" && <CustomerComplaints session={session} />}
         {tab === "spare" && <section className="tooling-list" aria-label="Spare Part Management System"><h2>Spare Part Management System</h2><p>การจัดการอะไหล่ / ยังไม่มีข้อมูลอะไหล่</p></section>}
         {tab === "defects" && <DefectStatistics logs={reportAllLogs} loading={reportDataLoading} error={reportDataError} onRefresh={() => setReportRefresh(v => v+1)} />}
         {tab === "history" && (
