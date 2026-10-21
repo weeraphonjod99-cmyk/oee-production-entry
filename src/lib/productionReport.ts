@@ -1,5 +1,5 @@
 import type { ProductionCapacityData, ProductionCapacityRecord } from './api';
-import { totalDowntime } from './metrics';
+import { totalDowntime, downtimeFields, effectiveDowntimeValue } from './metrics';
 import type { Machine, ProductionLog } from '../types';
 
 export type ReportMode = 'machine' | 'person' | 'part' | 'detail' | 'day';
@@ -83,9 +83,9 @@ export type ReportRow = {
   key: string; date: string; shift: string; machine: string; person: string; product: string; partNo: string; step: string;
   count: number; good: number; ng: number; test: number; output: number;
   minutes: number; run: number; downtime: number; target: number; eligible: number;
-  missingTime: number; invalidQty: number; reasons: Record<string, number>;
+  lossMinutes: Record<string, number>; missingTime: number; invalidQty: number; reasons: Record<string, number>;
 };
-export const emptyReportRow = (key = 'total'): ReportRow => ({key, date:'', shift:'', machine:'', person:'', product:'', partNo:'',step:'',count:0,good:0,ng:0,test:0,output:0,minutes:0,run:0,downtime:0,target:0,eligible:0,missingTime:0,invalidQty:0,reasons:{}});
+export const emptyReportRow = (key = 'total'): ReportRow => ({key, date:'', shift:'', machine:'', person:'', product:'', partNo:'',step:'',count:0,good:0,ng:0,test:0,output:0,minutes:0,run:0,downtime:0,target:0,eligible:0,lossMinutes:{},missingTime:0,invalidQty:0,reasons:{}});
 export function reportValues(row: ReportRow) {
   const complete = row.count > 0 && row.eligible === row.count && row.target > 0;
   return {
@@ -114,6 +114,7 @@ export function buildProductionReport(logs: ProductionLog[], mode: ReportMode, m
       row.count++; row.good+=good; row.ng+=ng; row.test+=test; row.output+=good+ng+test;
       row.minutes+=timeOk ? minutes : 0; row.run+=timeOk ? log.normalMinutes : 0;
       row.downtime+=timeOk ? downtime : 0;
+      if(timeOk) for(const field of downtimeFields){const value=effectiveDowntimeValue(log,field.key);if(Number.isFinite(value)&&value>0)row.lossMinutes[field.label]=(row.lossMinutes[field.label]||0)+value;}
       if (!timeOk) row.missingTime++; if (!qtyOk) row.invalidQty++;
       if (eligible) { row.target+=found.rate! * minutes; row.eligible++; }
       const reason = !timeOk ? minutes > 1440 || downtime > 1440 || log.normalMinutes > 1440 ? 'เวลาเกิน 24 ชั่วโมงต่อรายการรายวัน' : 'เวลาไม่ครบหรือไม่ถูกต้อง' : !qtyOk ? 'ยอดผลิตไม่ครบหรือไม่ถูกต้อง' : found.reason;
