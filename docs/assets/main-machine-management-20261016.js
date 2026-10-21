@@ -617,10 +617,10 @@ function MonthlyProductionReport({ logs }) {
 
 return MonthlyProductionReport;})();
 
-const JrtlCustomerComplaints=(()=>{const React=k,useState=k.useState,useEffect=k.useEffect;
+const JrtlCustomerComplaints=(()=>{const useState=k.useState,useEffect=k.useEffect;
 const complaintEndpoint = "https://script.google.com/macros/s/AKfycbz05f1rSaHl73PFVAoOA7T2DCfBwVEcTJ564zrwU2GariZgTkLH3KGbxzSSXtTwgXj6Wg/exec";
 const states = ['เปิดใหม่', 'กำลังแก้ไข', 'รอตรวจสอบ', 'ส่งกลับแก้ไข', 'ปิดแล้ว'];
-const emptyCase = () => ({ customer: '', part: '', problem: '', occurredAt: new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 16), due: '', team: '', owner: '', priority: 'ปกติ' });
+const emptyCase = () => ({ customer: '', part: '', problem: '', occurredAt: new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 16), due: '', team: '', owner: '', priority: 'ปกติ', photos: [] });
 function CustomerComplaints({ session }) {
     const [cases, setCases] = useState([]), [selected, setSelected] = useState(''), [tab, setTab] = useState('dashboard'), [busy, setBusy] = useState(false), [message, setMessage] = useState('กำลังตรวจการเชื่อมต่อข้อมูลร่วม…'), [connected, setConnected] = useState(false), [query, setQuery] = useState(''), [filter, setFilter] = useState('');
     const [draft, setDraft] = useState(() => { try {
@@ -630,6 +630,67 @@ function CustomerComplaints({ session }) {
         return emptyCase();
     } });
     const [reply, setReply] = useState({ containment: '', rootCause: '', action: '', response: '', evidence: '' }), [review, setReview] = useState('');
+    const [photoBusy, setPhotoBusy] = useState(false);
+    async function addPhotos(files) { if (!files)
+        return; const current = draft.photos || []; if (current.length + files.length > 3) {
+        setMessage('แนบได้สูงสุด 3 รูป');
+        return;
+    } setPhotoBusy(true); try {
+        const added = [];
+        for (const file of Array.from(files)) {
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024)
+                throw Error('รองรับ JPG, PNG, WebP ไม่เกิน 10 MB ต่อรูป');
+            const url = URL.createObjectURL(file);
+            try {
+                const img = new Image();
+                img.src = url;
+                await img.decode();
+                const canvas = document.createElement('canvas');
+                let scale = Math.min(1, 1200 / Math.max(img.width, img.height));
+                let data = '';
+                for (let attempt = 0; attempt < 8; attempt++) {
+                    canvas.width = Math.max(1, Math.round(img.width * scale));
+                    canvas.height = Math.max(1, Math.round(img.height * scale));
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx)
+                        throw Error('ไม่สามารถเตรียมรูปภาพ');
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    data = canvas.toDataURL('image/jpeg', 0.8);
+                    if (data.length <= 90000)
+                        break;
+                    scale *= 0.8;
+                }
+                if (data.length > 90000)
+                    throw Error('รูปมีขนาดใหญ่เกินไป');
+                added.push({ name: file.name.slice(0, 150), data });
+            }
+            finally {
+                URL.revokeObjectURL(url);
+            }
+        }
+        const next = { ...draft, photos: [...current, ...added] };
+        setDraft(next);
+        try {
+            localStorage.setItem('jrtl-complaint-draft-v1', JSON.stringify(next));
+        }
+        catch {
+            setMessage('รูปยังอยู่ในหน้านี้ แต่เก็บฉบับร่างไม่สำเร็จ กรุณาอย่าปิดหน้า');
+        }
+    }
+    catch (e) {
+        setMessage(e instanceof Error ? e.message : 'เพิ่มรูปไม่สำเร็จ');
+    }
+    finally {
+        setPhotoBusy(false);
+    } }
+    function removePhoto(index) { const next = { ...draft, photos: (draft.photos || []).filter((_, i) => i !== index) }; setDraft(next); try {
+        localStorage.setItem('jrtl-complaint-draft-v1', JSON.stringify(next));
+    }
+    catch {
+        setMessage('เก็บฉบับร่างไม่สำเร็จ');
+    } }
     const chosen = cases.find(c => c.id === selected);
     const reviewer = ['admin', 'qc'].includes(session.role);
     async function request(op, payload = {}) { if (!session.dieSyncToken)
@@ -707,7 +768,17 @@ function CustomerComplaints({ session }) {
             k.createElement("label", null,
                 "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E1B\u0E31\u0E0D\u0E2B\u0E32",
                 k.createElement("textarea", { required: true, maxLength: 5000, value: draft.problem, onChange: e => changeDraft('problem', e.target.value) })),
-            k.createElement("button", { disabled: busy, type: "submit" }, "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02"),
+            k.createElement("section", null,
+                k.createElement("label", null,
+                    "\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E\u0E1B\u0E31\u0E0D\u0E2B\u0E32 / Attach photos",
+                    k.createElement("input", { type: "file", accept: "image/jpeg,image/png,image/webp", multiple: true, disabled: busy || photoBusy, onChange: e => { void addPhotos(e.target.files); e.target.value = ''; } })),
+                k.createElement("p", null, "\u0E2A\u0E39\u0E07\u0E2A\u0E38\u0E14 3 \u0E23\u0E39\u0E1B \u00B7 JPG / PNG / WebP \u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19 10 MB \u0E15\u0E48\u0E2D\u0E23\u0E39\u0E1B \u00B7 \u0E23\u0E30\u0E1A\u0E1A\u0E22\u0E48\u0E2D\u0E23\u0E39\u0E1B\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19 Google Sheet"),
+                photoBusy && k.createElement("p", { role: "status" }, "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E\u2026"),
+                k.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap' } }, (draft.photos || []).map((photo, i) => k.createElement("figure", { key: i, style: { margin: 0 } },
+                    k.createElement("img", { src: photo.data, alt: photo.name, style: { width: 180, height: 130, objectFit: 'contain' } }),
+                    k.createElement("figcaption", null, photo.name),
+                    k.createElement("button", { type: "button", disabled: busy || photoBusy, onClick: () => removePhoto(i) }, "\u0E19\u0E33\u0E23\u0E39\u0E1B\u0E2D\u0E2D\u0E01"))))),
+            k.createElement("button", { disabled: busy || photoBusy, type: "submit" }, "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E41\u0E01\u0E49\u0E44\u0E02"),
             k.createElement("p", null, "\u0E09\u0E1A\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E19\u0E35\u0E49 \u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 Google Sheet \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08")),
         tab === 'detail' && chosen && k.createElement("section", { className: "mr-actions" },
             k.createElement("h3", null,
@@ -731,6 +802,9 @@ function CustomerComplaints({ session }) {
                 " \u00B7 \u0E01\u0E33\u0E2B\u0E19\u0E14: ",
                 chosen.due),
             k.createElement("p", { style: { whiteSpace: 'pre-wrap' } }, chosen.problem),
+            k.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap' } }, (chosen.photos || []).map((photo, i) => k.createElement("figure", { key: i },
+                k.createElement("img", { src: photo.data, alt: photo.name, style: { maxWidth: 400, maxHeight: 300, objectFit: 'contain' } }),
+                k.createElement("figcaption", null, photo.name)))),
             k.createElement("form", { className: "mr-form", onSubmit: async (e) => { e.preventDefault(); await mutate('respond', { id: chosen.id, revision: chosen.revision, response: reply }); } },
                 k.createElement("h4", null, "\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E30\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19\u0E08\u0E32\u0E01\u0E17\u0E35\u0E21\u0E41\u0E01\u0E49\u0E44\u0E02"),
                 ['containment', 'rootCause', 'action', 'response'].map((key, i) => k.createElement("label", { key: key },
@@ -740,7 +814,7 @@ function CustomerComplaints({ session }) {
                     "\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19 (Google Drive / HTTPS)",
                     k.createElement("input", { type: "url", required: true, pattern: "https://.*", value: reply.evidence, onChange: e => setReply({ ...reply, evidence: e.target.value }), disabled: chosen.status === 'ปิดแล้ว' })),
                 k.createElement("p", null, "\u0E41\u0E19\u0E1A\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E14\u0E49 \u0E01\u0E32\u0E23\u0E41\u0E19\u0E1A\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C\u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C"),
-                chosen.status !== 'ปิดแล้ว' && (session.role === 'admin' || session.username === chosen.owner) && k.createElement(React.Fragment, null,
+                chosen.status !== 'ปิดแล้ว' && (session.role === 'admin' || session.username === chosen.owner) && k.createElement(k.Fragment, null,
                     k.createElement("button", { type: "button", disabled: busy, onClick: () => void mutate('start', { id: chosen.id, revision: chosen.revision }) }, "\u0E23\u0E31\u0E1A\u0E07\u0E32\u0E19 / \u0E40\u0E23\u0E34\u0E48\u0E21\u0E41\u0E01\u0E49\u0E44\u0E02"),
                     k.createElement("button", { disabled: busy, type: "submit" }, "\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E30\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A"))),
             chosen.evidence && /^https:\/\//.test(chosen.evidence) && k.createElement("a", { href: chosen.evidence, target: "_blank", rel: "noreferrer" }, "\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E15\u0E23\u0E27\u0E08 \u2197"),
@@ -750,7 +824,7 @@ function CustomerComplaints({ session }) {
                     chosen.review || 'ยังไม่มีผลการตรวจสอบ',
                     " ",
                     chosen.reviewedBy || ''),
-                reviewer && chosen.status === 'รอตรวจสอบ' && k.createElement(React.Fragment, null,
+                reviewer && chosen.status === 'รอตรวจสอบ' && k.createElement(k.Fragment, null,
                     k.createElement("label", null,
                         "\u0E1C\u0E25\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A / \u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25\u0E2A\u0E48\u0E07\u0E01\u0E25\u0E31\u0E1A",
                         k.createElement("textarea", { value: review, onChange: e => setReview(e.target.value) })),
@@ -766,7 +840,7 @@ function CustomerComplaints({ session }) {
                 h.event,
                 " \u00B7 ",
                 h.note))),
-        tab === 'dashboard' && k.createElement(React.Fragment, null,
+        tab === 'dashboard' && k.createElement(k.Fragment, null,
             k.createElement("div", { className: "mr-charts" },
                 k.createElement("section", null,
                     k.createElement("h3", null, "\u0E2A\u0E23\u0E38\u0E1B\u0E15\u0E32\u0E21\u0E2A\u0E16\u0E32\u0E19\u0E30"),
