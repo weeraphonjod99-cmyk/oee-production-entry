@@ -2,3 +2,9 @@
 @media(max-width:900px){.mr-charts{grid-template-columns:1fr}.mr-kpis,.mr-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.monthly-report{padding:12px}.monthly-report h2{font-size:20px}.mr-controls{width:100%}.mr-kpis strong{font-size:21px}}
 @media(max-width:480px){.mr-fields{grid-template-columns:1fr}.mr-bar{grid-template-columns:110px 1fr 65px}.mr-trend{gap:2px}}
 @media print{body.monthly-report-print *{visibility:hidden!important}body.monthly-report-print .monthly-report,body.monthly-report-print .monthly-report *{visibility:visible!important}body.monthly-report-print .monthly-report{position:absolute;left:0;top:0;width:100%;padding:12px;border:0;background:white}body.monthly-report-print .monthly-report button,body.monthly-report-print .mr-controls,body.monthly-report-print .mr-form{display:none!important}.mr-kpis{grid-template-columns:repeat(4,1fr)}.mr-charts{grid-template-columns:1fr}.mr-table{overflow:visible}.mr-table table{min-width:0;font-size:9px}.mr-table th:last-child,.mr-table td:last-child{display:none}.mr-kpis,.mr-charts>section{break-inside:avoid}}
+
+/* Keep month values aligned with their headers, overriding generic numeric columns. */
+.monthly-report [aria-label='Monthly defect chart'] table th,.monthly-report [aria-label='Monthly defect chart'] table td{text-align:center;white-space:nowrap;overflow-wrap:normal}
+.monthly-report [aria-label='Monthly defect chart'] table th:first-child{text-align:left}
+
+
