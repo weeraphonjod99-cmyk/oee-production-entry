@@ -414,6 +414,13 @@ function MonthlyProductionReport({ logs }) {
     const today = monthlyToday();
     const [month, setMonth] = useState(today.slice(0, 7));
     const [machine, setMachine] = useState('');
+    const [defectTarget, setDefectTarget] = useState('1');
+    const defectYear = Number(month.slice(0, 4));
+    const defectMonths = Array.from({ length: 12 }, (_, i) => { const key = defectYear + '-' + String(i + 1).padStart(2, '0'); const data = monthlySummary(logs, key, machine, today); return { label: String(i + 1), good: data.good, ng: data.ng }; });
+    const defectYtd = defectMonths.reduce((a, b) => ({ label: 'YTD', good: a.good + b.good, ng: a.ng + b.ng }), { label: 'YTD', good: 0, ng: 0 });
+    const defectBars = [...defectMonths, defectYtd].map(d => ({ ...d, rate: d.good + d.ng > 0 ? d.ng / (d.good + d.ng) * 100 : null }));
+    const targetRate = defectTarget === '' ? null : Number(defectTarget);
+    const defectMax = Math.max(1, targetRate || 0, ...defectBars.map(d => d.rate || 0)) * 1.2;
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
     const [actions, setActions] = useState(() => { try {
@@ -542,6 +549,51 @@ function MonthlyProductionReport({ logs }) {
                         !visible.length && k.createElement("tr", null,
                             k.createElement("td", { colSpan: 8 }, "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E31\u0E1A\u0E1B\u0E23\u0E38\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49 \u2014 \u0E01\u0E14 \u201C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E31\u0E1A\u0E1B\u0E23\u0E38\u0E07\u201D \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E08\u0E23\u0E34\u0E07"))))),
             k.createElement("button", { type: "button", className: "mr-backup", onClick: () => downloadReport('improvement-actions.json', JSON.stringify({ version: 1, actions }, null, 2), 'application/json') }, "\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E2B\u0E25\u0E14\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E31\u0E1A\u0E1B\u0E23\u0E38\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 JSON")),
+        k.createElement("section", { className: "mr-actions", "aria-label": "Monthly defect chart" },
+            k.createElement("div", { className: "mr-section-title" },
+                k.createElement("h3", null,
+                    "\u0E2A\u0E23\u0E38\u0E1B\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22\u0E23\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19 / Monthly Defect Rate \u2014 ",
+                    defectYear),
+                k.createElement("div", { className: "mr-controls" },
+                    k.createElement("button", { type: "button", onClick: () => setMonth((defectYear - 1) + month.slice(4)) }, "\u2039 \u0E1B\u0E35\u0E01\u0E48\u0E2D\u0E19"),
+                    k.createElement("button", { type: "button", onClick: () => setMonth((defectYear + 1) + month.slice(4)) }, "\u0E1B\u0E35\u0E16\u0E31\u0E14\u0E44\u0E1B \u203A"),
+                    k.createElement("label", null,
+                        "\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22 (%)",
+                        k.createElement("input", { type: "number", min: "0", max: "100", step: "0.01", value: defectTarget, onChange: e => { const v = e.target.value; if (v === '' || (Number(v) >= 0 && Number(v) <= 100))
+                                setDefectTarget(v); } })))),
+            k.createElement("p", null,
+                "\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22 \u00F7 (\u0E07\u0E32\u0E19\u0E14\u0E35 + \u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22) \u00D7 100 \u00B7 \u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E22\u0E2D\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07\u0E02\u0E2D\u0E07 ",
+                machine || 'ทุกเครื่อง',
+                " \u00B7 YTD \u0E23\u0E27\u0E21\u0E16\u0E36\u0E07 ",
+                today,
+                " \u00B7 \u201C\u2014\u201D \u0E44\u0E21\u0E48\u0E21\u0E35\u0E10\u0E32\u0E19\u0E1C\u0E25\u0E34\u0E15 \u00B7 \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 1% \u0E1B\u0E23\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E19\u0E35\u0E49"),
+            k.createElement("div", { className: "mr-table" },
+                k.createElement("div", { style: { minWidth: 950 } },
+                    k.createElement("div", { className: "mr-trend", style: { height: 230 }, role: "img", "aria-label": "\u0E01\u0E23\u0E32\u0E1F\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22\u0E23\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E41\u0E25\u0E30 YTD \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22" }, defectBars.map(d => k.createElement("div", { key: d.label },
+                        k.createElement("strong", null, d.rate === null ? '—' : d.rate.toFixed(2) + '%'),
+                        k.createElement("div", { style: { position: 'relative' } },
+                            k.createElement("i", { style: { height: ((d.rate || 0) / defectMax * 100) + '%', background: d.label === 'YTD' ? '#2266a5' : '#5a9dde' } }),
+                            targetRate !== null && k.createElement("span", { style: { position: 'absolute', bottom: (targetRate / defectMax * 100) + '%', left: 0, right: 0, borderTop: '2px solid #ed8b32' } })),
+                        k.createElement("span", null, d.label === 'YTD' ? 'YTD' : d.label + '/' + defectYear)))),
+                    k.createElement("table", { style: { minWidth: 950, fontSize: 12 } },
+                        k.createElement("thead", null,
+                            k.createElement("tr", null,
+                                k.createElement("th", null, "\u0E40\u0E14\u0E37\u0E2D\u0E19"),
+                                defectBars.map(d => k.createElement("th", { key: d.label }, d.label)))),
+                        k.createElement("tbody", null,
+                            k.createElement("tr", null,
+                                k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22 (\u0E0A\u0E34\u0E49\u0E19)"),
+                                defectBars.map(d => k.createElement("td", { key: d.label }, number(d.ng)))),
+                            k.createElement("tr", null,
+                                k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E14\u0E35 + \u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22"),
+                                defectBars.map(d => k.createElement("td", { key: d.label }, number(d.good + d.ng)))),
+                            k.createElement("tr", null,
+                                k.createElement("th", null, "\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22"),
+                                defectBars.map(d => k.createElement("td", { key: d.label }, d.rate === null ? '—' : d.rate.toFixed(2) + '%'))),
+                            k.createElement("tr", null,
+                                k.createElement("th", null, "\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22 (\u0E40\u0E2A\u0E49\u0E19\u0E2A\u0E35\u0E2A\u0E49\u0E21)"),
+                                defectBars.map(d => k.createElement("td", { key: d.label }, targetRate === null ? '—' : targetRate.toFixed(2) + '%'))))))),
+            k.createElement("p", null, "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E22\u0E2D\u0E14\u0E08\u0E23\u0E34\u0E07\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E32\u0E1F\u0E08\u0E30\u0E04\u0E33\u0E19\u0E27\u0E13\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15")),
         k.createElement("div", { className: "mr-charts" },
             k.createElement("section", null,
                 k.createElement("h3", null, "\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E01\u0E32\u0E23\u0E1C\u0E25\u0E34\u0E15 / Production Loss Analysis"),
