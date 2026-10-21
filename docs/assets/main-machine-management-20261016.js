@@ -617,7 +617,7 @@ function MonthlyProductionReport({ logs }) {
 
 return MonthlyProductionReport;})();
 
-const JrtlCustomerComplaints=(()=>{const useState=k.useState,useEffect=k.useEffect;
+const JrtlCustomerComplaints=(()=>{const React=k,useState=k.useState,useEffect=k.useEffect;
 const complaintEndpoint = "https://script.google.com/macros/s/AKfycbz05f1rSaHl73PFVAoOA7T2DCfBwVEcTJ564zrwU2GariZgTkLH3KGbxzSSXtTwgXj6Wg/exec";
 const states = ['เปิดใหม่', 'กำลังแก้ไข', 'รอตรวจสอบ', 'ส่งกลับแก้ไข', 'ปิดแล้ว'];
 const emptyCase = () => ({ customer: '', part: '', problem: '', occurredAt: new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 16), due: '', team: '', owner: '', priority: 'ปกติ' });
