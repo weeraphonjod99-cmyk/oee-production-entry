@@ -107,8 +107,8 @@
         `ผลิตได้ (Output): ${row.output.toLocaleString()}`,
         `เป้าหมาย: ${targetValue}`,
         `ผลเทียบเป้าหมาย: ${percentValue}`,
-      ].join('\\n');
-      item.setAttribute('aria-label', tooltipText.replace(/\\n/g, ', '));
+      ].join('\n');
+      item.setAttribute('aria-label', tooltipText.replace(/\n/g, ', '));
       item.title = tooltipText;
       const tooltip = document.createElement('div'); tooltip.className = 'daily-machine-tooltip'; tooltip.setAttribute('role', 'tooltip'); tooltip.textContent = tooltipText;
       item.append(label, track, value, status, tooltip); bars.append(item);
