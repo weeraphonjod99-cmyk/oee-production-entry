@@ -31,17 +31,31 @@
     };
     return makeZip(files);
   }
-  function readChart(report) {
+  function readChart(report, tableRows) {
     const heading=['Machine / เครื่อง','งาน / Items','Actual / ผลิตได้','Target / เป้าหมาย','KPI %','กราฟแท่ง Actual'];
-    const rows=[...report.querySelectorAll('.pr-machine-bar-row')].map(row=>{
+    let rows=[...report.querySelectorAll('.pr-machine-bar-row')].map(row=>{
       const label=text(row.querySelector('.pr-machine-label b'));
-      const count=Number((text(row.querySelector('.pr-machine-label span')).match(/[\\d,]+/)||['0'])[0].replaceAll(',',''));
+      const count=Number((text(row.querySelector('.pr-machine-label span')).match(/[\d,]+/)||['0'])[0].replaceAll(',',''));
       const values=text(row.querySelector('.pr-machine-values')).split('/');
-      const actual=Number((values[0]||'').replace(/[^\\d.-]/g,''));
-      const target=Number((values[1]||'').replace(/[^\\d.-]/g,''));
+      const actual=Number((values[0]||'').replace(/[^\d.-]/g,''));
+      const target=Number((values[1]||'').replace(/[^\d.-]/g,''));
       const kpi=target>0?actual/target*100:null;
       return [label,count,actual,Number.isFinite(target)&&target>0?target:'—',kpi===null?'—':kpi.toFixed(1)+'%', '█'.repeat(Math.max(1,Math.round(actual/(Math.max(actual,target)||1)*24)))];
     });
+    if(!rows.length&&tableRows?.length>1){
+      const headers=tableRows[0].map(value=>String(value||''));
+      const indexOf=term=>headers.findIndex(value=>value.includes(term));
+      const machine=indexOf('Machine'), part=indexOf('Part / Step'), date=indexOf('Date'), shift=indexOf('Shift'), items=indexOf('Items'), actual=indexOf('Output'), target=indexOf('Target');
+      if(machine>=0&&actual>=0){
+        rows=tableRows.slice(1).map(row=>{
+          const numberAt=index=>Number(String(row[index]??'').replace(/[^\d.-]/g,''));
+          const output=numberAt(actual), goal=target>=0?numberAt(target):NaN;
+          const label=[date>=0?row[date]:'',shift>=0?row[shift]:'',row[machine],part>=0?row[part]:''].filter(Boolean).join(' · ');
+          const kpi=goal>0?output/goal*100:null;
+          return [label,items>=0?row[items]:'',output,Number.isFinite(goal)&&goal>0?goal:'—',kpi===null?'—':kpi.toFixed(1)+'%', '█'.repeat(Math.max(1,Math.round(output/(Math.max(output,goal)||1)*24)))];
+        });
+      }
+    }
     return [heading,...rows];
   }
   window.JRTLReportExcel = { create: xlsx };
@@ -70,7 +84,7 @@
     const button=(label,handler)=>{const b=document.createElement('button');b.type='button';b.className='ghost-button';b.textContent=label;b.addEventListener('click',handler);actions.append(b);return b;};
     button('ดาวน์โหลด CSV',()=>report.querySelector('.pr-header button')?.click());
     button('ดาวน์โหลด PDF',printReport);
-    button('ดาวน์โหลด Excel',async event=>{const excel=event.currentTarget;if(excel.disabled)return;excel.disabled=true;excel.textContent='กำลังเตรียม Excel…';try{const rows=await allRows(report);if(rows.length<2)throw Error('ไม่มีข้อมูลในตาราง');const chartRows=readChart(report);downloadBlob(new Blob([xlsx(rows,chartRows)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'production-report.xlsx');}catch(error){alert(error instanceof Error?error.message:'สร้าง Excel ไม่สำเร็จ');}finally{excel.disabled=false;excel.textContent='ดาวน์โหลด Excel';}});
+    button('ดาวน์โหลด Excel',async event=>{const excel=event.currentTarget;if(excel.disabled)return;excel.disabled=true;excel.textContent='กำลังเตรียม Excel…';try{const rows=await allRows(report);if(rows.length<2)throw Error('ไม่มีข้อมูลในตาราง');const chartRows=readChart(report,rows);downloadBlob(new Blob([xlsx(rows,chartRows)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'production-report.xlsx');}catch(error){alert(error instanceof Error?error.message:'สร้าง Excel ไม่สำเร็จ');}finally{excel.disabled=false;excel.textContent='ดาวน์โหลด Excel';}});
     heading.append(actions);
   }
   const style=document.createElement('style');style.textContent='.report-export-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.report-export-actions button{white-space:nowrap;padding:8px 12px;border:1px solid #b8d1e6;border-radius:7px;background:#f1f7fc;color:#164f7e;cursor:pointer;font:inherit}.report-export-actions button:disabled{opacity:.55;cursor:wait}@media print{body.report-export-print *{visibility:hidden!important}body.report-export-print .production-report,body.report-export-print .production-report *{visibility:visible!important}body.report-export-print .production-report{position:absolute!important;left:0!important;top:0!important;width:100%!important;max-width:none!important;padding:8px!important;overflow:visible!important;background:white!important}body.report-export-print .production-report button,body.report-export-print .production-report select,body.report-export-print .production-report input,body.report-export-print .production-report .report-export-actions,body.report-export-print .pr-tabs,body.report-export-print .pr-scroll{max-height:none!important}body.report-export-print .production-report button,body.report-export-print .production-report select,body.report-export-print .production-report input,body.report-export-print .production-report .report-export-actions{display:none!important}body.report-export-print .pr-scroll{overflow:visible!important}body.report-export-print .pr-machine-chart,body.report-export-print .pr-machine-bar-row{break-inside:avoid;page-break-inside:avoid}body.report-export-print .pr-machine-chart{print-color-adjust:exact;-webkit-print-color-adjust:exact}body.report-export-print .pr-scroll table{min-width:0!important;width:100%!important;font-size:7px!important}body.report-export-print .pr-scroll td,body.report-export-print .pr-scroll th{padding:3px!important;white-space:normal!important}}';document.head.append(style);
