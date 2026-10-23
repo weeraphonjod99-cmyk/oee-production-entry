@@ -45,10 +45,10 @@
     const table = root.querySelector('.pr-scroll table');
     if (!table) return;
     const headers = [...table.querySelectorAll('thead th')];
-    const machineCol = findColumn(headers, /Machine/);
-    const countCol = findColumn(headers, /Items/);
-    const outputCol = findColumn(headers, /Output/);
-    const targetCol = findColumn(headers, /Target/);
+    const machineCol = findColumn(headers, /Machine/i);
+    const countCol = findColumn(headers, /Items/i);
+    const outputCol = findColumn(headers, /Output/i);
+    const targetCol = findColumn(headers, /Target/i);
     if ([machineCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
