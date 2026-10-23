@@ -4746,7 +4746,7 @@ function App() {
           </section>
         )}
 
-        {tab === "employeeEntry" && !employeeMachineSelected && (
+        <RetainedMenu active={tab === "employeeEntry" && !employeeMachineSelected}>{tab === "employeeEntry" && !employeeMachineSelected ? (
           <section className="employee-machine-menu">
             <div className="machine-menu-heading">
               <div>
@@ -4768,9 +4768,9 @@ function App() {
               ))}
             </div>
           </section>
-        )}
+        ) : null}</RetainedMenu>
 
-        {((tab === "employeeEntry" && employeeMachineSelected) || tab === "entry") && (
+        <RetainedMenu active={(tab === "employeeEntry" && employeeMachineSelected) || tab === "entry"}>{((tab === "employeeEntry" && employeeMachineSelected) || tab === "entry") ? (
           <section className="entry-layout">
             <form className={`entry-form ${readOnlyEntry ? "read-only-entry" : ""}`} onSubmit={submit}>
               <div className="section-title">
@@ -5464,7 +5464,7 @@ function App() {
               </div>
             </aside>
           </section>
-        )}
+        ) : null}</RetainedMenu>
 
         {<RetainedMenu active={tab === "dashboard"}>{tab === "dashboard" ? (
           <section className="dashboard-layout">
