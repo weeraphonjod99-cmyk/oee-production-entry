@@ -56,6 +56,7 @@
     const outputCol = findColumn(headers, /Output/i);
     const timeCol = findColumn(headers, /TOTAL TIME/i);
     const targetCol = headers.findIndex(header => /^เป้าหมาย\s*\/\s*TARGET/i.test(text(header)));
+    const lossCol = findColumn(headers, /RECORDED LOSSES/i);
     if ([dateCol, shiftCol, machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const dates = [...document.querySelectorAll('input[type="date"]')].map(input => input.value).filter(Boolean);
     const productionDate = dates.length > 1 && dates[0] !== dates[1] ? `${dates[0]} ถึง ${dates[1]}` : (dates[0] || 'ตามตัวกรองวันที่');
@@ -68,7 +69,11 @@
       const timeText = timeCol >= 0 ? text(cells[timeCol]) : '';
       const runningMatch = timeText.match(/เดิน\s*([\d,.]+)/i);
       const runningMinutes = runningMatch ? parseNumber(runningMatch[1]) : null;
-      return { date: text(cells[dateCol]), shift: text(cells[shiftCol]) || selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      const stopMatch = timeText.match(/หยุด\s*([\d,.]+)/i);
+      const stopMinutes = stopMatch ? parseNumber(stopMatch[1]) : null;
+      const lossText = lossCol >= 0 ? text(cells[lossCol]) : '';
+      const losses = [...lossText.matchAll(/([^:]+?)\s*:\s*([\d,.]+)\s*นาที/g)].map(match => ({ label: match[1].trim(), minutes: parseNumber(match[2]) || 0 })).filter(loss => loss.minutes > 0);
+      return { date: text(cells[dateCol]), shift: text(cells[shiftCol]) || selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, stopMinutes, losses, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine).sort((a, b) => compareMachineOrder(a.machine, b.machine));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
@@ -102,6 +107,33 @@
       const status = document.createElement('strong'); status.className = 'daily-machine-status';
       if (row.target === null || row.target <= 0) { status.textContent = 'ไม่มีข้อมูลเป้าหมาย'; status.classList.add('unknown'); }
       else { const percent = row.output / row.target * 100; status.textContent = `${row.output >= row.target ? 'ถึงเป้าหมาย' : 'ต่ำกว่าเป้าหมาย'} · ${percent.toLocaleString('th-TH', { maximumFractionDigits: 1 })}%`; status.classList.add(row.output >= row.target ? 'met' : 'below'); }
+      const timeBreakdown = [{ label: 'ผลิตปกติ', short: 'ผลิต', minutes: row.runningMinutes || 0, color: '#2f9e62' }, ...row.losses.map(loss => {
+        const kind = /inspection|ตรวจสอบ/i.test(loss.label) ? ['ตรวจสอบ', '#8b5cf6']
+          : /equipment|machine repair|ซ่อมเครื่อง/i.test(loss.label) ? ['ซ่อมเครื่อง', '#ef4444']
+          : /mold repair|ซ่อมแม่พิมพ์/i.test(loss.label) ? ['ซ่อมแม่พิมพ์', '#f97316']
+          : /material|วัตถุดิบ/i.test(loss.label) ? ['เปลี่ยนวัตถุดิบ', '#eab308']
+          : /unplanned|emergency|หยุดไม่ทราบ/i.test(loss.label) ? ['หยุดฉุกเฉิน', '#dc2626']
+          : /meeting|5s|shift change|ประชุม|เปลี่ยนกะ/i.test(loss.label) ? ['ประชุม/เปลี่ยนกะ', '#64748b']
+          : /planned|ตามแผน/i.test(loss.label) ? ['หยุดตามแผน', '#0ea5e9']
+          : /new model|ทดลองงานใหม่/i.test(loss.label) ? ['ทดลองงานใหม่', '#14b8a6']
+          : [loss.label, '#94a3b8'];
+        return { label: kind[0], short: kind[0], minutes: loss.minutes, color: kind[1] };
+      })];
+      const loggedLossMinutes = row.losses.reduce((sum, loss) => sum + loss.minutes, 0);
+      const unclassified = Math.max(0, (row.stopMinutes || 0) - loggedLossMinutes);
+      if (unclassified > 0) timeBreakdown.push({ label: 'หยุดไม่ระบุสาเหตุ', short: 'หยุดไม่ระบุ', minutes: unclassified, color: '#cbd5e1' });
+      const timeTotal = timeBreakdown.reduce((sum, part) => sum + part.minutes, 0);
+      const timeSection = document.createElement('div'); timeSection.className = 'daily-machine-time-breakdown';
+      const timeTrack = document.createElement('div'); timeTrack.className = 'daily-machine-time-track'; timeTrack.setAttribute('aria-label', 'สัดส่วนเวลาเดินผลิตและเวลาหยุดแยกประเภท');
+      for (const part of timeBreakdown.filter(part => part.minutes > 0)) {
+        const segment = document.createElement('i'); segment.className = 'daily-machine-time-segment'; segment.style.width = `${timeTotal ? part.minutes / timeTotal * 100 : 0}%`; segment.style.backgroundColor = part.color; segment.title = `${part.label}: ${part.minutes.toLocaleString()} นาที`; segment.setAttribute('aria-label', segment.title); timeTrack.append(segment);
+      }
+      const timeList = document.createElement('div'); timeList.className = 'daily-machine-time-list';
+      for (const part of timeBreakdown.filter(part => part.minutes > 0)) {
+        const line = document.createElement('span'); const dot = document.createElement('i'); dot.style.backgroundColor = part.color; const label = document.createElement('b'); label.textContent = part.short; const minutes = document.createElement('small'); minutes.textContent = `${part.minutes.toLocaleString()} นาที`; line.append(dot, label, minutes); timeList.append(line);
+      }
+      if (timeTotal === 0) { const missing = document.createElement('small'); missing.textContent = 'ไม่มีข้อมูลเวลาแยกประเภท'; timeList.append(missing); }
+      timeSection.append(timeTrack, timeList);
       const targetValue = row.target === null ? 'ไม่มีข้อมูล' : row.target.toLocaleString('th-TH', { maximumFractionDigits: 1 });
       const percentValue = row.target > 0 ? `${(row.output / row.target * 100).toLocaleString('th-TH', { maximumFractionDigits: 1 })}%` : 'คำนวณไม่ได้';
       const tooltipText = [
@@ -116,11 +148,12 @@
         `ผลเทียบเป้าหมาย: ${percentValue}`,
         `เวลาเดินผลิต: ${row.runningMinutes === null ? 'ไม่มีข้อมูล' : `${row.runningMinutes.toLocaleString()} นาที`}`,
         `เวลารวมตามรายงาน: ${row.timeText || 'ไม่มีข้อมูล'}`,
+        ...timeBreakdown.filter(part => part.minutes > 0).map(part => `${part.label}: ${part.minutes.toLocaleString()} นาที`),
       ].join('\n');
       item.setAttribute('aria-label', tooltipText.replace(/\n/g, ', '));
       item.title = tooltipText;
       const tooltip = document.createElement('div'); tooltip.className = 'daily-machine-tooltip'; tooltip.setAttribute('role', 'tooltip'); tooltip.textContent = tooltipText;
-      item.append(label, track, value, status, tooltip); bars.append(item);
+      item.append(label, track, value, timeSection, status, tooltip); bars.append(item);
     }
     section.replaceChildren(heading, bars);
     const kpis = root.querySelector('.pr-kpis');
