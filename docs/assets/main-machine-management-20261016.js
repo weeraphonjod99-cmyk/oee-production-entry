@@ -580,7 +580,7 @@ function MonthlyProductionReport({ logs }) {
                                 k.createElement("th", null, "\u0E40\u0E14\u0E37\u0E2D\u0E19"),
                                 defectBars.map(d => k.createElement("th", { key: d.label }, d.label)))),
                         k.createElement("tbody", null,
-                            k.createElement("tr", null,
+                            k.createElement("tr", { style: { color: "#c62828", fontWeight: 700 } },
                                 k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22 (\u0E0A\u0E34\u0E49\u0E19)"),
                                 defectBars.map(d => k.createElement("td", { key: d.label }, number(d.ng)))),
                             k.createElement("tr", null,
