@@ -8,6 +8,9 @@
   };
   const text = node => (node?.textContent || '').replace(/\s+/g, ' ').trim();
   const parseNumber = value => { if (!value || value.includes('—')) return null; const parsed = Number(value.replace(/[^0-9.-]/g, '')); return Number.isFinite(parsed) ? parsed : null; };
+  const machineOrder = ['1# OCP-80T', '2# MHS-80T', '3# OCP-110T', '4# SN1-110T', '5# OCP-110T', '6# STD-150T', '7# GTX-300T', '8# GTX-500T', '9# OCP-110T', '10# OCP-260 T', '11# 200T', '12# 200T', '13# 110T', 'Bending #1', 'Bending #2', 'SW4 NMS', 'SW5 CU', 'SW6 NLC', 'SW7 LC 600', 'SW8 Door LC', 'Riveting', 'Tapping', 'RV1', 'RV2', '#1 RW', '#2 RW', '#3 RW', 'SW1# spot', 'SW#2 Spot', 'SW#3 Spot', '#8 Rubber Cap', 'CNC-C1', 'CNC-C2', 'CNC-C3', 'CNC-C4', 'CNC-C5', 'CNC-C6', 'CNC-C7', 'CNC-C8'];
+  const machineRank = new Map(machineOrder.map((name, index) => [name.toLocaleLowerCase('en'), index]));
+  const compareMachineOrder = (a, b) => (machineRank.get(a.trim().toLocaleLowerCase('en')) ?? Number.MAX_SAFE_INTEGER) - (machineRank.get(b.trim().toLocaleLowerCase('en')) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b, 'en', { numeric: true });
   let initializedReport = null;
   const reportHeading = () => [...document.querySelectorAll('h2,h3')].find(node => text(node).includes('Production Performance Report'));
   const setDate = input => {
@@ -54,7 +57,7 @@
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
       return { machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
-    }).filter(row => row.machine);
+    }).filter(row => row.machine).sort((a, b) => compareMachineOrder(a.machine, b.machine));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
     const heading = document.createElement('div'); heading.className = 'daily-machine-heading';
