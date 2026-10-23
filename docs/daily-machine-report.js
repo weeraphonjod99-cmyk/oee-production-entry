@@ -54,9 +54,14 @@
     const outputCol = findColumn(headers, /Output/i);
     const targetCol = headers.findIndex(header => /^เป้าหมาย\s*\/\s*TARGET/i.test(text(header)));
     if ([machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
+    const dates = [...root.querySelectorAll('input[type="date"]')].map(input => input.value).filter(Boolean);
+    const productionDate = dates.length > 1 && dates[0] !== dates[1] ? `${dates[0]} ถึง ${dates[1]}` : (dates[0] || 'ตามตัวกรองวันที่');
+    const shiftSelect = [...root.querySelectorAll('select')].find(select => /กะ|shift/i.test(select.parentElement?.innerText || select.getAttribute('aria-label') || ''));
+    const selectedShift = shiftSelect?.selectedOptions?.[0]?.textContent?.trim() || 'ตามตัวกรองกะ';
+    const recorderCol = findColumn(headers, /Recorded By/i);
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
-      return { machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      return { date: productionDate, shift: selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine).sort((a, b) => compareMachineOrder(a.machine, b.machine));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
@@ -72,7 +77,7 @@
       bars.innerHTML = `<p>${loading ? 'กำลังโหลดประวัติการผลิต…' : 'ไม่มีข้อมูลการผลิตสำหรับวันที่และตัวกรองที่เลือก'}</p>`;
     }
     for (const row of rows) {
-      const item = document.createElement('div'); item.className = 'daily-machine-row';
+      const item = document.createElement('div'); item.className = 'daily-machine-row'; item.tabIndex = 0;
       const label = document.createElement('div'); label.className = 'daily-machine-label';
       const machine = document.createElement('b'); machine.textContent = row.machine;
       const part = document.createElement('span'); part.className = 'daily-part-label'; part.textContent = row.part;
@@ -90,7 +95,23 @@
       const status = document.createElement('strong'); status.className = 'daily-machine-status';
       if (row.target === null || row.target <= 0) { status.textContent = 'ไม่มีข้อมูลเป้าหมาย'; status.classList.add('unknown'); }
       else { const percent = row.output / row.target * 100; status.textContent = `${row.output >= row.target ? 'ถึงเป้าหมาย' : 'ต่ำกว่าเป้าหมาย'} · ${percent.toLocaleString('th-TH', { maximumFractionDigits: 1 })}%`; status.classList.add(row.output >= row.target ? 'met' : 'below'); }
-      item.append(label, track, value, status); bars.append(item);
+      const targetValue = row.target === null ? 'ไม่มีข้อมูล' : row.target.toLocaleString('th-TH', { maximumFractionDigits: 1 });
+      const percentValue = row.target > 0 ? `${(row.output / row.target * 100).toLocaleString('th-TH', { maximumFractionDigits: 1 })}%` : 'คำนวณไม่ได้';
+      const tooltipText = [
+        `วันที่ผลิต: ${row.date}`,
+        `กะ: ${row.shift}`,
+        `เครื่อง: ${row.machine}`,
+        `ชิ้นงาน / หมายเลขงาน: ${row.part || 'ไม่ระบุ'}`,
+        `จำนวนงาน: ${row.count || 'ไม่ระบุ'}`,
+        `ผู้บันทึก: ${row.recorder || 'ไม่ระบุ'}`,
+        `ผลิตได้ (Output): ${row.output.toLocaleString()}`,
+        `เป้าหมาย: ${targetValue}`,
+        `ผลเทียบเป้าหมาย: ${percentValue}`,
+      ].join('\\n');
+      item.setAttribute('aria-label', tooltipText.replace(/\\n/g, ', '));
+      item.title = tooltipText;
+      const tooltip = document.createElement('div'); tooltip.className = 'daily-machine-tooltip'; tooltip.setAttribute('role', 'tooltip'); tooltip.textContent = tooltipText;
+      item.append(label, track, value, status, tooltip); bars.append(item);
     }
     section.replaceChildren(heading, bars);
     const kpis = root.querySelector('.pr-kpis');
