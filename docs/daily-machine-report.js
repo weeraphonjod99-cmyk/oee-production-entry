@@ -48,7 +48,9 @@
     const table = root.querySelector('.pr-scroll table');
     if (!table) return;
     const headers = [...table.querySelectorAll('thead th')];
-    const dateCol = findColumn(headers, /Date/i);\n    const shiftCol = findColumn(headers, /Shift/i);\n    const machineCol = findColumn(headers, /Machine/i);
+    const dateCol = findColumn(headers, /Date/i);
+    const shiftCol = findColumn(headers, /Shift/i);
+    const machineCol = findColumn(headers, /Machine/i);
     const partCol = findColumn(headers, /Part/i);
     const countCol = findColumn(headers, /Items/i);
     const outputCol = findColumn(headers, /Output/i);
