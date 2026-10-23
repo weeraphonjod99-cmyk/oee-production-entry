@@ -57,11 +57,15 @@
     const dates = [...document.querySelectorAll('input[type="date"]')].map(input => input.value).filter(Boolean);
     const productionDate = dates.length > 1 && dates[0] !== dates[1] ? `${dates[0]} ถึง ${dates[1]}` : (dates[0] || 'ตามตัวกรองวันที่');
     const shiftSelect = [...root.querySelectorAll('select')].find(select => /กะ|shift/i.test(select.parentElement?.innerText || select.getAttribute('aria-label') || ''));
-    const shiftButton = [...document.querySelectorAll('button')].find(button => /ทุกกะ\\s*\\/\\s*All shifts|กะเช้า\\s*\\/\\s*Day|กะดึก\\s*\\/\\s*Night/i.test(text(button)));\n    const selectedShift = shiftSelect?.selectedOptions?.[0]?.textContent?.trim() || text(shiftButton) || 'ตามตัวกรองกะ';
+    const shiftButton = [...document.querySelectorAll('button')].find(button => /ทุกกะ\s*\/\s*All shifts|กะเช้า\s*\/\s*Day|กะดึก\s*\/\s*Night/i.test(text(button)));
+    const selectedShift = shiftSelect?.selectedOptions?.[0]?.textContent?.trim() || text(shiftButton) || 'ตามตัวกรองกะ';
     const recorderCol = findColumn(headers, /Recorded By/i);
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
-      const timeText = timeCol >= 0 ? text(cells[timeCol]) : '';\n      const runningMatch = timeText.match(/เดิน\\s*([\\d,.]+)/i);\n      const runningMinutes = runningMatch ? parseNumber(runningMatch[1]) : null;\n      return { date: productionDate, shift: selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      const timeText = timeCol >= 0 ? text(cells[timeCol]) : '';
+      const runningMatch = timeText.match(/เดิน\s*([\d,.]+)/i);
+      const runningMinutes = runningMatch ? parseNumber(runningMatch[1]) : null;
+      return { date: productionDate, shift: selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine).sort((a, b) => compareMachineOrder(a.machine, b.machine));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
@@ -106,7 +110,9 @@
         `ผู้บันทึก: ${row.recorder || 'ไม่ระบุ'}`,
         `ผลิตได้ (Output): ${row.output.toLocaleString()}`,
         `เป้าหมาย: ${targetValue}`,
-        `ผลเทียบเป้าหมาย: ${percentValue}`,\n        `เวลาเดินผลิต: ${row.runningMinutes === null ? 'ไม่มีข้อมูล' : `${row.runningMinutes.toLocaleString()} นาที`}`,\n        `เวลารวมตามรายงาน: ${row.timeText || 'ไม่มีข้อมูล'}`,
+        `ผลเทียบเป้าหมาย: ${percentValue}`,
+        `เวลาเดินผลิต: ${row.runningMinutes === null ? 'ไม่มีข้อมูล' : `${row.runningMinutes.toLocaleString()} นาที`}`,
+        `เวลารวมตามรายงาน: ${row.timeText || 'ไม่มีข้อมูล'}`,
       ].join('\n');
       item.setAttribute('aria-label', tooltipText.replace(/\n/g, ', '));
       item.title = tooltipText;
