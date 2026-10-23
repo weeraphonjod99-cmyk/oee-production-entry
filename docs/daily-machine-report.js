@@ -25,12 +25,12 @@
       setDate(input);
     });
   };
-  const selectMachineView = () => {
+  const selectDetailView = () => {
     const root = document.querySelector('.production-report');
     if (!root) { initializedReport = null; return; }
     if (initializedReport === root) return;
     initializedReport = root;
-    const button = [...document.querySelectorAll('.production-report button')].find(node => text(node).includes('By Machine'));
+    const button = [...document.querySelectorAll('.production-report button')].find(node => text(node).includes('Machine × Recorder × Part'));
     if (button && button.getAttribute('aria-pressed') !== 'true') button.click();
   };
   const findColumn = (headers, pattern) => headers.findIndex(header => pattern.test(text(header)));
@@ -40,26 +40,27 @@
     // Draw from grouped report rows so the chart reflects the visible report table.
     root.querySelector('.pr-machine-chart')?.remove();
     const old = root.querySelector('.daily-machine-summary');
-    const activeMachine = [...root.querySelectorAll('.pr-tabs button')].some(button => button.getAttribute('aria-pressed') === 'true' && text(button).includes('By Machine'));
-    if (!activeMachine) { old?.remove(); return; }
+    const activeDetail = [...root.querySelectorAll('.pr-tabs button')].some(button => button.getAttribute('aria-pressed') === 'true' && text(button).includes('Machine × Recorder × Part'));
+    if (!activeDetail) { old?.remove(); return; }
     const table = root.querySelector('.pr-scroll table');
     if (!table) return;
     const headers = [...table.querySelectorAll('thead th')];
     const machineCol = findColumn(headers, /Machine/i);
+    const partCol = findColumn(headers, /Part/i);
     const countCol = findColumn(headers, /Items/i);
     const outputCol = findColumn(headers, /Output/i);
     const targetCol = findColumn(headers, /Target/i);
-    if ([machineCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
+    if ([machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
-      return { machine: text(cells[machineCol]), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      return { machine: text(cells[machineCol]), part: text(cells[partCol]), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine);
     const max = Math.max(1, ...rows.flatMap(row => [row.output, row.target || 0]));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
     const heading = document.createElement('div'); heading.className = 'daily-machine-heading';
     const title = document.createElement('div');
-    title.innerHTML = '<h3>สรุปการผลิตรายเครื่อง / Daily Production by Machine</h3><p>จำนวนงานผลิต ยอดผลิตจริง และเป้าหมายตามวันและตัวกรองที่เลือก</p>';
+    title.innerHTML = '<h3>สรุปผลผลิตรายเครื่องและชิ้นงาน / Production by Machine & Part</h3><p>ยอดผลิตจริงเทียบเป้าหมายรายชิ้นงาน · แสดงว่าถึงเป้าหรือไม่</p>';
     const legend = document.createElement('div'); legend.className = 'daily-machine-legend';
     legend.innerHTML = '<span><i class="daily-actual-key"></i> ผลิตได้ / Actual</span><span><i class="daily-target-key"></i> เป้าหมาย / Target</span>';
     heading.append(title, legend);
@@ -72,8 +73,9 @@
       const item = document.createElement('div'); item.className = 'daily-machine-row';
       const label = document.createElement('div'); label.className = 'daily-machine-label';
       const machine = document.createElement('b'); machine.textContent = row.machine;
-      const count = document.createElement('span'); count.textContent = `${row.count} งาน`;
-      label.append(machine, count);
+      const part = document.createElement('span'); part.className = 'daily-part-label'; part.textContent = row.part;
+      const count = document.createElement('small'); count.textContent = `${row.count} งาน`;
+      label.append(machine, part, count);
       const track = document.createElement('div'); track.className = 'daily-machine-track'; track.setAttribute('aria-label', `${row.machine}: ผลิตได้ ${row.output.toLocaleString()} เป้าหมาย ${row.target === null ? 'ไม่มีข้อมูล' : row.target.toLocaleString()}`);
       const fill = document.createElement('div'); fill.className = 'daily-machine-fill'; fill.style.width = `${Math.min(100, row.output / max * 100)}%`;
       track.append(fill);
@@ -81,13 +83,17 @@
       const value = document.createElement('div'); value.className = 'daily-machine-value';
       const actual = document.createElement('b'); actual.textContent = row.output.toLocaleString();
       const target = document.createElement('span'); target.textContent = ` / ${row.target === null ? '—' : row.target.toLocaleString()}`;
-      value.append(actual, target); item.append(label, track, value); bars.append(item);
+      value.append(actual, target);
+      const status = document.createElement('strong'); status.className = 'daily-machine-status';
+      if (row.target === null || row.target <= 0) { status.textContent = 'ไม่มีข้อมูลเป้าหมาย'; status.classList.add('unknown'); }
+      else { const percent = row.output / row.target * 100; status.textContent = `${row.output >= row.target ? 'ถึงเป้าหมาย' : 'ต่ำกว่าเป้าหมาย'} · ${percent.toLocaleString('th-TH', { maximumFractionDigits: 1 })}%`; status.classList.add(row.output >= row.target ? 'met' : 'below'); }
+      item.append(label, track, value, status); bars.append(item);
     }
     section.replaceChildren(heading, bars);
     const kpis = root.querySelector('.pr-kpis');
     if (kpis) kpis.after(section);
   };
-  const run = () => { initialiseFilters(); selectMachineView(); render(); };
+  const run = () => { initialiseFilters(); selectDetailView(); render(); };
   let scheduled = false;
   const observer = new MutationObserver(() => { if (scheduled) return; scheduled = true; requestAnimationFrame(() => { scheduled = false; run(); }); });
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
