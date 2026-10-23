@@ -33,7 +33,7 @@
     if (!root) { initializedReport = null; return; }
     if (initializedReport === root) return;
     initializedReport = root;
-    const button = [...document.querySelectorAll('.production-report button')].find(node => text(node).includes('Machine × Recorder × Part'));
+    const button = [...document.querySelectorAll('.production-report button')].find(node => text(node).includes('รายวัน / By Day'));
     if (button && button.getAttribute('aria-pressed') !== 'true') button.click();
   };
   const findColumn = (headers, pattern) => headers.findIndex(header => pattern.test(text(header)));
@@ -43,18 +43,18 @@
     // Draw from grouped report rows so the chart reflects the visible report table.
     root.querySelector('.pr-machine-chart')?.remove();
     const old = root.querySelector('.daily-machine-summary');
-    const activeDetail = [...root.querySelectorAll('.pr-tabs button')].some(button => button.getAttribute('aria-pressed') === 'true' && text(button).includes('Machine × Recorder × Part'));
+    const activeDetail = [...root.querySelectorAll('.pr-tabs button')].some(button => button.getAttribute('aria-pressed') === 'true' && text(button).includes('รายวัน / By Day'));
     if (!activeDetail) { old?.remove(); return; }
     const table = root.querySelector('.pr-scroll table');
     if (!table) return;
     const headers = [...table.querySelectorAll('thead th')];
-    const machineCol = findColumn(headers, /Machine/i);
+    const dateCol = findColumn(headers, /Date/i);\n    const shiftCol = findColumn(headers, /Shift/i);\n    const machineCol = findColumn(headers, /Machine/i);
     const partCol = findColumn(headers, /Part/i);
     const countCol = findColumn(headers, /Items/i);
     const outputCol = findColumn(headers, /Output/i);
     const timeCol = findColumn(headers, /TOTAL TIME/i);
     const targetCol = headers.findIndex(header => /^เป้าหมาย\s*\/\s*TARGET/i.test(text(header)));
-    if ([machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
+    if ([dateCol, shiftCol, machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const dates = [...document.querySelectorAll('input[type="date"]')].map(input => input.value).filter(Boolean);
     const productionDate = dates.length > 1 && dates[0] !== dates[1] ? `${dates[0]} ถึง ${dates[1]}` : (dates[0] || 'ตามตัวกรองวันที่');
     const shiftSelect = [...root.querySelectorAll('select')].find(select => /กะ|shift/i.test(select.parentElement?.innerText || select.getAttribute('aria-label') || ''));
@@ -66,13 +66,13 @@
       const timeText = timeCol >= 0 ? text(cells[timeCol]) : '';
       const runningMatch = timeText.match(/เดิน\s*([\d,.]+)/i);
       const runningMinutes = runningMatch ? parseNumber(runningMatch[1]) : null;
-      return { date: productionDate, shift: selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      return { date: text(cells[dateCol]), shift: text(cells[shiftCol]) || selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine).sort((a, b) => compareMachineOrder(a.machine, b.machine));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
     const heading = document.createElement('div'); heading.className = 'daily-machine-heading';
     const title = document.createElement('div');
-    title.innerHTML = '<h3>สรุปผลผลิตรายเครื่องและชิ้นงาน / Production by Machine & Part</h3><p>ยอดผลิตจริงเทียบเป้าหมายรายชิ้นงาน · แสดงว่าถึงเป้าหรือไม่</p>';
+    title.innerHTML = '<h3>สรุปผลผลิตรายเครื่องและชิ้นงาน / Production by Machine, Part & Shift</h3><p>แยกตามวันที่และกะ · เป้าหมายคำนวณแยกสำหรับแต่ละช่วงผลิต</p>';
     const legend = document.createElement('div'); legend.className = 'daily-machine-legend';
     legend.innerHTML = '<span><i class="daily-actual-key"></i> ผลิตได้ / Actual</span><span><i class="daily-target-key"></i> เป้าหมาย / Target</span>';
     heading.append(title, legend);
@@ -86,7 +86,7 @@
       const label = document.createElement('div'); label.className = 'daily-machine-label';
       const machine = document.createElement('b'); machine.textContent = row.machine;
       const part = document.createElement('span'); part.className = 'daily-part-label'; part.textContent = row.part;
-      const count = document.createElement('small'); count.textContent = `${row.count} งาน`;
+      const count = document.createElement('small'); count.textContent = `${row.count} งาน · ${row.shift || 'ไม่ระบุกะ'}`;
       label.append(machine, part, count);
       const track = document.createElement('div'); track.className = 'daily-machine-track'; track.setAttribute('aria-label', `${row.machine}: ผลิตได้ ${row.output.toLocaleString()} เป้าหมาย ${row.target === null ? 'ไม่มีข้อมูล' : row.target.toLocaleString()}`);
       const scale = Math.max(1, row.output, row.target || 0);
