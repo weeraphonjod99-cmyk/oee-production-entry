@@ -7,7 +7,7 @@
     return `${value('year')}-${value('month')}-${value('day')}`;
   };
   const text = node => (node?.textContent || '').replace(/\s+/g, ' ').trim();
-  const parseNumber = value => Number((value || '').replace(/[^0-9.-]/g, '')) || 0;
+  const parseNumber = value => { if (!value || value.includes('—')) return null; const parsed = Number(value.replace(/[^0-9.-]/g, '')); return Number.isFinite(parsed) ? parsed : null; };
   let initializedReport = null;
   const reportHeading = () => [...document.querySelectorAll('h2,h3')].find(node => text(node).includes('Production Performance Report'));
   const setDate = input => {
@@ -51,9 +51,9 @@
     if ([machineCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
-      return { machine: text(cells[machineCol]), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])), target: parseNumber(text(cells[targetCol])) };
+      return { machine: text(cells[machineCol]), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine);
-    const max = Math.max(1, ...rows.flatMap(row => [row.output, row.target]));
+    const max = Math.max(1, ...rows.flatMap(row => [row.output, row.target || 0]));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
     const heading = document.createElement('div'); heading.className = 'daily-machine-heading';
@@ -72,11 +72,11 @@
       label.append(machine, count);
       const track = document.createElement('div'); track.className = 'daily-machine-track'; track.setAttribute('aria-label', `${row.machine}: ผลิตได้ ${row.output.toLocaleString()} เป้าหมาย ${row.target.toLocaleString()}`);
       const fill = document.createElement('div'); fill.className = 'daily-machine-fill'; fill.style.width = `${Math.min(100, row.output / max * 100)}%`;
-      const marker = document.createElement('i'); marker.className = 'daily-machine-target-marker'; marker.style.left = `${Math.min(100, row.target / max * 100)}%`;
-      track.append(fill, marker);
+      track.append(fill);
+      if (row.target !== null) { const marker = document.createElement('i'); marker.className = 'daily-machine-target-marker'; marker.style.left = `${Math.min(100, row.target / max * 100)}%`; track.append(marker); }
       const value = document.createElement('div'); value.className = 'daily-machine-value';
       const actual = document.createElement('b'); actual.textContent = row.output.toLocaleString();
-      const target = document.createElement('span'); target.textContent = ` / ${row.target.toLocaleString()}`;
+      const target = document.createElement('span'); target.textContent = ` / ${row.target === null ? '—' : row.target.toLocaleString()}`;
       value.append(actual, target); item.append(label, track, value); bars.append(item);
     }
     section.replaceChildren(heading, bars);
