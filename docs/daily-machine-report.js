@@ -8,6 +8,7 @@
   };
   const text = node => (node?.textContent || '').replace(/\s+/g, ' ').trim();
   const parseNumber = value => Number((value || '').replace(/[^0-9.-]/g, '')) || 0;
+  let initializedReport = null;
   const reportHeading = () => [...document.querySelectorAll('h2,h3')].find(node => text(node).includes('Production Performance Report'));
   const setDate = input => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -25,14 +26,18 @@
     });
   };
   const selectMachineView = () => {
-    if (!reportHeading() || document.body.dataset.dailyMachineViewSelected) return;
+    const root = document.querySelector('.production-report');
+    if (!root) { initializedReport = null; return; }
+    if (initializedReport === root) return;
+    initializedReport = root;
     const button = [...document.querySelectorAll('.production-report button')].find(node => text(node).includes('By Machine'));
-    if (button) { button.click(); document.body.dataset.dailyMachineViewSelected = '1'; }
+    if (button && button.getAttribute('aria-pressed') !== 'true') button.click();
   };
   const findColumn = (headers, pattern) => headers.findIndex(header => pattern.test(text(header)));
   const render = () => {
     const root = document.querySelector('.production-report');
     if (!root || !reportHeading()) return;
+    if (root.querySelector('.pr-machine-chart')) { root.querySelector('.daily-machine-summary')?.remove(); return; }
     const old = root.querySelector('.daily-machine-summary');
     const activeMachine = [...root.querySelectorAll('.pr-tabs button')].some(button => button.getAttribute('aria-pressed') === 'true' && text(button).includes('By Machine'));
     if (!activeMachine) { old?.remove(); return; }
