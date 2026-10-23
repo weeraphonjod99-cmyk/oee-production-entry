@@ -22,7 +22,7 @@
     if (dates.length < 2 || dates.some(input => input.dataset.dailyDefaultApplied === '1')) return;
     dates.slice(0, 2).forEach(input => {
       input.dataset.dailyDefaultApplied = '1';
-      if (!input.value) setDate(input);
+      setDate(input);
     });
   };
   const selectMachineView = () => {
@@ -37,7 +37,8 @@
   const render = () => {
     const root = document.querySelector('.production-report');
     if (!root || !reportHeading()) return;
-    if (root.querySelector('.pr-machine-chart')) { root.querySelector('.daily-machine-summary')?.remove(); return; }
+    // Draw from grouped report rows so the chart reflects the visible report table.
+    root.querySelector('.pr-machine-chart')?.remove();
     const old = root.querySelector('.daily-machine-summary');
     const activeMachine = [...root.querySelectorAll('.pr-tabs button')].some(button => button.getAttribute('aria-pressed') === 'true' && text(button).includes('By Machine'));
     if (!activeMachine) { old?.remove(); return; }
@@ -63,14 +64,17 @@
     legend.innerHTML = '<span><i class="daily-actual-key"></i> ผลิตได้ / Actual</span><span><i class="daily-target-key"></i> เป้าหมาย / Target</span>';
     heading.append(title, legend);
     const bars = document.createElement('div'); bars.className = 'daily-machine-bars';
-    if (!rows.length) { bars.innerHTML = '<p>ไม่มีข้อมูลการผลิตสำหรับวันที่และตัวกรองที่เลือก</p>'; }
+    if (!rows.length) {
+      const loading = [...document.querySelectorAll('button')].some(button => /กำลังโหลดประวัติการผลิต/.test(text(button)));
+      bars.innerHTML = `<p>${loading ? 'กำลังโหลดประวัติการผลิต…' : 'ไม่มีข้อมูลการผลิตสำหรับวันที่และตัวกรองที่เลือก'}</p>`;
+    }
     for (const row of rows) {
       const item = document.createElement('div'); item.className = 'daily-machine-row';
       const label = document.createElement('div'); label.className = 'daily-machine-label';
       const machine = document.createElement('b'); machine.textContent = row.machine;
       const count = document.createElement('span'); count.textContent = `${row.count} งาน`;
       label.append(machine, count);
-      const track = document.createElement('div'); track.className = 'daily-machine-track'; track.setAttribute('aria-label', `${row.machine}: ผลิตได้ ${row.output.toLocaleString()} เป้าหมาย ${row.target.toLocaleString()}`);
+      const track = document.createElement('div'); track.className = 'daily-machine-track'; track.setAttribute('aria-label', `${row.machine}: ผลิตได้ ${row.output.toLocaleString()} เป้าหมาย ${row.target === null ? 'ไม่มีข้อมูล' : row.target.toLocaleString()}`);
       const fill = document.createElement('div'); fill.className = 'daily-machine-fill'; fill.style.width = `${Math.min(100, row.output / max * 100)}%`;
       track.append(fill);
       if (row.target !== null) { const marker = document.createElement('i'); marker.className = 'daily-machine-target-marker'; marker.style.left = `${Math.min(100, row.target / max * 100)}%`; track.append(marker); }
@@ -89,4 +93,5 @@
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
   run();
 })();
+
 
