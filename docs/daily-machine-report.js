@@ -51,7 +51,8 @@
     const machineCol = findColumn(headers, /Machine/i);
     const partCol = findColumn(headers, /Part/i);
     const countCol = findColumn(headers, /Items/i);
-    const outputCol = findColumn(headers, /Output/i);\n    const timeCol = findColumn(headers, /TOTAL TIME/i);
+    const outputCol = findColumn(headers, /Output/i);
+    const timeCol = findColumn(headers, /TOTAL TIME/i);
     const targetCol = headers.findIndex(header => /^เป้าหมาย\s*\/\s*TARGET/i.test(text(header)));
     if ([machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const dates = [...document.querySelectorAll('input[type="date"]')].map(input => input.value).filter(Boolean);
