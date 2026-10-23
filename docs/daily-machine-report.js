@@ -49,11 +49,11 @@
     const partCol = findColumn(headers, /Part/i);
     const countCol = findColumn(headers, /Items/i);
     const outputCol = findColumn(headers, /Output/i);
-    const targetCol = findColumn(headers, /Target/i);
+    const targetCol = headers.findIndex(header => /^เป้าหมาย\s*\/\s*TARGET/i.test(text(header)));
     if ([machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
-      return { machine: text(cells[machineCol]), part: text(cells[partCol]), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      return { machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine);
     const max = Math.max(1, ...rows.flatMap(row => [row.output, row.target || 0]));
     const section = old || document.createElement('section');
