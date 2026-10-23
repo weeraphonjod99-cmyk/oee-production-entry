@@ -710,7 +710,8 @@ function formatPercent(value) {
 }
 
 const reportText = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').replace(/[‐‑‒–—]/g, '-').toLowerCase();
-const stepKey = (v) => ['-', ''].includes(reportText(v)) ? '' : reportText(v);
+const stepKey = (v) => { const step = reportText(v); if (['-', ''].includes(step)) return ''; return /^(1|2)(?:\/2)?$/.test(step) ? `${step[0]}/2` : step; };
+const reportStepLabel = (v) => stepKey(v) || '—';
 const finite = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
 const positive = (v) => finite(v) && Number(v) > 0;
 const capacityMachineAliases = {
@@ -823,17 +824,18 @@ function buildProductionReport(logs, mode, match) {
     for (const log of logs) {
         const person = reportPerson(log);
         const machine = log.machineName || log.machineId;
-        const part = reportPart(log);
+        const found = match(log);
+        const reportLog = { ...log, step: reportStepLabel(log.step) };
+        const part = reportPart(reportLog);
         const key = JSON.stringify(mode === 'day' ? [log.date || '', reportShift(log.shift), log.machineId || machine, part] : mode === 'machine' ? [log.machineId || machine] : mode === 'person' ? [reportText(person)] : mode === 'part' ? [part] : [log.machineId || machine, reportText(person), part]);
         if (!rows.has(key))
-            rows.set(key, { ...emptyReportRow(key), date: log.date || '', shift: reportShift(log.shift), machine, person, product: log.productName, partNo: log.partNo, step: log.step });
+            rows.set(key, { ...emptyReportRow(key), date: log.date || '', shift: reportShift(log.shift), machine, person, product: log.productName, partNo: log.partNo, step: reportLog.step });
         const downtime = totalDowntime(log);
         const minutes = log.workMinutes != null ? Number(log.workMinutes) : Number(log.normalMinutes) + downtime;
         const timeOk = Number.isFinite(minutes) && minutes > 0 && minutes <= 1440 && Number.isFinite(downtime) && downtime >= 0 && downtime <= 1440 && finite(log.normalMinutes) && log.normalMinutes >= 0 && log.normalMinutes <= 1440;
         const quantities = [log.goodQty, log.ngQty, log.testQty];
         const qtyOk = quantities.every(q => finite(q) && Number(q) >= 0);
         const [good, ng, test] = quantities.map(q => finite(q) && Number(q) >= 0 ? Number(q) : 0);
-        const found = match(log);
         const eligible = found.rate !== null && timeOk && qtyOk;
         for (const row of [rows.get(key), total]) {
             row.count++;
