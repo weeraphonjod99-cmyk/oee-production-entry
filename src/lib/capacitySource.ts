@@ -9,7 +9,7 @@ export const capacitySnapshot=()=>state;
 let pending:Promise<ProductionCapacityData>|null=null,lastSuccess=0;
 export function fetchCurrentCapacity():Promise<ProductionCapacityData>{
  if(pending)return pending;
- if(state.data&&Date.now()-lastSuccess<15000)return Promise.resolve(state.data);
+ if(state.data&&Date.now()-lastSuccess<8000)return Promise.resolve(state.data);
  publish({loading:true});
  pending=(async()=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),45000);
