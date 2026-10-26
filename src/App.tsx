@@ -2069,7 +2069,7 @@ function useFactoryGeofence(active: boolean): FactoryGeofenceAccess {
 function App() {
   const [tab, setTab] = useState<TabId>("employeeEntry");
   const [machineSection, setMachineSection] = useState<'list' | 'maintenance' | 'repair'>('list');
-  const capacityRefreshTick=useCapacityRefreshTick(tab==='capacity');
+  const capacityRefreshTick=useCapacityRefreshTick(tab==='capacity',10000);
   const [session, setSession] = useState<AppSession | null>(() => loadSession());
   const factoryAccess = useFactoryGeofence(Boolean(session));
   const [onlineUsers,setOnlineUsers]=useState<NonNullable<OnlineUsersSummary['users']>>([]);
@@ -4726,7 +4726,7 @@ function App() {
           </div>
         </header>
 
-        {['capacity','dashboard','reports','productionSearch'].includes(tab) && <CapacitySourceStatus />}
+        {['capacity','dashboard','reports','productionSearch'].includes(tab) && <CapacitySourceStatus intervalSeconds={tab==='capacity'?10:60} />}
         {roleNotifications.length > 0 && (
           <section className="role-notification-strip" aria-live="polite">
             {roleNotifications.map((notification) => (
