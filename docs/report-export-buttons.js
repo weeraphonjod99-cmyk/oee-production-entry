@@ -32,7 +32,7 @@
     return makeZip(files);
   }
   function readChart(report, tableRows) {
-    const heading=['Machine / เครื่อง','งาน / Items','Actual / ผลิตได้','Target / เป้าหมาย','KPI %','กราฟแท่ง Actual'];
+    const heading=['Machine / เครื่อง','งาน / Items','Actual / ผลิตได้','Target / เป้าหมาย','KPI %','สถานะ / Target Status','กราฟแท่ง Actual'];
     let rows=[...report.querySelectorAll('.pr-machine-bar-row')].map(row=>{
       const label=text(row.querySelector('.pr-machine-label b'));
       const count=Number((text(row.querySelector('.pr-machine-label span')).match(/[\d,]+/)||['0'])[0].replaceAll(',',''));
@@ -40,19 +40,19 @@
       const actual=Number((values[0]||'').replace(/[^\d.-]/g,''));
       const target=Number((values[1]||'').replace(/[^\d.-]/g,''));
       const kpi=target>0?actual/target*100:null;
-      return [label,count,actual,Number.isFinite(target)&&target>0?target:'—',kpi===null?'—':kpi.toFixed(1)+'%', '█'.repeat(Math.max(1,Math.round(actual/(Math.max(actual,target)||1)*24)))];
+      return [label,count,actual,Number.isFinite(target)&&target>0?target:'—',kpi===null?'—':kpi.toFixed(1)+'%',kpi===null?'ไม่มีเป้าหมาย':kpi<100?'ต่ำกว่าเป้า':'ถึงเป้า','█'.repeat(Math.max(1,Math.round(actual/(Math.max(actual,target)||1)*24)))];
     });
     if(!rows.length&&tableRows?.length>1){
       const headers=tableRows[0].map(value=>String(value||''));
-      const indexOf=term=>headers.findIndex(value=>value.includes(term));
-      const machine=indexOf('Machine'), part=indexOf('Part / Step'), date=indexOf('Date'), shift=indexOf('Shift'), items=indexOf('Items'), actual=indexOf('Output'), target=indexOf('Target');
+      const indexOf=term=>headers.findIndex(value=>value.toLowerCase().includes(term.toLowerCase()));
+      const machine=indexOf('Machine'), part=indexOf('Part / Step'), date=indexOf('Date'), shift=indexOf('Shift'), items=indexOf('Items'), actual=indexOf('Output'), target=indexOf('Target'), status=indexOf('Status and Completeness');
       if(machine>=0&&actual>=0){
         rows=tableRows.slice(1).map(row=>{
           const numberAt=index=>Number(String(row[index]??'').replace(/[^\d.-]/g,''));
           const output=numberAt(actual), goal=target>=0?numberAt(target):NaN;
           const label=[date>=0?row[date]:'',shift>=0?row[shift]:'',row[machine],part>=0?row[part]:''].filter(Boolean).join(' · ');
           const kpi=goal>0?output/goal*100:null;
-          return [label,items>=0?row[items]:'',output,Number.isFinite(goal)&&goal>0?goal:'—',kpi===null?'—':kpi.toFixed(1)+'%', '█'.repeat(Math.max(1,Math.round(output/(Math.max(output,goal)||1)*24)))];
+          return [label,items>=0?row[items]:'',output,Number.isFinite(goal)&&goal>0?goal:'—',kpi===null?'—':kpi.toFixed(1)+'%',status>=0?row[status]:kpi===null?'ไม่มีเป้าหมาย':kpi<100?'ต่ำกว่าเป้า':'ถึงเป้า','█'.repeat(Math.max(1,Math.round(output/(Math.max(output,goal)||1)*24)))];
         });
       }
     }
