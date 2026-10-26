@@ -1,4 +1,6 @@
 (() => {
+  if (window.__jrtlMachineListExcelReady) return;
+  window.__jrtlMachineListExcelReady = true;
   const registry = (node) => node?.closest?.(".equipment-registry");
   const esc = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   const download = (root) => {
