@@ -32,7 +32,7 @@
   };
   const updateButton = () => {
     document.querySelectorAll(".equipment-registry .equipment-heading button").forEach((button) => {
-      button.textContent = "ดาวน์โหลด M/C List Excel";
+      if (button.textContent !== "ดาวน์โหลด M/C List Excel") button.textContent = "ดาวน์โหลด M/C List Excel";
       button.title = "ดาวน์โหลดรายการเครื่องจักรที่ตรงกับตัวกรองเป็นไฟล์ Excel";
     });
   };
