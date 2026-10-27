@@ -6,8 +6,8 @@
   const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
   const sheets = [
     { gid: '1726977328', name: 'Auto Part', label: 'ชิ้นส่วนรถยนต์ / Auto Part' },
-    { gid: '156843303', name: 'Electronics', label: 'อิเล็กทรอนิกส์ / Electronics' },
-    { gid: '443429873', name: 'Box', label: 'กล่อง / Box' },
+    { gid: '443429873', name: 'Electronics', label: 'อิเล็กทรอนิกส์ / Electronics' },
+    { gid: '156843303', name: 'Box', label: 'กล่อง / Box' },
   ];
   const state = { items: [], category: 'All', query: '', page: 0, loading: false, error: '', updated: '', open: false };
   const el = (tag, cls, text) => {
