@@ -5,6 +5,7 @@
 
   const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
   const imageMapUrl = './part-images-map.json';
+  const orderedImageMapUrl = './part-images-ordered.json';
   const sheets = [
     { gid: '1726977328', name: 'Auto Part', label: 'ชิ้นส่วนรถยนต์ / Auto Part' },
     { gid: '443429873', name: 'Electronics', label: 'อิเล็กทรอนิกส์ / Electronics' },
@@ -12,6 +13,7 @@
   ];
   const state = { items: [], category: 'All', query: '', page: 0, loading: false, error: '', updated: '', open: false };
   let imageMap = Object.create(null);
+  let orderedImageMap = Object.create(null);
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -123,7 +125,7 @@
     alert.hidden = true;
     if (!state.items.length) { content.replaceChildren(el('div', 'jrtl-pl-empty', 'กำลังโหลดรายการจาก Google Sheet…')); }
     try {
-      const [results, mapResponse] = await Promise.all([
+      const [results, mapResponse, orderedResponse] = await Promise.all([
         Promise.all(sheets.map(async sheet => {
         const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}`;
         const response = await fetch(url, { credentials: 'omit', cache: force ? 'no-store' : 'default' });
@@ -131,6 +133,7 @@
         return parseSheet(await response.text(), sheet).map(item => ({ ...item, category: sheet.name }));
         })),
         fetch(imageMapUrl, { cache: 'force-cache' }).catch(() => null),
+        fetch(orderedImageMapUrl, { cache: 'force-cache' }).catch(() => null),
       ]);
       if (mapResponse?.ok) {
         try {
@@ -138,6 +141,24 @@
           const jsonStart = mapText.indexOf('{');
           if (jsonStart >= 0) imageMap = JSON.parse(mapText.slice(jsonStart));
         } catch { imageMap = Object.create(null); }
+      }
+      if (orderedResponse?.ok) {
+        try {
+          const orderedText = await orderedResponse.text();
+          const jsonStart = orderedText.indexOf('{');
+          if (jsonStart >= 0) orderedImageMap = JSON.parse(orderedText.slice(jsonStart));
+        } catch { orderedImageMap = Object.create(null); }
+      }
+      for (let i = 0; i < sheets.length; i++) {
+        const paths = orderedImageMap[sheets[i].gid] || [];
+        let imageIndex = 0;
+        for (const item of results[i]) {
+          item.images = item.images.map(src => {
+            const localPath = paths[imageIndex++];
+            if (localPath) imageMap[src] = localPath;
+            return src;
+          });
+        }
       }
       state.items = results.flat(); state.updated = new Date().toLocaleString('th-TH'); state.error = '';
     } catch (error) {
