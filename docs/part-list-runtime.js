@@ -4,12 +4,14 @@
   window.__JRTL_PART_LIST__ = true;
 
   const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
+  const imageMapUrl = './part-images-map.json';
   const sheets = [
     { gid: '1726977328', name: 'Auto Part', label: 'ชิ้นส่วนรถยนต์ / Auto Part' },
     { gid: '443429873', name: 'Electronics', label: 'อิเล็กทรอนิกส์ / Electronics' },
     { gid: '156843303', name: 'Box', label: 'กล่อง / Box' },
   ];
   const state = { items: [], category: 'All', query: '', page: 0, loading: false, error: '', updated: '', open: false };
+  let imageMap = Object.create(null);
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -121,12 +123,16 @@
     alert.hidden = true;
     if (!state.items.length) { content.replaceChildren(el('div', 'jrtl-pl-empty', 'กำลังโหลดรายการจาก Google Sheet…')); }
     try {
-      const results = await Promise.all(sheets.map(async sheet => {
+      const [results, mapResponse] = await Promise.all([
+        Promise.all(sheets.map(async sheet => {
         const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}`;
         const response = await fetch(url, { credentials: 'omit', cache: force ? 'no-store' : 'default' });
         if (!response.ok) throw new Error(`${sheet.name}: HTTP ${response.status}`);
         return parseSheet(await response.text(), sheet).map(item => ({ ...item, category: sheet.name }));
-      }));
+        })),
+        fetch(imageMapUrl, { cache: 'force-cache' }).catch(() => null),
+      ]);
+      if (mapResponse?.ok) imageMap = await mapResponse.json();
       state.items = results.flat(); state.updated = new Date().toLocaleString('th-TH'); state.error = '';
     } catch (error) {
       state.error = 'อ่านข้อมูล Google Sheet ไม่สำเร็จ อาจต้องเปิดสิทธิ์การดูชีตให้ผู้มีลิงก์ · ' + (error?.message || 'Network error');
@@ -159,7 +165,7 @@
       tr.append(el('td', '', sheets.find(sheet => sheet.name === item.category)?.label || item.category), el('td', '', item.no), el('td', '', item.mode || '—'), el('td', 'jrtl-pl-no', item.partNo || '—'));
       const name = el('td'); name.append(el('strong', '', item.partName || '—')); if (item.details) name.append(el('small', '', item.details)); tr.append(name);
       const pics = el('td');
-      if (item.images.length) { const holder = el('div', 'jrtl-pl-imgs'); for (const src of item.images.slice(0, 2)) { const a = el('a'); a.href = src; a.target = '_blank'; a.rel = 'noreferrer'; const img = el('img'); img.referrerPolicy = 'no-referrer'; img.src = src; img.loading = 'lazy'; img.alt = item.partName; img.addEventListener('error', () => { img.remove(); a.className = 'jrtl-pl-img-fallback'; a.textContent = 'เปิดภาพ / Open image ↗'; }); a.append(img); holder.append(a); } pics.append(holder); } else pics.textContent = '—';
+      if (item.images.length) { const holder = el('div', 'jrtl-pl-imgs'); for (const src of item.images.slice(0, 2)) { const a = el('a'); a.href = src; a.target = '_blank'; a.rel = 'noreferrer'; const img = el('img'); img.src = imageMap[src] || src; img.loading = 'lazy'; img.alt = item.partName; img.addEventListener('error', () => { img.remove(); a.className = 'jrtl-pl-img-fallback'; a.textContent = 'เปิดภาพ / Open image ↗'; }); a.append(img); holder.append(a); } pics.append(holder); } else pics.textContent = '—';
       tr.append(pics); tbody.append(tr);
     }
     table.append(tbody); wrap.append(table);
@@ -197,4 +203,3 @@
   new MutationObserver(ensureMenu).observe(document.body, { childList: true, subtree: true });
   window.setInterval(() => { if (state.open && !document.hidden && !state.loading) void load(); }, 10 * 60 * 1000);
 })();
-
