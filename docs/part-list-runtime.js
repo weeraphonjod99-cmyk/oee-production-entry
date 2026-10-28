@@ -41,6 +41,7 @@
     #jrtl-part-overlay tbody tr:hover{background:#f7fbfe}#jrtl-part-overlay .jrtl-pl-no{font-weight:700;white-space:nowrap;color:#124d78}
     #jrtl-part-overlay small{display:block;margin-top:4px;max-width:480px;color:#637d94;white-space:normal}
     #jrtl-part-overlay .jrtl-pl-imgs{display:flex;gap:5px}#jrtl-part-overlay .jrtl-pl-imgs img{width:76px;height:58px;object-fit:contain;border:1px solid #d8e4ec;border-radius:5px;background:#fff}
+    #jrtl-part-overlay .jrtl-pl-img-fallback{display:inline-block;padding:8px 10px;border:1px solid #bed3e6;border-radius:7px;background:#f5f9fc;color:#164b73;text-decoration:underline;white-space:nowrap}
     #jrtl-part-overlay .jrtl-pl-empty{padding:34px;text-align:center;background:#f8fbfd;border:1px dashed #c9d8e6;border-radius:9px;color:#5a7289}
     #jrtl-part-overlay .jrtl-pl-error{padding:11px;background:#fff7e6;border:1px solid #eecb84;border-radius:8px;color:#865c04}
     #jrtl-part-overlay .jrtl-pl-pages{display:flex;justify-content:center;align-items:center;gap:14px;padding-top:14px}
@@ -158,7 +159,7 @@
       tr.append(el('td', '', sheets.find(sheet => sheet.name === item.category)?.label || item.category), el('td', '', item.no), el('td', '', item.mode || '—'), el('td', 'jrtl-pl-no', item.partNo || '—'));
       const name = el('td'); name.append(el('strong', '', item.partName || '—')); if (item.details) name.append(el('small', '', item.details)); tr.append(name);
       const pics = el('td');
-      if (item.images.length) { const holder = el('div', 'jrtl-pl-imgs'); for (const src of item.images.slice(0, 2)) { const a = el('a'); a.href = src; a.target = '_blank'; a.rel = 'noreferrer'; const img = el('img'); img.referrerPolicy = 'no-referrer'; img.src = src; img.loading = 'lazy'; img.alt = item.partName; img.addEventListener('error', () => { a.remove(); if (!holder.querySelector('a')) pics.textContent = '—'; }); a.append(img); holder.append(a); } pics.append(holder); } else pics.textContent = '—';
+      if (item.images.length) { const holder = el('div', 'jrtl-pl-imgs'); for (const src of item.images.slice(0, 2)) { const a = el('a'); a.href = src; a.target = '_blank'; a.rel = 'noreferrer'; const img = el('img'); img.referrerPolicy = 'no-referrer'; img.src = src; img.loading = 'lazy'; img.alt = item.partName; img.addEventListener('error', () => { img.remove(); a.className = 'jrtl-pl-img-fallback'; a.textContent = 'เปิดภาพ / Open image ↗'; }); a.append(img); holder.append(a); } pics.append(holder); } else pics.textContent = '—';
       tr.append(pics); tbody.append(tr);
     }
     table.append(tbody); wrap.append(table);
