@@ -1,6 +1,7 @@
 (() => {
   const STYLE_ID = "oee-help-tip-style";
   const TIP_ID = "oee-help-tip";
+  const PROCEDURE_URL = "./JRTL_OEE_Calculation_Procedure_TH_EN_Rev01.pdf";
 
   function install() {
     if (!document.getElementById(STYLE_ID)) {
@@ -10,12 +11,14 @@
         .oee-help-anchor { position: relative; display: inline-flex; align-items: center; margin-left: 8px; vertical-align: middle; }
         .oee-help-button { display: inline-grid; place-items: center; width: 25px; height: 25px; padding: 0; border: 1px solid #93c5fd; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font: 700 15px/1 system-ui,sans-serif; cursor: help; }
         .oee-help-button:hover, .oee-help-button:focus-visible { background: #dbeafe; outline: 2px solid #60a5fa; outline-offset: 2px; }
-        .oee-help-popover { display: none; position: absolute; z-index: 10000; top: calc(100% + 9px); left: 0; width: min(380px, calc(100vw - 48px)); box-sizing: border-box; padding: 15px 17px; border: 1px solid #bfdbfe; border-radius: 12px; background: #fff; color: #172033; box-shadow: 0 12px 32px rgba(15,23,42,.2); font: 14px/1.55 system-ui,Segoe UI,sans-serif; white-space: normal; }
+        .oee-help-popover { display: none; position: absolute; z-index: 10000; top: calc(100% + 9px); left: 0; width: min(400px, calc(100vw - 48px)); max-height: calc(100vh - 150px); overflow:auto; box-sizing: border-box; padding: 15px 17px; border: 1px solid #bfdbfe; border-radius: 12px; background: #fff; color: #172033; box-shadow: 0 12px 32px rgba(15,23,42,.2); font: 14px/1.55 system-ui,Segoe UI,sans-serif; white-space: normal; }
         .oee-help-anchor:hover .oee-help-popover, .oee-help-anchor:focus-within .oee-help-popover, .oee-help-anchor.is-open .oee-help-popover { display: block; }
         .oee-help-popover strong { display:block; margin-bottom: 5px; color:#123b63; font-size:15px; }
         .oee-help-popover p { margin:7px 0; }
         .oee-help-popover ul { margin:6px 0; padding-left:20px; }
         .oee-help-formula { display:block; margin:9px 0; padding:8px 10px; border-radius:8px; background:#eff6ff; color:#123b63; font-weight:700; }
+        .oee-help-pdf { display:block; margin-top:10px; padding:9px 11px; border-radius:8px; background:#f0fdf4; color:#166534; font-weight:700; text-decoration:underline; }
+        .oee-help-draft { display:block; margin-top:5px; color:#92400e; font-size:12px; }
         @media (max-width: 600px) { .oee-help-popover { left: -45px; } }
       `;
       document.head.appendChild(style);
@@ -41,14 +44,17 @@
     tip.setAttribute("role", "tooltip");
     tip.innerHTML = `
       <strong>OEE คืออะไร?</strong>
-      <p>OEE บอกว่าเวลาที่วางแผนผลิต เราเปลี่ยนเป็นงานดีได้มีประสิทธิภาพแค่ไหน ยิ่งใกล้ 100% ยิ่งดี</p>
+      <p>OEE บอกว่าเวลาที่วางแผนผลิต เปลี่ยนเป็นงานดีได้มีประสิทธิภาพแค่ไหน ยิ่งใกล้ 100% ยิ่งดี</p>
       <ul>
         <li><b>Availability (ความพร้อม):</b> เวลาเดินเครื่อง ÷ เวลาผลิตตามแผน</li>
-        <li><b>Performance (ความเร็ว):</b> ผลิตได้จริงเทียบกับจำนวนที่ควรผลิตได้</li>
+        <li><b>Performance (ความเร็ว):</b> (เวลา/ชิ้นมาตรฐาน × จำนวนผลิตทั้งหมด) ÷ เวลาเดินเครื่อง</li>
         <li><b>Quality (คุณภาพ):</b> จำนวนงานดี ÷ จำนวนผลิตทั้งหมด</li>
       </ul>
       <span class="oee-help-formula">OEE = Availability × Performance × Quality</span>
-      <p><b>ตัวอย่าง:</b> 90% × 95% × 94% = 80.4%<br>แปลว่าโดยรวมได้ผลงานดีประมาณ 80 จากทุก 100 ส่วนของศักยภาพตามแผน</p>
+      <p><b>ตัวอย่างจากเอกสาร:</b> วางแผน 500 นาที หยุด 200 นาที จึงเดินเครื่อง 300 นาที ผลิตทั้งหมด 5,400 ชิ้น งานดี 5,300 ชิ้น และเวลา/ชิ้นมาตรฐาน 0.05 นาที</p>
+      <p>Availability = 300 ÷ 500 = 60%<br>Performance = (0.05 × 5,400) ÷ 300 = 90%<br>Quality = 5,300 ÷ 5,400 = 98.15%<br><b>OEE = 60% × 90% × 98.15% ≈ 53.00%</b></p>
+      <a class="oee-help-pdf" href="${PROCEDURE_URL}" target="_blank" rel="noopener noreferrer">เปิดเอกสารวิธีคำนวณ OEE (PDF · 5 หน้า) ↗</a>
+      <small class="oee-help-draft">เอกสารระบุสถานะ “รออนุมัติ / Draft – For Approval”</small>
     `;
     anchor.append(button, tip);
     heading.insertAdjacentElement("afterend", anchor);
@@ -75,3 +81,4 @@
   install();
   new MutationObserver(install).observe(document.documentElement, { childList: true, subtree: true });
 })();
+
