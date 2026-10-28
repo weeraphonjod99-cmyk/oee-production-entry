@@ -132,7 +132,13 @@
         })),
         fetch(imageMapUrl, { cache: 'force-cache' }).catch(() => null),
       ]);
-      if (mapResponse?.ok) imageMap = await mapResponse.json();
+      if (mapResponse?.ok) {
+        try {
+          const mapText = await mapResponse.text();
+          const jsonStart = mapText.indexOf('{');
+          if (jsonStart >= 0) imageMap = JSON.parse(mapText.slice(jsonStart));
+        } catch { imageMap = Object.create(null); }
+      }
       state.items = results.flat(); state.updated = new Date().toLocaleString('th-TH'); state.error = '';
     } catch (error) {
       state.error = 'อ่านข้อมูล Google Sheet ไม่สำเร็จ อาจต้องเปิดสิทธิ์การดูชีตให้ผู้มีลิงก์ · ' + (error?.message || 'Network error');
