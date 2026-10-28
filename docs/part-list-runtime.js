@@ -158,7 +158,7 @@
       tr.append(el('td', '', sheets.find(sheet => sheet.name === item.category)?.label || item.category), el('td', '', item.no), el('td', '', item.mode || '—'), el('td', 'jrtl-pl-no', item.partNo || '—'));
       const name = el('td'); name.append(el('strong', '', item.partName || '—')); if (item.details) name.append(el('small', '', item.details)); tr.append(name);
       const pics = el('td');
-      if (item.images.length) { const holder = el('div', 'jrtl-pl-imgs'); for (const src of item.images.slice(0, 2)) { const a = el('a'); a.href = src; a.target = '_blank'; a.rel = 'noreferrer'; const img = el('img'); img.src = src; img.loading = 'lazy'; img.alt = item.partName; a.append(img); holder.append(a); } pics.append(holder); } else pics.textContent = '—';
+      if (item.images.length) { const holder = el('div', 'jrtl-pl-imgs'); for (const src of item.images.slice(0, 2)) { const a = el('a'); a.href = src; a.target = '_blank'; a.rel = 'noreferrer'; const img = el('img'); img.referrerPolicy = 'no-referrer'; img.src = src; img.loading = 'lazy'; img.alt = item.partName; img.addEventListener('error', () => { a.remove(); if (!holder.querySelector('a')) pics.textContent = '—'; }); a.append(img); holder.append(a); } pics.append(holder); } else pics.textContent = '—';
       tr.append(pics); tbody.append(tr);
     }
     table.append(tbody); wrap.append(table);
