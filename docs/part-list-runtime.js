@@ -5,15 +5,13 @@
 
   const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
   const imageMapUrl = './part-images-map.json';
-  const orderedImageMapUrl = './part-images-ordered.json';
   const sheets = [
     { gid: '1726977328', name: 'Auto Part', label: 'ชิ้นส่วนรถยนต์ / Auto Part' },
     { gid: '443429873', name: 'Electronics', label: 'อิเล็กทรอนิกส์ / Electronics' },
     { gid: '156843303', name: 'Box', label: 'กล่อง / Box' },
   ];
-  const state = { items: [], category: 'All', query: '', page: 0, loading: false, error: '', updated: '', open: false };
+  const state = { items: [], category: 'All', query: '', page: 0, loading: false, error: '', updated: '', open: false, changes: null, hasBaseline: false };
   let imageMap = Object.create(null);
-  let orderedImageMap = Object.create(null);
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -46,6 +44,10 @@
     #jrtl-part-overlay small{display:block;margin-top:4px;max-width:480px;color:#637d94;white-space:normal}
     #jrtl-part-overlay .jrtl-pl-imgs{display:flex;gap:5px}#jrtl-part-overlay .jrtl-pl-imgs img{width:76px;height:58px;object-fit:contain;border:1px solid #d8e4ec;border-radius:5px;background:#fff}
     #jrtl-part-overlay .jrtl-pl-img-fallback{display:inline-block;padding:8px 10px;border:1px solid #bed3e6;border-radius:7px;background:#f5f9fc;color:#164b73;text-decoration:underline;white-space:nowrap}
+    #jrtl-part-overlay .jrtl-pl-changes{margin:12px 0;padding:10px 12px;border:1px solid #bad8ef;border-radius:8px;background:#f2f8fd;color:#164b73}
+    #jrtl-part-overlay .jrtl-pl-changes summary{cursor:pointer;font-weight:700}
+    #jrtl-part-overlay .jrtl-pl-changes ul{margin:8px 0 0;padding-left:22px;max-height:220px;overflow:auto}
+    #jrtl-part-overlay .jrtl-pl-changes li{padding:4px 0;border-bottom:1px solid #dceaf5}
     #jrtl-part-overlay .jrtl-pl-empty{padding:34px;text-align:center;background:#f8fbfd;border:1px dashed #c9d8e6;border-radius:9px;color:#5a7289}
     #jrtl-part-overlay .jrtl-pl-error{padding:11px;background:#fff7e6;border:1px solid #eecb84;border-radius:8px;color:#865c04}
     #jrtl-part-overlay .jrtl-pl-pages{display:flex;justify-content:center;align-items:center;gap:14px;padding-top:14px}
@@ -76,8 +78,12 @@
   searchLabel.append(search);
   const found = el('span'); tools.append(searchLabel, found);
   const alert = el('p', 'jrtl-pl-error'); alert.hidden = true;
+  const changePanel = el('details', 'jrtl-pl-changes');
+  const changeSummary = el('summary', '', 'ตรวจพบการเปลี่ยนแปลง / Part updates');
+  const changeList = el('ul');
+  changePanel.append(changeSummary, changeList);
   const content = el('div');
-  shell.append(head, cats, tools, alert, content); overlay.append(shell); document.body.append(overlay);
+  shell.append(head, cats, tools, alert, changePanel, content); overlay.append(shell); document.body.append(overlay);
 
   function parseSheet(html, sheet) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -115,7 +121,8 @@
       const partNo = clean(cells[pni]), partName = clean(cells[pmi]);
       if (!partNo && !partName) return [];
       const details = headers.map((_, i) => i).filter(i => ![ni, pni, pmi, mi].includes(i)).map(i => clean(cells[i])).filter(Boolean).join(' · ');
-      return [{ key: `${sheet.gid}:${row}:${partNo}`, row, no: clean(cells[ni]) || String(row), mode: clean(cells[mi]), partNo, partName, details, images: images.flat() }];
+      const mode = clean(cells[mi]);
+      return [{ key: `${sheet.gid}:${normalize(partNo)}:${normalize(mode)}`, row, no: clean(cells[ni]) || String(row), mode, partNo, partName, details, images: images.flat() }];
     });
   }
 
@@ -125,7 +132,7 @@
     alert.hidden = true;
     if (!state.items.length) { content.replaceChildren(el('div', 'jrtl-pl-empty', 'กำลังโหลดรายการจาก Google Sheet…')); }
     try {
-      const [results, mapResponse, orderedResponse] = await Promise.all([
+      const [results, mapResponse] = await Promise.all([
         Promise.all(sheets.map(async sheet => {
         const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}`;
         const response = await fetch(url, { credentials: 'omit', cache: force ? 'no-store' : 'default' });
@@ -133,7 +140,6 @@
         return parseSheet(await response.text(), sheet).map(item => ({ ...item, category: sheet.name }));
         })),
         fetch(imageMapUrl, { cache: 'force-cache' }).catch(() => null),
-        fetch(orderedImageMapUrl, { cache: 'force-cache' }).catch(() => null),
       ]);
       if (mapResponse?.ok) {
         try {
@@ -142,32 +148,58 @@
           if (jsonStart >= 0) imageMap = JSON.parse(mapText.slice(jsonStart));
         } catch { imageMap = Object.create(null); }
       }
-      if (orderedResponse?.ok) {
-        try {
-          const orderedText = await orderedResponse.text();
-          const jsonStart = orderedText.indexOf('{');
-          if (jsonStart >= 0) orderedImageMap = JSON.parse(orderedText.slice(jsonStart));
-        } catch { orderedImageMap = Object.create(null); }
-      }
-      for (let i = 0; i < sheets.length; i++) {
-        const paths = orderedImageMap[sheets[i].gid] || [];
-        let imageIndex = 0;
-        for (const item of results[i]) {
-          item.images = item.images.map(src => {
-            const localPath = paths[imageIndex++];
-            if (localPath) imageMap[src] = localPath;
-            return src;
-          });
+      const nextItems = results.flat();
+      if (state.hasBaseline) {
+        const previous = new Map();
+        for (const item of state.items) {
+          const matches = previous.get(item.key) || [];
+          matches.push(item); previous.set(item.key, matches);
         }
+        const changes = [];
+        for (const item of nextItems) {
+          const matches = previous.get(item.key) || [];
+          const before = matches.shift();
+          if (!before) changes.push({ type: 'เพิ่มชิ้นงาน / Added', item });
+          else if (before.partName !== item.partName || before.details !== item.details) changes.push({ type: 'แก้ไขข้อมูล / Updated', item });
+        }
+        state.changes = changes;
+      } else {
+        state.changes = null;
+        state.hasBaseline = true;
       }
-      state.items = results.flat(); state.updated = new Date().toLocaleString('th-TH'); state.error = '';
+      state.items = nextItems; state.updated = new Date().toLocaleString('th-TH'); state.error = '';
     } catch (error) {
       state.error = 'อ่านข้อมูล Google Sheet ไม่สำเร็จ อาจต้องเปิดสิทธิ์การดูชีตให้ผู้มีลิงก์ · ' + (error?.message || 'Network error');
     } finally {
       state.loading = false; reload.disabled = false; reload.textContent = 'อัปเดตข้อมูล';
       updated.textContent = `อัปเดตล่าสุด ${state.updated || '—'}`;
+      renderChanges();
       render();
     }
+  }
+  function renderChanges() {
+    changeList.replaceChildren();
+    if (state.changes === null) {
+      changeSummary.textContent = 'ข้อมูลตั้งต้นจาก Google Sheet · รอบถัดไปจะแจ้ง Part No. ที่เพิ่มหรือแก้ไข';
+      changePanel.hidden = false;
+      return;
+    }
+    const changes = state.changes;
+    const added = changes.filter(change => change.type.startsWith('เพิ่ม')).length;
+    const edited = changes.length - added;
+    changeSummary.textContent = changes.length
+      ? `พบ ${changes.length} รายการเปลี่ยนแปลง · เพิ่ม ${added} · แก้ไข ${edited} (คลิกเพื่อดู Part No. และชื่อชิ้นงาน)`
+      : 'ไม่พบ Part No. เพิ่มหรือแก้ไขจากรอบก่อน';
+    for (const change of changes.slice(0, 100)) {
+      const item = change.item;
+      const li = el('li');
+      li.append(el('strong', '', `${change.type} · ${sheets.find(sheet => sheet.name === item.category)?.label || item.category}`));
+      li.append(document.createTextNode(` — Part No. ${item.partNo || 'ไม่ระบุ'} · ${item.partName || 'ไม่ระบุชื่อ'}`));
+      changeList.append(li);
+    }
+    if (changes.length > 100) changeList.append(el('li', '', `และอีก ${changes.length - 100} รายการ`));
+    changePanel.hidden = false;
+    changePanel.open = changes.length > 0;
   }
   function render() {
     cats.replaceChildren();
@@ -228,5 +260,6 @@
   }
   ensureMenu();
   new MutationObserver(ensureMenu).observe(document.body, { childList: true, subtree: true });
-  window.setInterval(() => { if (state.open && !document.hidden && !state.loading) void load(); }, 10 * 60 * 1000);
+  window.setInterval(() => { if (state.open && !document.hidden && !state.loading) void load(); }, 60 * 1000);
 })();
+
