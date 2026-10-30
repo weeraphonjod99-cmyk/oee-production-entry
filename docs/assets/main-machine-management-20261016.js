@@ -486,6 +486,10 @@ function MonthlyProductionReport({ logs }) {
         const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000);
         return () => { active = false; window.clearInterval(timer); };
     }, []);
+    const defectYear = Number(month.slice(0, 4));
+    const defectMonths = Array.from({ length: 12 }, (_, i) => { const key = defectYear + '-' + String(i + 1).padStart(2, '0'); const data = monthlySummary(logs, key, machine, today); return { label: String(i + 1), good: data.good, ng: data.ng }; });
+    const defectYtd = defectMonths.reduce((a, b) => ({ label: 'YTD', good: a.good + b.good, ng: a.ng + b.ng }), { label: 'YTD', good: 0, ng: 0 });
+    const defectBars = [...defectMonths, defectYtd].map(d => ({ ...d, rate: d.good + d.ng > 0 ? d.ng / (d.good + d.ng) * 100 : null }));
     const defectCategoryRows = defectMonths.map(d => {
         const monthKey = defectYear + '-' + String(Number(d.label)).padStart(2, '0');
         const values = { 'Auto Part': 0, Electronics: 0, Box: 0, Unmatched: 0 };
@@ -504,10 +508,6 @@ function MonthlyProductionReport({ logs }) {
         Unmatched: sum.Unmatched + row.Unmatched
     }), { label: 'YTD', 'Auto Part': 0, Electronics: 0, Box: 0, Unmatched: 0 });
     const defectCategoryBars = [...defectCategoryRows, defectCategoryYtd];
-    const defectYear = Number(month.slice(0, 4));
-    const defectMonths = Array.from({ length: 12 }, (_, i) => { const key = defectYear + '-' + String(i + 1).padStart(2, '0'); const data = monthlySummary(logs, key, machine, today); return { label: String(i + 1), good: data.good, ng: data.ng }; });
-    const defectYtd = defectMonths.reduce((a, b) => ({ label: 'YTD', good: a.good + b.good, ng: a.ng + b.ng }), { label: 'YTD', good: 0, ng: 0 });
-    const defectBars = [...defectMonths, defectYtd].map(d => ({ ...d, rate: d.good + d.ng > 0 ? d.ng / (d.good + d.ng) * 100 : null }));
     const targetRate = defectTarget === '' ? null : Number(defectTarget);
     const defectMax = Math.max(1, targetRate || 0, ...defectBars.map(d => d.rate || 0)) * 1.2;
     const [error, setError] = useState('');
