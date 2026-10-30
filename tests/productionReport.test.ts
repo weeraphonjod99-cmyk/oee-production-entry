@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {buildProductionReport,capacityMatcher,reportValues,reportRate} from '../src/lib/productionReport';
+import {capacityFromSheets} from '../src/lib/capacityWorkbook';
 const base:any={id:'1',machineId:'m1',machineName:'CNC-C1',productName:'Part A',partNo:'A',step:'1',entryUser:'Ann',goodQty:90,ngQty:10,testQty:0,workMinutes:100,normalMinutes:80,changeoverMinutes:20,inspectionMinutes:0,equipmentRepairMinutes:0,moldRepairMinutes:0,materialChangeMinutes:0,emergencyStopMinutes:0,meetingMinutes:0,plannedStopMinutes:0};
 const mm:any=[{id:'m1',name:'CNC-C1'}];
 const rec:any={sheetName:'CNC-C1',machineName:'CNC',partNo:'A',productName:'Part A',step:'1',kpi85PerMinute:1,target8h100:1};
@@ -11,6 +12,15 @@ const unsteppedData:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records
 assert.equal(capacityMatcher(unsteppedData,mm,85)(base).rate,1,'allow a unique part-level capacity target when the sheet has no Step column');
 const mixedSteps:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records:[{...rec,step:''},{...rec,step:'2',kpi85PerMinute:2}]}]};
 assert.equal(capacityMatcher(mixedSteps,mm,85)(base).rate,null,'do not ignore a different explicit Step when sheet contains stepped rows');
+const rv2Header=['Item','Part Name','Part No.','','Output','100%','','90%','','85%',''];
+const rv2Sub=['','','','','','CT','Speed (pcs/min)','CT','Speed (pcs/min)','CT','Speed (pcs/min)'];
+const rv2Capacity=capacityFromSheets([{name:'RV2',rows:[rv2Header,rv2Sub,
+ ['1','CG BASE UNIT RR','2567475-AA','2/4',35,17.1,3.5,19,3.15,20,2.98],
+ ['2','CG BASE UNIT RR','2567475-AA','4/4',35,17.1,3.5,19,3.15,20,2.98],
+]}]);
+assert.deepEqual(rv2Capacity.machines[0].records.map(r=>r.step),['2/4','4/4'],'infer the unlabeled Step column immediately after Part No.');
+const rv2Log:any={...base,machineId:'RV2',machineName:'RV2',productName:'CG BASE UNIT RR',partNo:'2567475-AA',step:'4/4',normalMinutes:305,workMinutes:305,goodQty:791};
+assert.equal(capacityMatcher(rv2Capacity,[{id:'RV2',name:'RV2'}],85)(rv2Log).rate,2.98,'match the RV2 4/4 target from the blank-header Step column');
 const r=buildProductionReport([base,{...base,id:'2',partNo:'B',productName:'Part B',workMinutes:50,normalMinutes:50,changeoverMinutes:0,goodQty:50,ngQty:0}], 'person',matcher);
 assert.equal(r.rows.length,1);assert.equal(r.total.target,200);assert.equal(r.total.output,150);assert.equal(reportValues(r.total).kpi,75);assert.equal(reportValues(r.total).gap,-50);assert.equal(reportValues(r.total).rate,200/150);assert.equal(reportValues(r.total).actualRate,1);
 assert.equal(buildProductionReport([base,{...base,entryUser:'Bob'}],'detail',matcher).rows.length,2);
