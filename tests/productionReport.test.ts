@@ -7,6 +7,10 @@ const data:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records:[rec,{..
 const matcher=capacityMatcher(data,mm,85);
 assert.equal(matcher(base).rate,1,'match actual sheet machine, not generic CNC group');
 assert.equal(matcher({...base,step:'2'}).rate,null,'never fallback across explicit steps');
+const unsteppedData:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records:[{...rec,step:''}]}]};
+assert.equal(capacityMatcher(unsteppedData,mm,85)(base).rate,1,'allow a unique part-level capacity target when the sheet has no Step column');
+const mixedSteps:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records:[{...rec,step:''},{...rec,step:'2',kpi85PerMinute:2}]}]};
+assert.equal(capacityMatcher(mixedSteps,mm,85)(base).rate,null,'do not ignore a different explicit Step when sheet contains stepped rows');
 const r=buildProductionReport([base,{...base,id:'2',partNo:'B',productName:'Part B',workMinutes:50,normalMinutes:50,changeoverMinutes:0,goodQty:50,ngQty:0}], 'person',matcher);
 assert.equal(r.rows.length,1);assert.equal(r.total.target,200);assert.equal(r.total.output,150);assert.equal(reportValues(r.total).kpi,75);assert.equal(reportValues(r.total).gap,-50);assert.equal(reportValues(r.total).rate,200/150);assert.equal(reportValues(r.total).actualRate,1);
 assert.equal(buildProductionReport([base,{...base,entryUser:'Bob'}],'detail',matcher).rows.length,2);
