@@ -448,7 +448,7 @@ function MonthlyProductionReport({ logs }) {
         let active = true;
         const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
         const sheets = [{ gid: '1726977328', category: 'Auto Part' }, { gid: '443429873', category: 'Electronics' }, { gid: '156843303', category: 'Box' }];
-        const norm = value => String(value || '').trim().toLocaleLowerCase().replace(/[\\s\\-–—_./]/g, '');
+        const norm = value => String(value || '').trim().toLocaleLowerCase().replace(/[\s\\-–—_./]/g, '');
         const parseSheet = (html, sheet) => {
             const doc = new DOMParser().parseFromString(html, 'text/html'), rows = [];
             for (const tr of doc.querySelectorAll('tr')) {
@@ -458,15 +458,15 @@ function MonthlyProductionReport({ logs }) {
                 for (const td of [...tr.children].filter(cell => cell.tagName.toLowerCase() === 'td')) {
                     while (cells[col] !== undefined) col++;
                     const span = Math.max(1, Number(td.getAttribute('colspan') || 1));
-                    for (let i = 0; i < span; i++) cells[col + i] = i === 0 ? String(td.textContent || '').replace(/\\s+/g, ' ').trim() : '';
+                    for (let i = 0; i < span; i++) cells[col + i] = i === 0 ? String(td.textContent || '').replace(/\s+/g, ' ').trim() : '';
                     col += span;
                 }
                 rows.push(cells);
             }
-            const header = rows.findIndex(row => row.some(x => /part\\s*(no\\.?|number)|规格/i.test(x)) && row.some(x => /part\\s*(name|description)|名称/i.test(x)));
+            const header = rows.findIndex(row => row.some(x => /part\s*(no\\.?|number)|规格/i.test(x)) && row.some(x => /part\s*(name|description)|名称/i.test(x)));
             if (header < 0) throw new Error('Part List headers missing');
             const h = rows[header].map(x => x.toLowerCase());
-            const ni = h.findIndex(x => /part\\s*(no\\.?|number)|规格/i.test(x)), pi = h.findIndex(x => /part\\s*(name|description)|名称/i.test(x));
+            const ni = h.findIndex(x => /part\s*(no\\.?|number)|规格/i.test(x)), pi = h.findIndex(x => /part\s*(name|description)|名称/i.test(x));
             return rows.slice(header + 1).flatMap(row => {
                 const part = norm(row[ni]);
                 return part ? [[part, { category: sheet.category, name: String(row[pi] || '').trim() }]] : [];
