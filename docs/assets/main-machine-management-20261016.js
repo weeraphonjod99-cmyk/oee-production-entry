@@ -463,10 +463,10 @@ function MonthlyProductionReport({ logs }) {
                 }
                 rows.push(cells);
             }
-            const header = rows.findIndex(row => row.some(x => /part\s*(no\\.?|number)|规格/i.test(x)) && row.some(x => /part\s*(name|description)|名称/i.test(x)));
+            const header = rows.findIndex(row => row.some(x => /part\s*(no\.?|number)|规格/i.test(x)) && row.some(x => /part\s*(name|description)|名称/i.test(x)));
             if (header < 0) throw new Error('Part List headers missing');
             const h = rows[header].map(x => x.toLowerCase());
-            const ni = h.findIndex(x => /part\s*(no\\.?|number)|规格/i.test(x)), pi = h.findIndex(x => /part\s*(name|description)|名称/i.test(x));
+            const ni = h.findIndex(x => /part\s*(no\.?|number)|规格/i.test(x)), pi = h.findIndex(x => /part\s*(name|description)|名称/i.test(x));
             return rows.slice(header + 1).flatMap(row => {
                 const part = norm(row[ni]);
                 return part ? [[part, { category: sheet.category, name: String(row[pi] || '').trim() }]] : [];
