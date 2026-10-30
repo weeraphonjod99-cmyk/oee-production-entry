@@ -17,7 +17,7 @@ export function capacityFromSheets(sheets:CapacitySheet[],fetchedAt=new Date().t
   const hi=sheet.rows.slice(0,30).findIndex(r=>r.some(c=>key(c)==='partno')&&r.some(c=>key(c)==='partname'));
   if(hi<0)continue;
   const h=sheet.rows[hi],sub=sheet.rows[hi+1]||[];
-  const part=h.findIndex(c=>key(c)==='partno'),name=h.findIndex(c=>key(c)==='partname'),step=h.findIndex(c=>key(c)==='step');
+  const part=h.findIndex(c=>key(c)==='partno'),name=h.findIndex(c=>key(c)==='partname');let step=h.findIndex(c=>key(c)==='step');if(step<0){const dataRows=sheet.rows.slice(hi+2).filter(row=>text(row[part]));const inferred=part+1;const stepRows=dataRows.filter(row=>/^\\d+\\s*\\/\\s*\\d+$/.test(text(row[inferred]))).length;if(stepRows>=Math.min(2,dataRows.length))step=inferred;}
   const rateCol=(pct:number)=>{const start=h.findIndex(c=>Math.abs(ratio(c)-pct)<1e-8);if(start<0)return -1;for(let i=start;i<=start+1;i++)if(key(sub[i])==='speedpcsmin')return i;return -1;};
   const r85=rateCol(.85),r100=rateCol(1);
   if(r85<0||r100<0)throw new Error(`หัวข้อกำลังผลิตเปลี่ยน / Unsupported capacity headings: ${sheet.name}`);
