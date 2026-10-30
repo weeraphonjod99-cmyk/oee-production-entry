@@ -658,12 +658,19 @@ function MonthlyProductionReport({ logs }) {
                 " \u00B7 \u201C\u2014\u201D \u0E44\u0E21\u0E48\u0E21\u0E35\u0E10\u0E32\u0E19\u0E1C\u0E25\u0E34\u0E15 \u00B7 \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 1% \u0E1B\u0E23\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E19\u0E35\u0E49"),
             k.createElement("div", { className: "mr-table" },
                 k.createElement("div", { style: { minWidth: 950 } },
-                    k.createElement("div", { className: "mr-trend", style: { height: 230 }, role: "img", "aria-label": "\u0E01\u0E23\u0E32\u0E1F\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22\u0E23\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E41\u0E25\u0E30 YTD \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22" }, defectBars.map(d => k.createElement("div", { key: d.label },
-                        k.createElement("strong", null, d.rate === null ? '—' : d.rate.toFixed(2) + '%'),
-                        k.createElement("div", { style: { position: 'relative' } },
-                            k.createElement("i", { style: { height: ((d.rate || 0) / defectMax * 100) + '%', background: d.label === 'YTD' ? '#2266a5' : '#5a9dde' } }),
-                            targetRate !== null && k.createElement("span", { style: { position: 'absolute', bottom: (targetRate / defectMax * 100) + '%', left: 0, right: 0, borderTop: '2px solid #ed8b32' } })),
-                        k.createElement("span", null, d.label === 'YTD' ? 'YTD' : d.label + '/' + defectYear)))),
+                    k.createElement("div", { className: "mr-ng-category-legend", style: { display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center", padding: "8px 4px", fontSize: 12 } },
+                        [["Auto Part", "#2476cf"], ["Electronics", "#ed8b32"], ["Box", "#22a06b"], ["Unmatched", "#9aa6b2"]].map(([label, color]) => k.createElement("span", { key: label, style: { display: "inline-flex", alignItems: "center", gap: 6 } }, k.createElement("i", { style: { display: "inline-block", width: 12, height: 12, borderRadius: 3, background: color } }), label))),
+                    k.createElement("div", { className: "mr-trend", style: { height: 230, display: "grid", gridTemplateColumns: `repeat(${defectBars.length}, minmax(48px, 1fr))`, gap: 8, alignItems: "stretch" }, role: "img", "aria-label": "กราฟงานเสียรายเดือนแบบแท่งซ้อน แยกชิ้นส่วนรถยนต์ อิเล็กทรอนิกส์ กล่อง และยังไม่พบ Part No.; ตัวเลขด้านบนแสดงอัตรางานเสีย" }, defectCategoryBars.map((d, index) => {
+                        const totalNg = defectBars[index].ng;
+                        const scale = Math.max(1, ...defectMonths.map(item => item.ng));
+                        const height = Math.min(100, totalNg / scale * 100);
+                        const cats = [["Auto Part", d["Auto Part"], "#2476cf"], ["Electronics", d.Electronics, "#ed8b32"], ["Box", d.Box, "#22a06b"], ["Unmatched", d.Unmatched, "#9aa6b2"]];
+                        return k.createElement("div", { key: d.label, style: { minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between" }, title: `${d.label === "YTD" ? "YTD" : d.label + "/" + defectYear} · NG ${number(totalNg)} · Auto Part ${number(d["Auto Part"])} · Electronics ${number(d.Electronics)} · Box ${number(d.Box)} · Unmatched ${number(d.Unmatched)}` },
+                            k.createElement("strong", { style: { fontSize: 11 } }, defectBars[index].rate === null ? "—" : defectBars[index].rate.toFixed(2) + "%"),
+                            k.createElement("div", { style: { width: "100%", height: 170, display: "flex", alignItems: "flex-end", justifyContent: "center", borderBottom: "1px solid #d5e3ef", backgroundImage: "repeating-linear-gradient(to top, transparent 0, transparent 31px, #e3ebf3 32px)" } },
+                                k.createElement("div", { style: { width: "48%", height: height + "%", minHeight: totalNg > 0 ? 2 : 0, display: "flex", flexDirection: "column-reverse", overflow: "hidden", borderRadius: "4px 4px 0 0" } }, ...cats.map(([category, value, color]) => k.createElement("div", { key: category, title: category + ": " + number(value), style: { width: "100%", height: totalNg > 0 ? (value / totalNg * 100) + "%" : "0%", minHeight: value > 0 ? 1 : 0, background: color } })))),
+                            k.createElement("span", { style: { fontSize: 10, whiteSpace: "nowrap" } }, d.label === "YTD" ? "YTD" : d.label + "/" + defectYear));
+                    })),
                     k.createElement("table", { style: { minWidth: 950, fontSize: 12 } },
                         k.createElement("thead", null,
                             k.createElement("tr", null,
