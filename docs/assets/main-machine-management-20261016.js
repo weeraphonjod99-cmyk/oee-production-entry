@@ -502,11 +502,12 @@ function MonthlyProductionReport({ logs }) {
         }
         return { label: d.label, ...values };
     });
-    const defectCategoryYtd = defectCategoryRows.reduce((sum, row) => ({
-        label: 'YTD', 'Auto Part': sum['Auto Part'] + row['Auto Part'],
+    const defectCategoryYtd = defectCategoryRows.reduce((sum, row, index) => ({
+        label: 'YTD', good: sum.good + defectMonths[index].good, ng: sum.ng + defectMonths[index].ng,
+        'Auto Part': sum['Auto Part'] + row['Auto Part'],
         Electronics: sum.Electronics + row.Electronics, Box: sum.Box + row.Box,
         Unmatched: sum.Unmatched + row.Unmatched
-    }), { label: 'YTD', 'Auto Part': 0, Electronics: 0, Box: 0, Unmatched: 0 });
+    }), { label: 'YTD', good: 0, ng: 0, 'Auto Part': 0, Electronics: 0, Box: 0, Unmatched: 0 });
     const defectCategoryBars = [...defectCategoryRows, defectCategoryYtd];
     const targetRate = defectTarget === '' ? null : Number(defectTarget);
     const defectMax = Math.max(1, targetRate || 0, ...defectBars.map(d => d.rate || 0)) * 1.2;
@@ -678,17 +679,20 @@ function MonthlyProductionReport({ logs }) {
                                 defectBars.map(d => k.createElement("th", { key: d.label }, d.label)))),
                         k.createElement("tbody", null,
                             k.createElement("tr", { style: { color: "#c62828", fontWeight: 700 } },
-                                k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22 (\u0E0A\u0E34\u0E49\u0E19)"),
-                                defectBars.map(d => k.createElement("td", { key: d.label }, number(d.ng)))),
+                                k.createElement("th", null, "งานเสียรวม (ชิ้น · % ของยอดผลิต)"),
+                                defectBars.map(d => k.createElement("td", { key: d.label }, number(d.ng) + " · " + (d.rate === null ? "—" : d.rate.toFixed(2) + "%")))),
                             ...[
-                                ["งานเสีย / ชิ้นส่วนรถยนต์ (Auto Part)", "Auto Part"],
-                                ["งานเสีย / อิเล็กทรอนิกส์ (Electronics)", "Electronics"],
-                                ["งานเสีย / กล่อง (Box)", "Box"],
-                                ["งานเสีย / ยังไม่พบ Part No. ในชีต", "Unmatched"],
+                                ["งานเสีย / ชิ้นส่วนรถยนต์ (ชิ้น · % ของยอดผลิต)", "Auto Part"],
+                                ["งานเสีย / อิเล็กทรอนิกส์ (ชิ้น · % ของยอดผลิต)", "Electronics"],
+                                ["งานเสีย / กล่อง (ชิ้น · % ของยอดผลิต)", "Box"],
+                                ["งานเสีย / ยังไม่พบ Part No. (ชิ้น · % ของยอดผลิต)", "Unmatched"],
                             ].map(([label, category]) => k.createElement("tr", { key: category },
                                 k.createElement("th", null, label),
-                                defectCategoryBars.map(d => k.createElement("td", { key: d.label }, number(d[category]))
-                                )
+                                defectCategoryBars.map(d => {
+                                    const qty = Number(d[category]) || 0, denominator = (Number(d.good) || 0) + (Number(d.ng) || 0);
+                                    const rate = denominator > 0 ? (qty / denominator * 100).toFixed(2) + "%" : "—";
+                                    return k.createElement("td", { key: d.label, title: qty + " NG / " + denominator + " ผลผลิตรวม" }, number(qty) + " · " + rate);
+                                })
                             )),
                             k.createElement("tr", null,
                                 k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E14\u0E35 + \u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22"),
