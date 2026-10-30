@@ -314,7 +314,7 @@ function useWeeklyDashboardFilters() {
   return [filters,setFilters];
 }
 
-const JrtlMonthlyProductionReport=(()=>{const useState=k.useState;
+const JrtlMonthlyProductionReport=(()=>{const useState=k.useState,useEffect=k.useEffect;
 const downtimeFields = [
     { key: "changeoverMinutes", label: "เปลี่ยนรุ่น / Changeover", shortLabel: "Change" },
     { key: "inspectionMinutes", label: "ตรวจสอบ / Inspection", shortLabel: "Inspect" },
@@ -443,6 +443,67 @@ function MonthlyProductionReport({ logs }) {
     const [month, setMonth] = useState(today.slice(0, 7));
     const [machine, setMachine] = useState('');
     const [defectTarget, setDefectTarget] = useState('1');
+    const [partCategoryMap, setPartCategoryMap] = useState(() => new Map());
+    useEffect(() => {
+        let active = true;
+        const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
+        const sheets = [{ gid: '1726977328', category: 'Auto Part' }, { gid: '443429873', category: 'Electronics' }, { gid: '156843303', category: 'Box' }];
+        const norm = value => String(value || '').trim().toLocaleLowerCase().replace(/[\\s\\-–—_./]/g, '');
+        const parseSheet = (html, sheet) => {
+            const doc = new DOMParser().parseFromString(html, 'text/html'), rows = [];
+            for (const tr of doc.querySelectorAll('tr')) {
+                const th = [...tr.querySelectorAll('th')].find(cell => (cell.id || '').startsWith(sheet.gid + 'R'));
+                if (!th) continue;
+                const cells = []; let col = 0;
+                for (const td of [...tr.children].filter(cell => cell.tagName.toLowerCase() === 'td')) {
+                    while (cells[col] !== undefined) col++;
+                    const span = Math.max(1, Number(td.getAttribute('colspan') || 1));
+                    for (let i = 0; i < span; i++) cells[col + i] = i === 0 ? String(td.textContent || '').replace(/\\s+/g, ' ').trim() : '';
+                    col += span;
+                }
+                rows.push(cells);
+            }
+            const header = rows.findIndex(row => row.some(x => /part\\s*(no\\.?|number)|规格/i.test(x)) && row.some(x => /part\\s*(name|description)|名称/i.test(x)));
+            if (header < 0) throw new Error('Part List headers missing');
+            const h = rows[header].map(x => x.toLowerCase());
+            const ni = h.findIndex(x => /part\\s*(no\\.?|number)|规格/i.test(x)), pi = h.findIndex(x => /part\\s*(name|description)|名称/i.test(x));
+            return rows.slice(header + 1).flatMap(row => {
+                const part = norm(row[ni]);
+                return part ? [[part, { category: sheet.category, name: String(row[pi] || '').trim() }]] : [];
+            });
+        };
+        const load = async () => {
+            try {
+                const pairs = await Promise.all(sheets.map(async sheet => {
+                    const response = await fetch('https://docs.google.com/spreadsheets/d/' + book + '/htmlview/sheet?headers=true&gid=' + sheet.gid, { credentials: 'omit', cache: 'no-store' });
+                    if (!response.ok) throw new Error('Part List unavailable');
+                    return parseSheet(await response.text(), sheet);
+                }));
+                if (active) setPartCategoryMap(new Map(pairs.flat()));
+            } catch (error) { console.warn('Monthly Part NG categories unavailable', error); }
+        };
+        void load();
+        const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000);
+        return () => { active = false; window.clearInterval(timer); };
+    }, []);
+    const defectCategoryRows = defectMonths.map(d => {
+        const monthKey = defectYear + '-' + String(Number(d.label)).padStart(2, '0');
+        const values = { 'Auto Part': 0, Electronics: 0, Box: 0, Unmatched: 0 };
+        for (const log of logs) {
+            if (String(log.date || '').slice(0, 7) !== monthKey || String(log.date || '') > today || (machine && log.machineName !== machine)) continue;
+            const ng = Number(log.ngQty) || 0;
+            if (ng <= 0) continue;
+            const part = partCategoryMap.get(norm(log.partNo || ''));
+            if (part) values[part.category] += ng; else values.Unmatched += ng;
+        }
+        return { label: d.label, ...values };
+    });
+    const defectCategoryYtd = defectCategoryRows.reduce((sum, row) => ({
+        label: 'YTD', 'Auto Part': sum['Auto Part'] + row['Auto Part'],
+        Electronics: sum.Electronics + row.Electronics, Box: sum.Box + row.Box,
+        Unmatched: sum.Unmatched + row.Unmatched
+    }), { label: 'YTD', 'Auto Part': 0, Electronics: 0, Box: 0, Unmatched: 0 });
+    const defectCategoryBars = [...defectCategoryRows, defectCategoryYtd];
     const defectYear = Number(month.slice(0, 4));
     const defectMonths = Array.from({ length: 12 }, (_, i) => { const key = defectYear + '-' + String(i + 1).padStart(2, '0'); const data = monthlySummary(logs, key, machine, today); return { label: String(i + 1), good: data.good, ng: data.ng }; });
     const defectYtd = defectMonths.reduce((a, b) => ({ label: 'YTD', good: a.good + b.good, ng: a.ng + b.ng }), { label: 'YTD', good: 0, ng: 0 });
@@ -612,6 +673,16 @@ function MonthlyProductionReport({ logs }) {
                             k.createElement("tr", { style: { color: "#c62828", fontWeight: 700 } },
                                 k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22 (\u0E0A\u0E34\u0E49\u0E19)"),
                                 defectBars.map(d => k.createElement("td", { key: d.label }, number(d.ng)))),
+                            ...[
+                                ["งานเสีย / ชิ้นส่วนรถยนต์ (Auto Part)", "Auto Part"],
+                                ["งานเสีย / อิเล็กทรอนิกส์ (Electronics)", "Electronics"],
+                                ["งานเสีย / กล่อง (Box)", "Box"],
+                                ["งานเสีย / ยังไม่พบ Part No. ในชีต", "Unmatched"],
+                            ].map(([label, category]) => k.createElement("tr", { key: category },
+                                k.createElement("th", null, label),
+                                defectCategoryBars.map(d => k.createElement("td", { key: d.label }, number(d[category]))
+                                )
+                            )),
                             k.createElement("tr", null,
                                 k.createElement("th", null, "\u0E07\u0E32\u0E19\u0E14\u0E35 + \u0E07\u0E32\u0E19\u0E40\u0E2A\u0E35\u0E22"),
                                 defectBars.map(d => k.createElement("td", { key: d.label }, number(d.good + d.ng)))),
