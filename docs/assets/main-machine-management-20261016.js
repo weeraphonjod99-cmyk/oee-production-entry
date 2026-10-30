@@ -444,11 +444,11 @@ function MonthlyProductionReport({ logs }) {
     const [machine, setMachine] = useState('');
     const [defectTarget, setDefectTarget] = useState('1');
     const [partCategoryMap, setPartCategoryMap] = useState(() => new Map());
+    const norm = value => String(value || '').trim().toLocaleLowerCase().replace(/[\s._/–—-]/g, '');
     useEffect(() => {
         let active = true;
         const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
         const sheets = [{ gid: '1726977328', category: 'Auto Part' }, { gid: '443429873', category: 'Electronics' }, { gid: '156843303', category: 'Box' }];
-        const norm = value => String(value || '').trim().toLocaleLowerCase().replace(/[\s._/–—-]/g, '');
         const parseSheet = (html, sheet) => {
             const doc = new DOMParser().parseFromString(html, 'text/html'), rows = [];
             for (const tr of doc.querySelectorAll('tr')) {
