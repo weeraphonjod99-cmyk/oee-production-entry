@@ -900,8 +900,12 @@ function capacityMatcher(data, machines, percent) {
         }
         if (!rows.length)
             return { rate: null, reason: 'ไม่พบเป้าของชิ้นงานนี้ในเครื่องที่เลือก' };
-        if (stepKey(log.step))
-            rows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
+        if (stepKey(log.step)) {
+            const exactStepRows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
+            // This capacity sheet has no Step column, so its unique part target is valid for any logged step.
+            // Keep strict matching whenever the source contains explicit steps.
+            rows = exactStepRows.length ? exactStepRows : rows.every(r => !stepKey(r.step)) ? rows : [];
+        }
         if (!rows.length)
             return { rate: null, reason: `ไม่พบเป้าสำหรับ Step ${log.step} ของชิ้นงานนี้` };
         if (!stepKey(log.step) && new Set(rows.map(r => stepKey(r.step))).size > 1)
