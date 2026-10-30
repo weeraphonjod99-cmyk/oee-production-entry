@@ -66,7 +66,13 @@ export function capacityMatcher(data: ProductionCapacityData | null, machines: M
     const part = log.partNo ? 'part:' + reportText(log.partNo) : 'name:' + reportText(log.productName);
     let rows = index.get(JSON.stringify([machine, part])) || [];
     if (!rows.length) return {rate: null, reason: 'ไม่พบเป้าของชิ้นงานนี้ในเครื่องที่เลือก'};
-    if (stepKey(log.step)) rows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
+    if (stepKey(log.step)) {
+      const exactStepRows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
+      // Some machine sheets have no Step column; allow their part-level target
+      // only when every matching capacity row is unstepped. Never cross-match
+      // a different explicit Step.
+      rows = exactStepRows.length ? exactStepRows : rows.every(r => !stepKey(r.step)) ? rows : [];
+    }
     if (!rows.length) return {rate: null, reason: `ไม่พบเป้าสำหรับ Step ${log.step} ของชิ้นงานนี้`};
     if (!stepKey(log.step) && new Set(rows.map(r => stepKey(r.step))).size > 1) return {rate: null, reason: 'ไม่ระบุ Step และพบหลาย Step'};
     const named = rows.filter(r => reportText(r.productName) === reportText(log.productName));
