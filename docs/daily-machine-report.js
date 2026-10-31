@@ -8,6 +8,7 @@
   };
   const text = node => (node?.textContent || '').replace(/\s+/g, ' ').trim();
   const parseNumber = value => { if (!value || value.includes('—')) return null; const parsed = Number(value.replace(/[^0-9.-]/g, '')); return Number.isFinite(parsed) ? parsed : null; };
+  const hours = minutes => `${(Math.max(Number(minutes) || 0, 0) / 60).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ชั่วโมง`;
   const machineOrder = ['1# OCP-80T', '2# MHS-80T', '3# OCP-110T', '4# SN1-110T', '5# OCP-110T', '6# STD-150T', '7# GTX-300T', '8# GTX-500T', '9# OCP-110T', '10# OCP-260 T', '11# 200T', '12# 200T', '13# 110T', 'Bending #1', 'Bending #2', 'SW4 NMS', 'SW5 CU', 'SW6 NLC', 'SW7 LC 600', 'SW8 Door LC', 'Riveting', 'Tapping', 'RV1', 'RV2', '#1 RW', '#2 RW', '#3 RW', 'SW1# spot', 'SW#2 Spot', 'SW#3 Spot', '#8 Rubber Cap', 'CNC-C1', 'CNC-C2', 'CNC-C3', 'CNC-C4', 'CNC-C5', 'CNC-C6', 'CNC-C7', 'CNC-C8'];
   const machineRank = new Map(machineOrder.map((name, index) => [name.toLocaleLowerCase('en'), index]));
   const compareMachineOrder = (a, b) => (machineRank.get(a.trim().toLocaleLowerCase('en')) ?? Number.MAX_SAFE_INTEGER) - (machineRank.get(b.trim().toLocaleLowerCase('en')) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b, 'en', { numeric: true });
@@ -126,11 +127,11 @@
       const timeSection = document.createElement('div'); timeSection.className = 'daily-machine-time-breakdown';
       const timeTrack = document.createElement('div'); timeTrack.className = 'daily-machine-time-track'; timeTrack.setAttribute('aria-label', 'สัดส่วนเวลาเดินผลิตและเวลาหยุดแยกประเภท');
       for (const part of timeBreakdown.filter(part => part.minutes > 0)) {
-        const segment = document.createElement('i'); segment.className = 'daily-machine-time-segment'; segment.style.width = `${timeTotal ? part.minutes / timeTotal * 100 : 0}%`; segment.style.backgroundColor = part.color; segment.title = `${part.label}: ${part.minutes.toLocaleString()} นาที`; segment.setAttribute('aria-label', segment.title); timeTrack.append(segment);
+        const segment = document.createElement('i'); segment.className = 'daily-machine-time-segment'; segment.style.width = `${timeTotal ? part.minutes / timeTotal * 100 : 0}%`; segment.style.backgroundColor = part.color; segment.title = `${part.label}: ${hours(part.minutes)}`; segment.setAttribute('aria-label', segment.title); timeTrack.append(segment);
       }
       const timeList = document.createElement('div'); timeList.className = 'daily-machine-time-list';
       for (const part of timeBreakdown.filter(part => part.minutes > 0)) {
-        const line = document.createElement('span'); const dot = document.createElement('i'); dot.style.backgroundColor = part.color; const label = document.createElement('b'); label.textContent = part.short; const minutes = document.createElement('small'); minutes.textContent = `${part.minutes.toLocaleString()} นาที`; line.append(dot, label, minutes); timeList.append(line);
+        const line = document.createElement('span'); const dot = document.createElement('i'); dot.style.backgroundColor = part.color; const label = document.createElement('b'); label.textContent = part.short; const minutes = document.createElement('small'); minutes.textContent = hours(part.minutes); line.append(dot, label, minutes); timeList.append(line);
       }
       if (timeTotal === 0) { const missing = document.createElement('small'); missing.textContent = 'ไม่มีข้อมูลเวลาแยกประเภท'; timeList.append(missing); }
       timeSection.append(timeTrack, timeList);
@@ -146,9 +147,9 @@
         `ผลิตได้ (Output): ${row.output.toLocaleString()}`,
         `เป้าหมาย: ${targetValue}`,
         `ผลเทียบเป้าหมาย: ${percentValue}`,
-        `เวลาเดินผลิต: ${row.runningMinutes === null ? 'ไม่มีข้อมูล' : `${row.runningMinutes.toLocaleString()} นาที`}`,
+        `เวลาเดินผลิต: ${row.runningMinutes === null ? 'ไม่มีข้อมูล' : hours(row.runningMinutes)}`,
         `เวลารวมตามรายงาน: ${row.timeText || 'ไม่มีข้อมูล'}`,
-        ...timeBreakdown.filter(part => part.minutes > 0).map(part => `${part.label}: ${part.minutes.toLocaleString()} นาที`),
+        ...timeBreakdown.filter(part => part.minutes > 0).map(part => `${part.label}: ${hours(part.minutes)}`),
       ].join('\n');
       item.setAttribute('aria-label', tooltipText.replace(/\n/g, ', '));
       item.title = tooltipText;
