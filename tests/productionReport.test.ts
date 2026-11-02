@@ -7,6 +7,9 @@ const rec:any={sheetName:'CNC-C1',machineName:'CNC',partNo:'A',productName:'Part
 const data:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records:[rec,{...rec,partNo:'B',productName:'Part B',kpi85PerMinute:2}]}]};
 const matcher=capacityMatcher(data,mm,85);
 assert.equal(matcher(base).rate,1,'match actual sheet machine, not generic CNC group');
+const upperLink:any={...base,machineId:'3# OCP-110T',machineName:'3# OCP-110T',productName:'UPPER LINK',partNo:'48187060AA',step:''};
+assert.equal(capacityMatcher({machines:[]},[{id:'3# OCP-110T',name:'3# OCP-110T'}],85)(upperLink).rate,68,'use the verified 85% supplemental target');
+assert.equal(capacityMatcher({machines:[]},[{id:'3# OCP-110T',name:'3# OCP-110T'}],100)(upperLink).rate,80,'preserve the verified 100% speed');
 assert.equal(matcher({...base,step:'2'}).rate,null,'never fallback across explicit steps');
 const unsteppedData:any={machines:[{sheetName:'CNC-C1',machineName:'CNC',records:[{...rec,step:''}]}]};
 assert.equal(capacityMatcher(unsteppedData,mm,85)(base).rate,1,'allow a unique part-level capacity target when the sheet has no Step column');
