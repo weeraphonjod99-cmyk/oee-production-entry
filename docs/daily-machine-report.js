@@ -107,7 +107,7 @@
       value.append(actual, target);
       const status = document.createElement('strong'); status.className = 'daily-machine-status';
       if (row.target === null || row.target <= 0) { status.textContent = 'ไม่มีข้อมูลเป้าหมาย'; status.classList.add('unknown'); }
-      else { const percent = row.output / row.target * 100; status.textContent = `${row.output >= row.target ? 'ถึงเป้าหมาย' : 'ต่ำกว่าเป้าหมาย'} · ${percent.toLocaleString('th-TH', { maximumFractionDigits: 1 })}%`; status.classList.add(row.output >= row.target ? 'met' : 'below'); }
+      else { const gap = row.output - row.target; const deltaPercent = Math.abs(gap / row.target * 100); const achievedPercent = row.output / row.target * 100; const fmt = value => value.toLocaleString('th-TH', { maximumFractionDigits: 1 }); status.textContent = Math.abs(gap) < 1e-8 ? 'ถึงเป้าพอดี · 100%' : `${gap > 0 ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(deltaPercent)}% · ทำได้ ${fmt(achievedPercent)}%`; status.classList.add(gap >= 0 ? 'met' : 'below'); }
       const timeBreakdown = [{ label: 'ผลิตปกติ', short: 'ผลิต', minutes: row.runningMinutes || 0, color: '#2f9e62' }, ...row.losses.map(loss => {
         const kind = /inspection|ตรวจสอบ/i.test(loss.label) ? ['ตรวจสอบ', '#8b5cf6']
           : /equipment|machine repair|ซ่อมเครื่อง/i.test(loss.label) ? ['ซ่อมเครื่อง', '#ef4444']
@@ -147,6 +147,7 @@
         `ผลิตได้ (Output): ${row.output.toLocaleString()}`,
         `เป้าหมาย: ${targetValue}`,
         `ผลเทียบเป้าหมาย: ${percentValue}`,
+        `ส่วนต่างจากเป้าหมาย: ${row.target > 0 ? (row.output === row.target ? 'ถึงเป้าพอดี' : `${row.output > row.target ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${Math.abs((row.output - row.target) / row.target * 100).toLocaleString('th-TH', { maximumFractionDigits: 1 })}%`) : 'คำนวณไม่ได้'}`,
         `เวลาเดินผลิต: ${row.runningMinutes === null ? 'ไม่มีข้อมูล' : hours(row.runningMinutes)}`,
         `เวลารวมตามรายงาน: ${row.timeText || 'ไม่มีข้อมูล'}`,
         ...timeBreakdown.filter(part => part.minutes > 0).map(part => `${part.label}: ${hours(part.minutes)}`),
