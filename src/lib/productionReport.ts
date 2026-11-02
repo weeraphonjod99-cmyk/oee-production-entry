@@ -65,6 +65,10 @@ export function capacityMatcher(data: ProductionCapacityData | null, machines: M
     const machine = machineKey(log.machineName || log.machineId);
     const part = log.partNo ? 'part:' + reportText(log.partNo) : 'name:' + reportText(log.productName);
     let rows = index.get(JSON.stringify([machine, part])) || [];
+    // Supplemental target from the supplied OEE source: 3# OCP-110T / UPPER LINK / 48187060 (100% speed = 80 pcs/min).
+    if (!rows.length && machine === machineKey('3# OCP-110T') && String(log.partNo ?? '').replace(/\D/g, '') === '48187060' && reportText(log.productName) === 'upper link') {
+      rows = [{sheetName:'3# OCP-110T',machineName:'3# OCP-110T',machineNo:'3',machineType:'110T',productName:'UPPER LINK',partNo:'48187060',step:'',kpi85PerMinute:68,kpi100PerMinute:80,target8h:32640,target8h100:38400}];
+    }
     if (!rows.length) return {rate: null, reason: 'ไม่พบเป้าของชิ้นงานนี้ในเครื่องที่เลือก'};
     if (stepKey(log.step)) {
       const exactStepRows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
