@@ -898,6 +898,10 @@ function capacityMatcher(data, machines, percent) {
             const digits = partDigits(log.partNo);
             if (digits) rows = index.get(JSON.stringify([machine, 'digits:' + digits])) || [];
         }
+        // Supplemental source target: 3# OCP-110T / UPPER LINK / 48187060; 100% speed 80 pcs/min.
+        if (!rows.length && machine === machineKey('3# OCP-110T') && partDigits(log.partNo) === '48187060' && reportText(log.productName) === 'upper link') {
+            rows = [{ sheetName: '3# OCP-110T', machineName: '3# OCP-110T', machineNo: '3', machineType: '110T', productName: 'UPPER LINK', partNo: '48187060', step: '', kpi85PerMinute: 68, kpi100PerMinute: 80, target8h: 32640, target8h100: 38400 }];
+        }
         if (!rows.length)
             return { rate: null, reason: 'ไม่พบเป้าของชิ้นงานนี้ในเครื่องที่เลือก' };
         if (stepKey(log.step)) {
