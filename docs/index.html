@@ -21,7 +21,7 @@
       </div>
     </div>
     <script type="module">
-      (async()=>{const names=Array.from({length:9},(_,i)=>String(i).padStart(2,'0'));const chunks=await Promise.all(names.map(async name=>{const response=await fetch('./assets/part-machine-chart-fixed.js.gz.b64.'+name+'?v=production-trend-part-machine-20261102b');if(!response.ok)throw new Error('Chart bundle chunk '+name+' failed: '+response.status);return response.text();}));const zipped=Uint8Array.from(atob(chunks.join('')),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
+      (async()=>{const response=await fetch('./assets/main-machine-management-20261102-part-machine-fixed.js.gz.b64?v=production-trend-part-machine-20261102c');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
     </script>
     <link rel="stylesheet" href="./assets/main-JO7NMJ7P.css?v=oee-target-font-20261027" />
     <link rel="stylesheet" href="./assets/main-machine-management-20261102-groupchart.css?v=production-trend-part-machine-20261102" />
