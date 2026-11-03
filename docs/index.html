@@ -21,7 +21,7 @@
       </div>
     </div>
     <script type="module">
-      (async()=>{const response=await fetch('./assets/main-machine-management-20261102-part-machine-fixed2.js.gz.b64?v=capacity-target-api-20261103c');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
+      (async()=>{const response=await fetch('./assets/main-machine-management-20261102-part-machine-fixed2.js.gz.b64?v=capacity-target-api-20261103d');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
     </script>
     <link rel="stylesheet" href="./assets/main-JO7NMJ7P.css?v=oee-target-font-20261027" />
     <link rel="stylesheet" href="./assets/main-machine-management-20261102-groupchart.css?v=production-trend-part-machine-20261102" />
