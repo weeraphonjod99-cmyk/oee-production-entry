@@ -24,3 +24,4 @@
 .pr-trend-data .actual-value{color:#1767ad;font-weight:700}
 .pr-trend-data .target-value{color:#a85b0b;font-weight:700}
 @media(max-width:600px){.pr-trend-summary>div{flex:1;min-width:145px}.pr-trend-summary strong{font-size:16px}.pr-trend-legend{font-size:11px;justify-content:flex-start}}
+.pr-trend-actual-label,.pr-trend-target-label{font-size:8px}
