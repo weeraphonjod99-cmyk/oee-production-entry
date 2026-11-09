@@ -50,6 +50,7 @@
         const id = key(item.partNo);
         if (id && !categoryByPart.has(id)) categoryByPart.set(id, item);
       }
+      window.__JRTL_PART_CATEGORY_MAP__ = categoryByPart;
       lastSignature = '';
       scheduleRender();
     } catch (error) {
