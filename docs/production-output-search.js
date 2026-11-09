@@ -41,6 +41,7 @@
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
+  const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; };
   const render = () => {
     const root = document.querySelector('.production-report');
     const panel = root?.querySelector('.production-output-search');
@@ -62,11 +63,11 @@
       total += outputCol >= 0 ? number(cells[outputCol]?.textContent) : 0;
       count++;
     }
-    panel.querySelector('[data-pos-good]').textContent = fmt(good);
-    panel.querySelector('[data-pos-ng]').textContent = fmt(ng);
-    panel.querySelector('[data-pos-total]').textContent = fmt(total || good + ng);
-    panel.querySelector('[data-pos-count]').textContent = fmt(count);
-    panel.querySelector('[data-pos-note]').textContent = count ? 'ยอดสรุปตามช่วงวันที่และคำค้น โดยใช้ข้อมูลรายการที่แสดงในรายงานด้านล่าง' : 'ไม่พบรายการผลิตตามวันที่หรือคำค้นนี้';
+    setText(panel.querySelector('[data-pos-good]'), fmt(good));
+    setText(panel.querySelector('[data-pos-ng]'), fmt(ng));
+    setText(panel.querySelector('[data-pos-total]'), fmt(total || good + ng));
+    setText(panel.querySelector('[data-pos-count]'), fmt(count));
+    setText(panel.querySelector('[data-pos-note]'), count ? 'ยอดสรุปตามช่วงวันที่และคำค้น โดยใช้ข้อมูลรายการที่แสดงในรายงานด้านล่าง' : 'ไม่พบรายการผลิตตามวันที่หรือคำค้นนี้');
   };
   const observer = new MutationObserver(mount);
   observer.observe(document.documentElement, { childList: true, subtree: true });
