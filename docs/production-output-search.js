@@ -24,7 +24,7 @@
       panel.querySelector('[data-pos-to]').addEventListener('change', event => syncDate(1, event.target.value));
       activeRoot = root;
     }
-    const dates = [...root.querySelectorAll('input[type="date"]')].filter(input => !input.closest('.production-output-search'));
+    const dates = [...document.querySelectorAll('input[type="date"]')].filter(input => !input.closest('.production-output-search'));
     if (dates.length >= 2) {
       for (const [input, idx] of [[panel.querySelector('[data-pos-from]'), 0], [panel.querySelector('[data-pos-to]'), 1]]) {
         if (document.activeElement !== input && input.value !== dates[idx].value) input.value = dates[idx].value;
@@ -34,7 +34,7 @@
   };
   const syncDate = (index, value) => {
     const root = document.querySelector('.production-report');
-    const input = [...(root?.querySelectorAll('input[type="date"]') || [])].filter(node => !node.closest('.production-output-search'))[index];
+    const input = [...document.querySelectorAll('input[type="date"]')].filter(node => !node.closest('.production-output-search'))[index];
     if (!input || !value) return;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
     setter?.call(input, value);
