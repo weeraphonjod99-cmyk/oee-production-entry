@@ -61,7 +61,7 @@
     loading = true;
     try {
       const results = await Promise.all(sheets.map(async sheet => {
-        const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}&_=${Date.now()}`;
+        const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}`;
         const response = await fetch(url, { credentials: 'omit', cache: 'no-store' });
         if (!response.ok) throw new Error(`Sheet HTTP ${response.status}`);
         return parseHtml(await response.text(), sheet);
