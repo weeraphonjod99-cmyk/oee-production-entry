@@ -44,7 +44,7 @@
     const isPartNo = value => /part\\s*(no\\.?|number)|规格/i.test(value);
     const isPartName = value => /part\\s*(name|description)|名称/i.test(value);
     const isItemNo = value => /^(no\\.?|serial no\\.?|ลำดับ|序号)$/i.test(value);
-    const headersAt = rows.findIndex(row => row.map(normalizeHeader).some(isPartNo) && row.map(normalizeHeader).some(isPartName) && (row.map(normalizeHeader).some(isItemNo) || sheet.name !== 'Auto Part'));
+    const headersAt = rows.findIndex(row => row.map(normalizeHeader).some(isPartNo) && row.map(normalizeHeader).some(isPartName));
     if (headersAt < 0) throw new Error(`Missing headers: ${sheet.name}`);
     const headers = rows[headersAt].map(normalizeHeader);
     const noAt = headers.findIndex(isPartNo);
