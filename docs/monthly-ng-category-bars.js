@@ -93,7 +93,7 @@
     chart.setAttribute('aria-label', 'กราฟแท่งงานเสียรายเดือนแยกสีตามประเภทรถยนต์ อิเล็กทรอนิกส์ กล่อง และรายการไม่พบหมวด พร้อมเส้นเป้าหมาย');
 
     for (const period of chart.children) {
-      const label = period.querySelector('span')?.textContent?.trim() || '';
+      const label = period.querySelector(':scope > span')?.textContent?.trim() || '';
       const index = label === 'YTD' ? 12 : Number(label.split('/')[0]) - 1;
       const row = rows[index];
       const plot = period.querySelector('div');
