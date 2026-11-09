@@ -17,17 +17,38 @@
   const parseHtml = (html, sheet) => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const rows = [];
+    const spans = new Map();
     for (const tr of doc.querySelectorAll('tr')) {
       const th = [...tr.querySelectorAll('th')].find(cell => (cell.id || '').startsWith(`${sheet.gid}R`));
       if (!th) continue;
-      const cells = [...tr.children].filter(cell => cell.tagName.toLowerCase() === 'td').map(cell => clean(cell.textContent));
+      const cells = [];
+      for (const [col, span] of spans) {
+        cells[col] = span.value;
+        if (--span.left <= 0) spans.delete(col);
+      }
+      let col = 0;
+      for (const td of [...tr.children].filter(cell => cell.tagName.toLowerCase() === 'td')) {
+        while (cells[col] !== undefined) col++;
+        const value = clean(td.textContent);
+        const width = Number(td.getAttribute('colspan') || 1);
+        const height = Number(td.getAttribute('rowspan') || 1);
+        for (let offset = 0; offset < width; offset++) {
+          cells[col + offset] = offset === 0 ? value : '';
+          if (height > 1) spans.set(col + offset, { value: offset === 0 ? value : '', left: height - 1 });
+        }
+        col += width;
+      }
       rows.push(cells);
     }
-    const headersAt = rows.findIndex(row => row.some(value => /part\s*(no\.?|number)|规格/i.test(value)) && row.some(value => /part\s*(name|description)|名称/i.test(value)));
+    const normalizeHeader = value => clean(value).toLocaleLowerCase();
+    const isPartNo = value => /part\\s*(no\\.?|number)|规格/i.test(value);
+    const isPartName = value => /part\\s*(name|description)|名称/i.test(value);
+    const isItemNo = value => /^(no\\.?|serial no\\.?|ลำดับ|序号)$/i.test(value);
+    const headersAt = rows.findIndex(row => row.map(normalizeHeader).some(isPartNo) && row.map(normalizeHeader).some(isPartName) && (row.map(normalizeHeader).some(isItemNo) || sheet.name !== 'Auto Part'));
     if (headersAt < 0) throw new Error(`Missing headers: ${sheet.name}`);
-    const headers = rows[headersAt].map(value => value.toLowerCase());
-    const noAt = headers.findIndex(value => /part\s*(no\.?|number)|规格/i.test(value));
-    const nameAt = headers.findIndex(value => /part\s*(name|description)|名称/i.test(value));
+    const headers = rows[headersAt].map(normalizeHeader);
+    const noAt = headers.findIndex(isPartNo);
+    const nameAt = headers.findIndex(isPartName);
     return rows.slice(headersAt + 1).flatMap(row => {
       const partNo = clean(row[noAt]);
       if (!partNo) return [];
