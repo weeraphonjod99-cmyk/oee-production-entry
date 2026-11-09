@@ -146,7 +146,7 @@
   const observer = new MutationObserver(scheduleRender);
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { void loadCategories(); scheduleRender(); } });
-  window.setInterval(() => { if (!document.hidden && document.querySelector('.defect-statistics')) void loadCategories(); }, 60_000);
+  window.setInterval(() => { if (!document.hidden && !categoryByPart.size && (document.querySelector('.defect-statistics') || document.querySelector('.monthly-report'))) void loadCategories(); }, 10_000);
   void loadCategories();
   scheduleRender();
 })();
