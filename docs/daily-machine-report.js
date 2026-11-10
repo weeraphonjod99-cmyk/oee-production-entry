@@ -13,6 +13,7 @@
   const machineRank = new Map(machineOrder.map((name, index) => [name.toLocaleLowerCase('en'), index]));
   const compareMachineOrder = (a, b) => (machineRank.get(a.trim().toLocaleLowerCase('en')) ?? Number.MAX_SAFE_INTEGER) - (machineRank.get(b.trim().toLocaleLowerCase('en')) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b, 'en', { numeric: true });
   let initializedReport = null;
+  let lastRenderKey = "";
   const reportHeading = () => [...document.querySelectorAll('h2,h3')].find(node => text(node).includes('Production Performance Report'));
   const setDate = input => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -65,6 +66,9 @@
     const shiftSelect = [...root.querySelectorAll('select')].find(select => /กะ|shift/i.test(select.parentElement?.innerText || select.getAttribute('aria-label') || ''));
     const shiftButton = [...document.querySelectorAll('button')].find(button => /ทุกกะ\s*\/\s*All shifts|กะเช้า\s*\/\s*Day|กะดึก\s*\/\s*Night/i.test(text(button)));
     const selectedShift = shiftSelect?.selectedOptions?.[0]?.textContent?.trim() || text(shiftButton) || 'ตามตัวกรองกะ';
+    const renderKey = table.innerHTML + JSON.stringify(dates) + selectedShift;
+    if (old && lastRenderKey === renderKey) return;
+    lastRenderKey = renderKey;
     const recorderCol = findColumn(headers, /Recorded By/i);
     const rows = [...table.querySelectorAll('tbody tr')].map(tr => {
       const cells = [...tr.children];
@@ -164,7 +168,13 @@
   };
   const run = () => { initialiseFilters(); selectDetailView(); render(); };
   let scheduled = false;
-  const observer = new MutationObserver(() => { if (scheduled) return; scheduled = true; requestAnimationFrame(() => { scheduled = false; run(); }); });
+  const observer = new MutationObserver(mutations => {
+    const owned = node => node instanceof Element && (node.matches('.daily-machine-summary') || node.closest('.daily-machine-summary'));
+    const relevant = mutations.some(m => !owned(m.target) && !(m.type === 'childList' && [...m.addedNodes, ...m.removedNodes].length && [...m.addedNodes, ...m.removedNodes].every(owned)));
+    if (!relevant || scheduled) return;
+    scheduled = true;
+    setTimeout(() => { scheduled = false; run(); }, 100);
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
   run();
 })();
