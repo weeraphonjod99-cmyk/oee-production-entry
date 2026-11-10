@@ -12,7 +12,7 @@
   const categoryByPart = new Map();
   let loading = false, lastSignature = '', timer = 0;
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
-  const key = value => clean(value).toLocaleLowerCase().replace(/[\s\-–—_./]/g, '');
+  const key = value => clean(value).toLowerCase().replace(/^nms\s*\/\s*(?=bru\d)/, '').replace(/\s*\(\d+\s*\/\s*\d+\)$/, '').replace(/[\s\-–—_./]/g, '');
   const number = value => Number(String(value || '').replace(/[^\d.-]/g, '')) || 0;
   const parseHtml = (html, sheet) => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -29,7 +29,8 @@
       let col = 0;
       for (const td of [...tr.children].filter(cell => cell.tagName.toLowerCase() === 'td')) {
         while (cells[col] !== undefined) col++;
-        const value = clean(td.textContent);
+        const cellText = node => node.nodeType === 3 ? node.textContent : node.nodeName?.toUpperCase() === 'BR' ? '\n' : [...node.childNodes].map(cellText).join('');
+        const value = cellText(td).trim();
         const width = Number(td.getAttribute('colspan') || 1);
         const height = Number(td.getAttribute('rowspan') || 1);
         for (let offset = 0; offset < width; offset++) {
@@ -41,9 +42,9 @@
       rows.push(cells);
     }
     const normalizeHeader = value => clean(value).toLocaleLowerCase();
-    const isPartNo = value => /part\\s*(no\\.?|number)|规格/i.test(value);
-    const isPartName = value => /part\\s*(name|description)|名称/i.test(value);
-    const isItemNo = value => /^(no\\.?|serial no\\.?|ลำดับ|序号)$/i.test(value);
+    const isPartNo = value => /part\s*(no\.?|number)|规格/i.test(value);
+    const isPartName = value => /part\s*(name|description)|名称/i.test(value);
+    const isItemNo = value => /^(no\.?|serial no\.?|ลำดับ|序号)$/i.test(value);
     const headersAt = rows.findIndex(row => row.map(normalizeHeader).some(isPartNo) && row.map(normalizeHeader).some(isPartName));
     if (headersAt < 0) throw new Error(`Missing headers: ${sheet.name}`);
     const headers = rows[headersAt].map(normalizeHeader);
@@ -51,30 +52,45 @@
     const nameAt = headers.findIndex(isPartName);
     return rows.slice(headersAt + 1).flatMap(row => {
       const partNo = clean(row[noAt]);
-      if (!partNo) return [];
-      return [{ partNo, partName: clean(row[nameAt]), category: sheet.name }];
+      if (!partNo || isPartNo(partNo)) return [];
+      return String(row[noAt]).split(/\n+/).map(clean).filter(Boolean).map(partNo => ({ partNo, partName: clean(row[nameAt]), category: sheet.name }));
     });
   };
 
   async function loadCategories() {
     if (loading || document.hidden) return;
     loading = true;
+    window.__JRTL_PART_CATEGORY_STATUS__ = {state: categoryByPart.size ? 'ready' : 'loading', updated: window.__JRTL_PART_CATEGORY_STATUS__?.updated};
     try {
       const results = await Promise.all(sheets.map(async sheet => {
         const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}`;
-        const response = await fetch(url, { credentials: 'omit', cache: 'no-store' });
+        const response = await fetch(url, { credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(20000) });
         if (!response.ok) throw new Error(`Sheet HTTP ${response.status}`);
         return parseHtml(await response.text(), sheet);
       }));
-      categoryByPart.clear();
+      if (results.some(items => !items.length)) throw new Error('Empty category sheet');
+      const next = new Map();
+      const add = (id, item) => {
+        if (!id) return;
+        const previous = next.get(id);
+        next.set(id, previous && previous.category !== item.category ? {...item, category: 'Unmatched'} : item);
+      };
       for (const item of results.flat()) {
         const id = key(item.partNo);
-        if (id && !categoryByPart.has(id)) categoryByPart.set(id, item);
+        add(id, item);
+        const numericFamily = id.match(/^(\d{6,})(?:[a-z]{1,2}(?:boi)?)?$/);
+        if (numericFamily) add(numericFamily[1], item);
       }
+      categoryByPart.clear();
+      for (const [id, item] of next) categoryByPart.set(id, item);
       window.__JRTL_PART_CATEGORY_MAP__ = categoryByPart;
+      window.__JRTL_PART_CATEGORY_STATUS__ = {state:'ready', updated:new Date().toISOString(), count:categoryByPart.size};
+      window.dispatchEvent(new Event('jrtl:part-categories'));
       lastSignature = '';
       scheduleRender();
     } catch (error) {
+      window.__JRTL_PART_CATEGORY_STATUS__ = {state:categoryByPart.size?'stale':'error',updated:window.__JRTL_PART_CATEGORY_STATUS__?.updated,error:String(error.message || error)};
+      window.dispatchEvent(new Event('jrtl:part-categories'));
       const panel = document.querySelector('.jrtl-defect-part-categories');
       if (panel) panel.querySelector('.jrtl-dpc-status').textContent = 'อ่านหมวด Part No. จาก Google Sheet ไม่สำเร็จ / Unable to load categories.';
     } finally { loading = false; }
@@ -118,7 +134,8 @@
       return { label, ng: number(row.querySelector('span b')?.textContent), category: item?.category || 'Unclassified', partNo: item?.partNo || 'ไม่พบ Part No. ในชีต', partName: item?.partName || label, stat };
     });
     const signature = JSON.stringify(entries);
-    if (signature === lastSignature && categoryByPart.size) return;
+    if (signature === lastSignature && panel.dataset.rendered === "true") return;
+    panel.dataset.rendered = "true";
     lastSignature = signature;
     const groups = panel.querySelector('.jrtl-dpc-groups');
     groups.replaceChildren();
@@ -133,6 +150,7 @@
       if (!items.length) { const li = document.createElement('li'); li.textContent = 'ไม่พบงานเสียในหมวดนี้ตามตัวกรอง'; list.append(li); }
       card.append(heading, count, list); groups.append(card);
     }
+    panel.querySelector('.jrtl-dpc-unmapped')?.remove();
     const unmatched = entries.filter(item => item.category === 'Unclassified');
     if (unmatched.length) {
       const warning = document.createElement('p'); warning.className = 'jrtl-dpc-unmapped';
@@ -146,7 +164,7 @@
   const observer = new MutationObserver(scheduleRender);
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { void loadCategories(); scheduleRender(); } });
-  window.setInterval(() => { if (!document.hidden && !categoryByPart.size && (document.querySelector('.defect-statistics') || document.querySelector('.monthly-report'))) void loadCategories(); }, 10_000);
+  window.setInterval(() => { if (!document.hidden && (!categoryByPart.size || Date.now()-Date.parse(window.__JRTL_PART_CATEGORY_STATUS__?.updated || 0)>60000) && (document.querySelector('.defect-statistics') || document.querySelector('.monthly-report'))) void loadCategories(); }, 10_000);
   void loadCategories();
   scheduleRender();
 })();
