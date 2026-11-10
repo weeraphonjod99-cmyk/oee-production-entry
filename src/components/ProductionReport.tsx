@@ -1,3 +1,4 @@
+import { capacitySnapshot, subscribeCapacity } from '../lib/capacitySource';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchProductionCapacity, type ProductionCapacityData } from '../lib/api';
 import { buildProductionReport, capacityMatcher, reportPart, reportPerson, reportShiftLabel, reportValues, type ReportMode, type ReportRow } from '../lib/productionReport';
@@ -20,13 +21,16 @@ export function ProductionReport({logs,machines,products}:{logs:ProductionLog[];
   const [percent,setPercent] = useState(85); const [mode,setMode] = useState<ReportMode>('detail');
   const [person,setPerson] = useState(''); const [part,setPart] = useState(''); const [onlyBelow,setOnlyBelow] = useState(false); const [page,setPage] = useState(0);
   useEffect(() => {
-    let cancelled = false; setLoading(true); setError('');
-    fetchProductionCapacity('').then(data => {
-      if (!cancelled) {setCapacity(data); if (!data) setError('ยังไม่ได้เชื่อมต่อข้อมูลกำลังผลิต');}
-    }).catch(e => {if (!cancelled) {setError(e instanceof Error ? e.message : 'โหลดเป้าหมายไม่สำเร็จ');}})
-      .finally(() => {if (!cancelled) setLoading(false);});
-    return () => {cancelled=true;};
-  },[reload,autoRefresh]);
+    const sync = () => {
+      const state = capacitySnapshot();
+      setCapacity(state.data);
+      setLoading(state.loading && !state.data);
+      setError(state.error);
+    };
+    sync();
+    return subscribeCapacity(sync);
+  }, []);
+  useEffect(() => { fetchProductionCapacity('').catch(() => {}); }, [reload, autoRefresh]);
   const people = useMemo(() => [...new Set(logs.map(reportPerson))].sort((a,b)=>a.localeCompare(b,'th')), [logs]);
   const parts = useMemo(() => [...new Map(logs.map(l=>[reportPart(l),`${l.partNo || l.productName} · ${l.productName} · Step ${l.step || '—'}`])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'th')), [logs]);
   const selected = useMemo(()=>logs.filter(l=>(!person || reportPerson(l)===person)&&(!part || reportPart(l)===part)),[logs,person,part]);
