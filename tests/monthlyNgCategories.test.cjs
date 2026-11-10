@@ -1,0 +1,31 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=process.argv[2]||path.join(__dirname,'../docs');
+const {createRequire}=require('node:module');
+const fromRepo=createRequire(path.resolve(process.argv[3]||path.join(__dirname,'../package.json')));
+const XML=fromRepo('@xmldom/xmldom');
+const proto=Object.getPrototypeOf(new XML.DOMParser().parseFromString('<r/>','text/xml').documentElement);
+proto.querySelectorAll=function(t){return [...this.getElementsByTagName(t)];};
+if(!Object.getOwnPropertyDescriptor(proto,'children'))Object.defineProperty(proto,'children',{get(){return [...this.childNodes].filter(n=>n.nodeType===1);}});
+if(!Object.getOwnPropertyDescriptor(proto,'id'))Object.defineProperty(proto,'id',{get(){return this.getAttribute('id')||'';}});
+class Parser{parseFromString(s){const d=new XML.DOMParser().parseFromString(s,'text/html');d.querySelectorAll=t=>[...d.getElementsByTagName(t)];return d;}}
+const source=fs.readFileSync(path.join(root,'defect-part-categories.js'),'utf8');
+const rows=(gid,part)=>`<table><tr><th id="${gid}R0">1</th><td>Part No.</td><td>Part Name</td></tr><tr><th id="${gid}R1">2</th><td>${part}</td><td>Example</td></tr></table>`;
+const html={'1726977328':rows('1726977328','SB-1'),'443429873':rows('443429873','48187058AA<br/>48187058AB'),'156843303':rows('156843303','BRU30888')};
+let fail=false;
+const ctx={window:{setTimeout:()=>1,dispatchEvent:()=>{}},document:{hidden:false,querySelector:()=>null},DOMParser:Parser,AbortSignal:{timeout:()=>undefined},Event:class{},fetch:async url=>({ok:!fail,status:503,text:async()=>html[new URL(url).searchParams.get('gid')]})};
+vm.runInNewContext(source.slice(0,source.indexOf('  const observer ='))+'window.test={loadCategories};})();',ctx);
+(async()=>{
+  await ctx.window.test.loadCategories();const map=ctx.window.__JRTL_PART_CATEGORY_MAP__;
+  assert.equal(map.get('sb1').category,'Auto Part');assert.equal(map.get('48187058aa').category,'Electronics');assert.equal(map.get('48187058ab').category,'Electronics');assert.equal(map.get('48187058').category,'Electronics');
+  fail=true;await ctx.window.test.loadCategories();assert.equal(ctx.window.__JRTL_PART_CATEGORY_STATUS__.state,'stale');assert.equal(ctx.window.__JRTL_PART_CATEGORY_MAP__,map);
+  const chart=fs.readFileSync(path.join(root,'monthly-ng-category-bars.js'),'utf8'),c={window:{}};
+  vm.runInNewContext(chart.slice(0,chart.indexOf('  function readLogs('))+'window.test={summarize};})();',c);
+  const logs=[{date:'2026-01-01',machineName:'M1',partNo:'SB-1',goodQty:90,ngQty:10},{date:'2026-01-02',machineName:'M1',partNo:'48187058',goodQty:180,ngQty:20},{date:'2026-02-01',machineName:'M2',partNo:'NMS/BRU30888',goodQty:95,ngQty:5},{date:'2026-02-02',machineName:'M2',partNo:'UNKNOWN',goodQty:95,ngQty:5},{date:'2026-12-01',partNo:'SB-1',goodQty:1000,ngQty:1000}];
+  const r=c.window.test.summarize(logs,2026,'','2026-11-10',map);
+  assert.equal(r[12].ng,40);assert.equal(r[12].good,460);assert.equal(r[0].categories['Auto Part'],10);assert.equal(r[0].categories.Electronics,20);assert.equal(r[1].categories.Box,5);assert.equal(r[1].categories.Unmatched,5);
+  for(const row of r)assert.equal(Object.values(row.categories).reduce((a,b)=>a+b,0),row.ng);
+  assert.equal(r.slice(0,12).reduce((s,row)=>s+row.good+row.ng,0),r[12].good+r[12].ng);
+  assert.equal(c.window.test.summarize(logs,2026,'M1','2026-11-10',map)[12].ng,30);
+  assert.equal(c.window.test.summarize(logs,2025,'','2026-11-10',map)[12].ng,0);
+  console.log('PASS: category headers and multiline aliases, failed-refresh retention, monthly/YTD reconciliation, year/machine filters, future-date cutoff');
+})().catch(e=>{console.error(e);process.exitCode=1;});
