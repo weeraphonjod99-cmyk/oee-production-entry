@@ -58,6 +58,7 @@
     const timeCol = findColumn(headers, /TOTAL TIME/i);
     const targetCol = headers.findIndex(header => /^เป้าหมาย\s*\/\s*TARGET/i.test(text(header)));
     const lossCol = findColumn(headers, /RECORDED LOSSES/i);
+    const statusCol = findColumn(headers, /STATUS AND COMPLETENESS/i);
     if ([dateCol, shiftCol, machineCol, partCol, countCol, outputCol, targetCol].some(index => index < 0)) return;
     const dates = [...document.querySelectorAll('input[type="date"]')].map(input => input.value).filter(Boolean);
     const productionDate = dates.length > 1 && dates[0] !== dates[1] ? `${dates[0]} ถึง ${dates[1]}` : (dates[0] || 'ตามตัวกรองวันที่');
@@ -74,7 +75,7 @@
       const stopMinutes = stopMatch ? parseNumber(stopMatch[1]) : null;
       const lossText = lossCol >= 0 ? text(cells[lossCol]) : '';
       const losses = [...lossText.matchAll(/([^:]+?)\s*:\s*([\d,.]+)\s*นาที/g)].map(match => ({ label: match[1].trim(), minutes: parseNumber(match[2]) || 0 })).filter(loss => loss.minutes > 0);
-      return { date: text(cells[dateCol]), shift: text(cells[shiftCol]) || selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, stopMinutes, losses, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
+      return { targetReason: statusCol >= 0 ? [...cells[statusCol].querySelectorAll("small")].map(text).filter(s => !/^[\d,]+\s*\//.test(s)).join(" · ") : "", date: text(cells[dateCol]), shift: text(cells[shiftCol]) || selectedShift, recorder: recorderCol >= 0 ? text(cells[recorderCol]) : '', runningMinutes, stopMinutes, losses, timeText, machine: text(cells[machineCol]), part: (cells[partCol]?.innerText || text(cells[partCol])).replace(/\s+/g, ' ').trim(), count: text(cells[countCol]), output: parseNumber(text(cells[outputCol])) || 0, target: parseNumber(text(cells[targetCol])) };
     }).filter(row => row.machine).sort((a, b) => compareMachineOrder(a.machine, b.machine));
     const section = old || document.createElement('section');
     section.className = 'daily-machine-summary';
@@ -106,7 +107,7 @@
       const target = document.createElement('span'); target.textContent = ` / ${row.target === null ? '—' : row.target.toLocaleString()}`;
       value.append(actual, target);
       const status = document.createElement('strong'); status.className = 'daily-machine-status';
-      if (row.target === null || row.target <= 0) { status.textContent = 'ไม่มีข้อมูลเป้าหมาย'; status.classList.add('unknown'); }
+      if (row.target === null || row.target <= 0) { status.textContent = row.targetReason || 'ไม่มีข้อมูลเป้าหมาย'; status.classList.add('unknown'); }
       else { const gap = row.output - row.target; const deltaPercent = Math.abs(gap / row.target * 100); const achievedPercent = row.output / row.target * 100; const fmt = value => value.toLocaleString('th-TH', { maximumFractionDigits: 1 }); status.textContent = Math.abs(gap) < 1e-8 ? 'ถึงเป้าพอดี · 100%' : `${gap > 0 ? 'เกินเป้า' : 'ต่ำกว่าเป้า'} ${fmt(deltaPercent)}% · ทำได้ ${fmt(achievedPercent)}%`; status.classList.add(gap >= 0 ? 'met' : 'below'); }
       const timeBreakdown = [{ label: 'ผลิตปกติ', short: 'ผลิต', minutes: row.runningMinutes || 0, color: '#2f9e62' }, ...row.losses.map(loss => {
         const kind = /inspection|ตรวจสอบ/i.test(loss.label) ? ['ตรวจสอบ', '#8b5cf6']
