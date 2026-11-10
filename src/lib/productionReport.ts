@@ -1,3 +1,4 @@
+import { createCapacityMatcher } from './capacityMatching';
 import type { ProductionCapacityData, ProductionCapacityRecord } from './api';
 import { totalDowntime, downtimeFields, effectiveDowntimeValue } from './metrics';
 import type { Machine, ProductionLog } from '../types';
@@ -47,46 +48,7 @@ export function reportRate(record: ProductionCapacityRecord, percent: number) {
 }
 
 export function capacityMatcher(data: ProductionCapacityData | null, machines: Machine[], percent: number) {
-  const aliases = new Map<string, string>();
-  machines.forEach(m => { aliases.set(capacityMachineKey(m.id), capacityMachineKey(m.name)); aliases.set(capacityMachineKey(m.name), capacityMachineKey(m.name)); });
-  const machineKey = (s: string) => aliases.get(capacityMachineKey(s)) || capacityMachineKey(s);
-  const index = new Map<string, ProductionCapacityRecord[]>();
-  data?.machines.forEach(m => m.records.forEach(r => {
-    // Exports sometimes put the group (e.g. CNC or 80T) in machineName.
-    // Prefer the worksheet's exact registered machine, never join an entire group.
-    const candidates = [r.sheetName,m.sheetName,r.machineName,m.machineName];
-    const machine = machineKey(candidates.find(n => aliases.has(capacityMachineKey(n))) || r.sheetName || m.sheetName || r.machineName);
-    const part = r.partNo ? 'part:' + reportText(r.partNo) : 'name:' + reportText(r.productName);
-    const key = JSON.stringify([machine, part]);
-    index.set(key, [...(index.get(key) || []), r]);
-  }));
-  return (log: ProductionLog): {rate: number | null; reason: string} => {
-    if (!data) return {rate: null, reason: 'ยังไม่มีข้อมูลกำลังผลิต'};
-    const machine = machineKey(log.machineName || log.machineId);
-    const part = log.partNo ? 'part:' + reportText(log.partNo) : 'name:' + reportText(log.productName);
-    let rows = index.get(JSON.stringify([machine, part])) || [];
-    // Supplemental target from the supplied OEE source: 3# OCP-110T / UPPER LINK / 48187060 (100% speed = 80 pcs/min).
-    if (!rows.length && machine === machineKey('3# OCP-110T') && String(log.partNo ?? '').replace(/\D/g, '') === '48187060' && reportText(log.productName) === 'upper link') {
-      rows = [{sheetName:'3# OCP-110T',machineName:'3# OCP-110T',machineNo:'3',machineType:'110T',productName:'UPPER LINK',partNo:'48187060',step:'',kpi85PerMinute:68,kpi100PerMinute:80,target8h:32640,target8h100:38400}];
-    }
-    if (!rows.length) return {rate: null, reason: 'ไม่พบเป้าของชิ้นงานนี้ในเครื่องที่เลือก'};
-    if (stepKey(log.step)) {
-      const exactStepRows = rows.filter(r => stepKey(r.step) === stepKey(log.step));
-      // Some machine sheets have no Step column; allow their part-level target
-      // only when every matching capacity row is unstepped. Never cross-match
-      // a different explicit Step.
-      rows = exactStepRows.length ? exactStepRows : rows.every(r => !stepKey(r.step)) ? rows : [];
-    }
-    if (!rows.length) return {rate: null, reason: `ไม่พบเป้าสำหรับ Step ${log.step} ของชิ้นงานนี้`};
-    if (!stepKey(log.step) && new Set(rows.map(r => stepKey(r.step))).size > 1) return {rate: null, reason: 'ไม่ระบุ Step และพบหลาย Step'};
-    const named = rows.filter(r => reportText(r.productName) === reportText(log.productName));
-    if (named.length) rows = named;
-    const rates = rows.map(r => reportRate(r, percent));
-    if (rates.some(r => r === null)) return {rate: null, reason: 'เป้าหมายต่อนาทียังไม่ครบ'};
-    const rate = rates[0]!;
-    if (rates.some(r => Math.abs(r! - rate) > 1e-8)) return {rate: null, reason: 'พบเป้าหมายหลายค่าที่ขัดกัน'};
-    return {rate, reason: ''};
-  };
+  return createCapacityMatcher(data, machines, percent);
 }
 
 export type ReportRow = {
