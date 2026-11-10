@@ -21,13 +21,13 @@
       </div>
     </div>
     <script type="module">
-      (async()=>{const response=await fetch('./assets/main-machine-management-20261102-part-machine-fixed2.js.gz.b64?v=daily-every-point-20261106');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
+      (async()=>{const response=await fetch('./assets/main-target-reliability-20261110.js.gz.b64?v=target-reliability-20261110');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
     </script>
     <link rel="stylesheet" href="./assets/main-JO7NMJ7P.css?v=oee-target-font-20261027" />
     <link rel="stylesheet" href="./assets/main-machine-management-20261102-groupchart.css?v=production-trend-part-machine-20261102" />
     <link rel="stylesheet" href="./report-responsive.css?v=20261016" />
     <script type="module" src="./report-responsive.js?v=20261016"></script>
-  <link rel="stylesheet" href="./soft-blue-theme.css?v=20261017" /><link rel="stylesheet" href="./maintenance-menus.css?v=factory1-20261017" /><script type="module" src="./maintenance-menus.js?v=machine-zip-20261017"></script><link rel="stylesheet" href="./daily-machine-report.css?v=daily-target-gap-percent-20261102a" /><script type="module" src="./daily-machine-report.js?v=daily-target-gap-percent-20261102a"></script>    <script src="./report-export-buttons.js?summary-sheet-20261026"></script>
+  <link rel="stylesheet" href="./soft-blue-theme.css?v=20261017" /><link rel="stylesheet" href="./maintenance-menus.css?v=factory1-20261017" /><script type="module" src="./maintenance-menus.js?v=machine-zip-20261017"></script><link rel="stylesheet" href="./daily-machine-report.css?v=daily-target-gap-percent-20261102a" /><script type="module" src="./daily-machine-report.js?v=target-reasons-20261110"></script>    <script src="./report-export-buttons.js?summary-sheet-20261026"></script>
       <script defer src="./part-list-runtime.js?v=part-update-watch-20261028"></script>
       <script defer src="./oee-help-tip.js?v=20261028-rev01-pdf"></script>
       <script defer src="./assets/machine-registry-google-sync.js?v=google-sheet-10s-20261028"></script>
