@@ -101,3 +101,13 @@ body>header h1{color:#123e69;font-size:24px;font-weight:800}body>header small{co
   body.report-printing .production-report .pr-scroll .pr-status { white-space: normal !important; }
   body.report-printing .production-report .pr-empty { font-size: 9pt !important; }
 }
+
+@media print {
+  body.report-printing .report-print-target.production-report > :not(.pr-header):not(.pr-table-heading):not(.pr-scroll) {
+    display: none !important;
+  }
+  body.report-printing .report-print-target.production-report .pr-header > :not(div),
+  body.report-printing .report-print-target.production-report .pr-header > div > :not(h2):not(p) {
+    display: none !important;
+  }
+}
