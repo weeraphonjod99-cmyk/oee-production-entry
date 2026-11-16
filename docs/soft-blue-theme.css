@@ -33,3 +33,70 @@ body>header h1{color:#123e69;font-size:24px;font-weight:800}body>header small{co
 @media print{body,html,.workspace{background:#fff}.topbar{box-shadow:none}}
 .tooling-subnav button[aria-pressed="true"]{background:#246ba6;color:#fff;border-color:#246ba6}.fo-hero{background:linear-gradient(110deg,#d6eafb,#eef7ff);color:#173f68}.fo-hero h1{color:#123e69}.fo-hero p,.fo-period span,.fo-hero .fo-eyebrow{color:#456b8a}
 
+
+/* Production report PDF: wide landscape pages with the complete, readable table. */
+@page { size: A3 landscape; margin: 8mm 7mm; }
+@media print {
+  body.report-printing { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body.report-printing .report-print-target.production-report {
+    position: absolute !important; inset: 0 auto auto 0 !important;
+    width: 100% !important; max-width: none !important; padding: 0 !important;
+    margin: 0 !important; border: 0 !important; overflow: visible !important;
+    color: #183b30 !important; background: #fff !important;
+    font-family: Arial, Tahoma, sans-serif !important;
+  }
+  body.report-printing .production-report .pr-source,
+  body.report-printing .production-report .pr-filters,
+  body.report-printing .production-report .pr-kpis,
+  body.report-printing .production-report .pr-formula,
+  body.report-printing .production-report .pr-trend-chart,
+  body.report-printing .production-report .pr-machine-summary-chart,
+  body.report-printing .production-report .pr-tabs,
+  body.report-printing .production-report .pr-mode-select,
+  body.report-printing .production-report .pr-scroll-hint,
+  body.report-printing .production-report .pr-note,
+  body.report-printing .production-report .pr-pagination,
+  body.report-printing .production-report .pr-table-heading label,
+  body.report-printing .production-report .report-export-actions {
+    display: none !important;
+  }
+  body.report-printing .production-report .pr-header {
+    display: block !important; margin: 0 0 5mm !important; padding: 0 0 3mm !important;
+    border-bottom: 1px solid #9ebbd1 !important;
+  }
+  body.report-printing .production-report .pr-header h2 { margin: 0 0 1mm !important; font-size: 15pt !important; color: #174873 !important; }
+  body.report-printing .production-report .pr-header p { margin: 0 !important; font-size: 8pt !important; color: #456b8a !important; }
+  body.report-printing .production-report .pr-table-heading {
+    display: flex !important; margin: 0 0 2mm !important; gap: 4mm !important;
+    justify-content: space-between !important; color: #173b59 !important; font-size: 8pt !important;
+  }
+  body.report-printing .production-report .pr-table-heading h3 { margin: 0 !important; font-size: 11pt !important; }
+  body.report-printing .production-report .pr-scroll {
+    width: 100% !important; max-width: none !important; max-height: none !important;
+    overflow: visible !important; border: 0 !important; border-radius: 0 !important;
+  }
+  body.report-printing .production-report .pr-scroll table {
+    width: 100% !important; min-width: 0 !important; table-layout: fixed !important;
+    border-collapse: collapse !important; font-size: 7pt !important;
+  }
+  body.report-printing .production-report .pr-scroll thead { display: table-header-group !important; }
+  body.report-printing .production-report .pr-scroll tfoot { display: table-footer-group !important; }
+  body.report-printing .production-report .pr-scroll tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+  body.report-printing .production-report .pr-scroll th,
+  body.report-printing .production-report .pr-scroll td {
+    padding: 1.5mm 1mm !important; border: 0.25mm solid #d6e1e8 !important;
+    color: #173b59 !important; font-size: 7pt !important; line-height: 1.25 !important;
+    white-space: normal !important; overflow-wrap: anywhere !important; vertical-align: top !important;
+  }
+  body.report-printing .production-report .pr-scroll thead th {
+    position: static !important; background: #e7f1fa !important; color: #264f70 !important;
+    font-size: 6.5pt !important; font-weight: 700 !important; vertical-align: middle !important;
+  }
+  body.report-printing .production-report .pr-scroll tbody th { text-align: left !important; }
+  body.report-printing .production-report .pr-scroll .pr-product { min-width: 0 !important; text-align: left !important; }
+  body.report-printing .production-report .pr-scroll .below { color: #b42318 !important; background: #fff0f0 !important; }
+  body.report-printing .production-report .pr-scroll .met { color: #176534 !important; background: #eff9f1 !important; }
+  body.report-printing .production-report .pr-scroll .pending { color: #805600 !important; background: #fff8e9 !important; }
+  body.report-printing .production-report .pr-scroll .pr-status { white-space: normal !important; }
+  body.report-printing .production-report .pr-empty { font-size: 9pt !important; }
+}
