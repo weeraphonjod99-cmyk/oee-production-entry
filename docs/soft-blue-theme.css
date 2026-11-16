@@ -35,10 +35,11 @@ body>header h1{color:#123e69;font-size:24px;font-weight:800}body>header small{co
 
 
 /* Production report PDF: wide landscape pages with the complete, readable table. */
-@page { size: A3 landscape; margin: 8mm 7mm; }
+@page jrtl-production-report { size: A3 landscape; margin: 8mm 7mm; }
 @media print {
   body.report-printing { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   body.report-printing .report-print-target.production-report {
+    page: jrtl-production-report !important;
     position: absolute !important; inset: 0 auto auto 0 !important;
     width: 100% !important; max-width: none !important; padding: 0 !important;
     margin: 0 !important; border: 0 !important; overflow: visible !important;
