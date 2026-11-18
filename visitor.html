@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f3f7fa" />
+  <title>รายงานการผลิตสำหรับผู้เยี่ยมชม | JRTL-PMS</title>
+  <link rel="stylesheet" href="./assets/VisitorPortal-6Lcmd-1R.css" />
+  <style>html,body{margin:0;min-height:100%;font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#f3f7fa}button,input{font:inherit}a{text-decoration:none}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+(async()=>{const files=['visitor-bundle-01.txt','visitor-bundle-02.txt','visitor-bundle-03.txt','visitor-bundle-04.txt','visitor-bundle-05.txt','visitor-bundle-06.txt'];const encoded=(await Promise.all(files.map(f=>fetch('./assets/'+f).then(r=>{if(!r.ok)throw new Error('Bundle part failed: '+f);return r.text()})))).join('').trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Visitor portal failed to load',error);document.getElementById('root').textContent='โหลดหน้ารายงานไม่สำเร็จ กรุณารีเฟรช';});
+</script>
+</body>
+</html>
+
