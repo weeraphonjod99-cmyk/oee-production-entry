@@ -11,8 +11,7 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon-192.png" />
     <title>JRTL Production Management System (JRTL-PMS)</title>
-  <link rel="stylesheet" href="./soft-blue-theme.css?v=20261017" />  <script>const q=new URLSearchParams(location.search);if(q.get('visitor')==='1'){const p=new URL('./visitor.html',location.href);if(q.has('customer'))p.searchParams.set('customer',q.get('customer'));location.replace(p.href);}</script>
-  </head>
+  <link rel="stylesheet" href="./monthly-report.css?v=monthly-ng-category-20261109" /></head>
   <body>
     <div id="root">
       <div style="font-family:Segoe UI,Arial,sans-serif;padding:32px;line-height:1.6;color:#172033">
@@ -21,7 +20,23 @@
         <p style="margin:0">ให้เปิดผ่าน <strong>http://127.0.0.1:5173/</strong> หรือดับเบิลคลิก <strong>start-oee-app.cmd</strong></p>
       </div>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
-  <link rel="stylesheet" href="./maintenance-menus.css?v=factory1-20261017" /><script type="module" src="./maintenance-menus.js?v=machine-zip-20261017"></script>  <script defer src="./visitor-menu.js?v=visitor-portal-20261118"></script>
+    <script type="module">
+      const params=new URLSearchParams(location.search);
+      if(params.get('visitor')==='1'){const target=new URL('./visitor.html',location.href);if(params.has('customer'))target.searchParams.set('customer',params.get('customer'));location.replace(target.href);}
+      else{(async()=>{const bundleFiles=Array.from({length:18},(_,i)=>'main-app-bundle-'+String(i+1).padStart(2,'0')+'.txt');const cssFiles=Array.from({length:4},(_,i)=>'main-app-css-'+String(i+1).padStart(2,'0')+'.txt');const [bundleParts,cssParts]=await Promise.all([Promise.all(bundleFiles.map(f=>fetch('./assets/'+f).then(r=>{if(!r.ok)throw new Error('Bundle file failed: '+f);return r.text()}))),Promise.all(cssFiles.map(f=>fetch('./assets/'+f).then(r=>{if(!r.ok)throw new Error('Style file failed: '+f);return r.text()})))]);const style=document.createElement('style');style.textContent=cssParts.join('');document.head.appendChild(style);const zipped=Uint8Array.from(atob(bundleParts.join('').trim()),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});}
+    </script>
+
+    <link rel="stylesheet" href="./assets/main-machine-management-20261102-groupchart.css?v=production-trend-part-machine-20261102" />
+    <link rel="stylesheet" href="./report-responsive.css?v=20261016" />
+    <script type="module" src="./report-responsive.js?v=20261016"></script>
+  <link rel="stylesheet" href="./soft-blue-theme.css?v=production-pdf-table-only-20261116c" /><link rel="stylesheet" href="./maintenance-menus.css?v=factory1-20261017" /><script type="module" src="./maintenance-menus.js?v=machine-zip-20261017"></script><link rel="stylesheet" href="./daily-machine-report.css?v=daily-target-gap-percent-20261102a" /><script type="module" src="./daily-machine-report.js?v=target-reasons-20261110b"></script>    <script src="./report-export-buttons.js?summary-sheet-20261026"></script>
+      <script defer src="./part-list-runtime.js?v=part-update-watch-20261028"></script>
+      <script defer src="./oee-help-tip.js?v=20261028-rev01-pdf"></script>
+      <script defer src="./assets/machine-registry-google-sync.js?v=google-sheet-10s-20261028"></script>
+        <script defer src="./defect-part-categories.js?v=ng-categories-20261110"></script>
+        <script defer src="./monthly-ng-category-bars.js?v=ng-categories-20261110"></script>
+        <script defer src="./trend-part-search.js?v=search-part-chart-20261102"></script>
+  <link rel="stylesheet" href="./production-output-search.css?v=production-output-search-20261109c" /><script defer src="./production-output-search.js?v=production-output-search-20261109c"></script>
+  <script defer src="./visitor-menu.js?v=visitor-portal-20261118"></script>
 </body>
 </html>
