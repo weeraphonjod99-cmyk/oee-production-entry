@@ -1,0 +1,171 @@
+(() => {
+  'use strict';
+  if (window.__JRTL_DEFECT_PART_CATEGORIES__) return;
+  window.__JRTL_DEFECT_PART_CATEGORIES__ = true;
+
+  const book = '1OShntM3Vo4z7CFt_Qxpuz7L_s4XJKaI1a_Zdvv3WYAg';
+  const sheets = [
+    { gid: '1726977328', name: 'Auto Part', label: 'ชิ้นส่วนรถยนต์ / Auto Part' },
+    { gid: '443429873', name: 'Electronics', label: 'อิเล็กทรอนิกส์ / Electronics' },
+    { gid: '156843303', name: 'Box', label: 'กล่อง / Box' },
+  ];
+  const categoryByPart = new Map();
+  let loading = false, lastSignature = '', timer = 0;
+  const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const key = value => clean(value).toLowerCase().replace(/^nms\s*\/\s*(?=bru\d)/, '').replace(/\s*\(\d+\s*\/\s*\d+\)$/, '').replace(/[\s\-–—_./]/g, '');
+  const number = value => Number(String(value || '').replace(/[^\d.-]/g, '')) || 0;
+  const parseHtml = (html, sheet) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = [];
+    const spans = new Map();
+    for (const tr of doc.querySelectorAll('tr')) {
+      const th = [...tr.querySelectorAll('th')].find(cell => (cell.id || '').startsWith(`${sheet.gid}R`));
+      if (!th) continue;
+      const cells = [];
+      for (const [col, span] of spans) {
+        cells[col] = span.value;
+        if (--span.left <= 0) spans.delete(col);
+      }
+      let col = 0;
+      for (const td of [...tr.children].filter(cell => cell.tagName.toLowerCase() === 'td')) {
+        while (cells[col] !== undefined) col++;
+        const cellText = node => node.nodeType === 3 ? node.textContent : node.nodeName?.toUpperCase() === 'BR' ? '\n' : [...node.childNodes].map(cellText).join('');
+        const value = cellText(td).trim();
+        const width = Number(td.getAttribute('colspan') || 1);
+        const height = Number(td.getAttribute('rowspan') || 1);
+        for (let offset = 0; offset < width; offset++) {
+          cells[col + offset] = offset === 0 ? value : '';
+          if (height > 1) spans.set(col + offset, { value: offset === 0 ? value : '', left: height - 1 });
+        }
+        col += width;
+      }
+      rows.push(cells);
+    }
+    const normalizeHeader = value => clean(value).toLocaleLowerCase();
+    const isPartNo = value => /part\s*(no\.?|number)|规格/i.test(value);
+    const isPartName = value => /part\s*(name|description)|名称/i.test(value);
+    const isItemNo = value => /^(no\.?|serial no\.?|ลำดับ|序号)$/i.test(value);
+    const headersAt = rows.findIndex(row => row.map(normalizeHeader).some(isPartNo) && row.map(normalizeHeader).some(isPartName));
+    if (headersAt < 0) throw new Error(`Missing headers: ${sheet.name}`);
+    const headers = rows[headersAt].map(normalizeHeader);
+    const noAt = headers.findIndex(isPartNo);
+    const nameAt = headers.findIndex(isPartName);
+    return rows.slice(headersAt + 1).flatMap(row => {
+      const partNo = clean(row[noAt]);
+      if (!partNo || isPartNo(partNo)) return [];
+      return String(row[noAt]).split(/\n+/).map(clean).filter(Boolean).map(partNo => ({ partNo, partName: clean(row[nameAt]), category: sheet.name }));
+    });
+  };
+
+  async function loadCategories() {
+    if (loading || document.hidden) return;
+    loading = true;
+    window.__JRTL_PART_CATEGORY_STATUS__ = {state: categoryByPart.size ? 'ready' : 'loading', updated: window.__JRTL_PART_CATEGORY_STATUS__?.updated};
+    try {
+      const results = await Promise.all(sheets.map(async sheet => {
+        const url = `https://docs.google.com/spreadsheets/d/${book}/htmlview/sheet?headers=true&gid=${sheet.gid}`;
+        const response = await fetch(url, { credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(20000) });
+        if (!response.ok) throw new Error(`Sheet HTTP ${response.status}`);
+        return parseHtml(await response.text(), sheet);
+      }));
+      if (results.some(items => !items.length)) throw new Error('Empty category sheet');
+      const next = new Map();
+      const add = (id, item) => {
+        if (!id) return;
+        const previous = next.get(id);
+        next.set(id, previous && previous.category !== item.category ? {...item, category: 'Unmatched'} : item);
+      };
+      for (const item of results.flat()) {
+        const id = key(item.partNo);
+        add(id, item);
+        const numericFamily = id.match(/^(\d{6,})(?:[a-z]{1,2}(?:boi)?)?$/);
+        if (numericFamily) add(numericFamily[1], item);
+      }
+      categoryByPart.clear();
+      for (const [id, item] of next) categoryByPart.set(id, item);
+      window.__JRTL_PART_CATEGORY_MAP__ = categoryByPart;
+      window.__JRTL_PART_CATEGORY_STATUS__ = {state:'ready', updated:new Date().toISOString(), count:categoryByPart.size};
+      window.dispatchEvent(new Event('jrtl:part-categories'));
+      lastSignature = '';
+      scheduleRender();
+    } catch (error) {
+      window.__JRTL_PART_CATEGORY_STATUS__ = {state:categoryByPart.size?'stale':'error',updated:window.__JRTL_PART_CATEGORY_STATUS__?.updated,error:String(error.message || error)};
+      window.dispatchEvent(new Event('jrtl:part-categories'));
+      const panel = document.querySelector('.jrtl-defect-part-categories');
+      if (panel) panel.querySelector('.jrtl-dpc-status').textContent = 'อ่านหมวด Part No. จาก Google Sheet ไม่สำเร็จ / Unable to load categories.';
+    } finally { loading = false; }
+  }
+
+  function installStyle() {
+    if (document.getElementById('jrtl-defect-part-category-style')) return;
+    const style = document.createElement('style');
+    style.id = 'jrtl-defect-part-category-style';
+    style.textContent = `.jrtl-defect-part-categories{margin:14px 0;padding:16px;background:#f6faff;border:1px solid #cfe0f1;border-radius:10px;color:#173a5d}.jrtl-defect-part-categories h3{margin:0 0 5px;font-size:16px}.jrtl-dpc-status{margin:4px 0 12px;color:#58738d;font-size:12px}.jrtl-dpc-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.jrtl-dpc-group{padding:12px;background:#fff;border:1px solid #d6e4f0;border-radius:8px;min-width:0}.jrtl-dpc-group h4{margin:0 0 8px;font-size:14px}.jrtl-dpc-total{font-size:20px;font-weight:800;color:#a5232b}.jrtl-dpc-group ul{margin:8px 0 0;padding-left:18px;max-height:220px;overflow:auto}.jrtl-dpc-group li{margin:5px 0;font-size:12px;overflow-wrap:anywhere}.jrtl-dpc-group li b{display:block}.jrtl-dpc-unmapped{margin-top:10px;padding:8px;background:#fff8e8;border:1px solid #f0d59a;border-radius:7px;font-size:12px}@media(max-width:760px){.jrtl-dpc-groups{grid-template-columns:1fr}}`;
+    document.head.append(style);
+  }
+
+  function scheduleRender() {
+    if (timer) return;
+    timer = window.setTimeout(() => { timer = 0; render(); }, 180);
+  }
+
+  function render() {
+    const root = document.querySelector('.defect-statistics');
+    const ranking = root?.querySelector('.ds-rank-grid');
+    if (!root || !ranking) return;
+    installStyle();
+    let panel = root.querySelector('.jrtl-defect-part-categories');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.className = 'jrtl-defect-part-categories';
+      panel.setAttribute('aria-label', 'งานเสียแยกตามประเภทชิ้นงาน');
+      const title = document.createElement('h3'); title.textContent = 'งานเสียแยกตามประเภทชิ้นงาน / Defects by Part Category';
+      const status = document.createElement('p'); status.className = 'jrtl-dpc-status';
+      status.textContent = 'อ้างอิงหมวดและ Part No. จาก Google Sheet Part List';
+      const groups = document.createElement('div'); groups.className = 'jrtl-dpc-groups';
+      panel.append(title, status, groups);
+      root.insertBefore(panel, ranking);
+    }
+    const entries = [...ranking.querySelectorAll('.ds-rank')].map(row => {
+      const label = clean(row.querySelector('button')?.textContent).replace(/^\d+\.\s*/, '');
+      const stat = clean(row.querySelector('span')?.textContent);
+      const match = [...categoryByPart.entries()].find(([part]) => part && key(label).includes(part));
+      const item = match?.[1];
+      return { label, ng: number(row.querySelector('span b')?.textContent), category: item?.category || 'Unclassified', partNo: item?.partNo || 'ไม่พบ Part No. ในชีต', partName: item?.partName || label, stat };
+    });
+    const signature = JSON.stringify(entries);
+    if (signature === lastSignature && panel.dataset.rendered === "true") return;
+    panel.dataset.rendered = "true";
+    lastSignature = signature;
+    const groups = panel.querySelector('.jrtl-dpc-groups');
+    groups.replaceChildren();
+    for (const sheet of sheets) {
+      const items = entries.filter(item => item.category === sheet.name).sort((a,b) => b.ng-a.ng);
+      const card = document.createElement('article'); card.className = 'jrtl-dpc-group';
+      const heading = document.createElement('h4'); heading.textContent = sheet.label;
+      const total = items.reduce((sum,item) => sum + item.ng,0);
+      const count = document.createElement('div'); count.className = 'jrtl-dpc-total'; count.textContent = `${total.toLocaleString('th-TH')} NG`;
+      const list = document.createElement('ul');
+      for (const item of items) { const li = document.createElement('li'); const name = document.createElement('b'); name.textContent = `${item.partNo} · ${item.partName}`; li.append(name, document.createTextNode(`${item.ng.toLocaleString('th-TH')} ชิ้นเสีย`)); list.append(li); }
+      if (!items.length) { const li = document.createElement('li'); li.textContent = 'ไม่พบงานเสียในหมวดนี้ตามตัวกรอง'; list.append(li); }
+      card.append(heading, count, list); groups.append(card);
+    }
+    panel.querySelector('.jrtl-dpc-unmapped')?.remove();
+    const unmatched = entries.filter(item => item.category === 'Unclassified');
+    if (unmatched.length) {
+      const warning = document.createElement('p'); warning.className = 'jrtl-dpc-unmapped';
+      warning.textContent = `รายการที่ยังจับคู่ Part No. ใน Google Sheet ไม่ได้ ${unmatched.length} รายการ: ${unmatched.map(item => item.label).join(' · ')}`;
+      groups.after(warning);
+    } else panel.querySelector('.jrtl-dpc-unmapped')?.remove();
+    const status = panel.querySelector('.jrtl-dpc-status');
+    status.textContent = categoryByPart.size ? `จับคู่กับ Google Sheet Part List แล้ว ${categoryByPart.size.toLocaleString('th-TH')} Part No. · สรุปงานเสียตามตัวกรองปัจจุบัน` : 'กำลังโหลดรายการ Part No. จาก Google Sheet…';
+  }
+
+  const observer = new MutationObserver(scheduleRender);
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { void loadCategories(); scheduleRender(); } });
+  window.setInterval(() => { if (!document.hidden && (!categoryByPart.size || Date.now()-Date.parse(window.__JRTL_PART_CATEGORY_STATUS__?.updated || 0)>60000) && (document.querySelector('.defect-statistics') || document.querySelector('.monthly-report'))) void loadCategories(); }, 10_000);
+  void loadCategories();
+  scheduleRender();
+})();
+
