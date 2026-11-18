@@ -8,7 +8,14 @@
   }
   const addItems = () => {
     const nav = document.querySelector(".side-nav nav");
-    if (nav && !nav.querySelector("[data-visitor-admin]")) {
+    if (nav && !nav.querySelector("[data-visitor-public]")) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.visitorPublic = "1";
+      button.innerHTML = '<span class="nav-icon-badge" aria-hidden="true">◉</span> ดูรายงานผู้เยี่ยมชม / Visitor Production';
+      button.addEventListener("click", () => window.location.assign("./visitor.html"));
+      nav.appendChild(button);
+    }    if (nav && !nav.querySelector("[data-visitor-admin]")) {
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.visitorAdmin = "1";
@@ -30,4 +37,5 @@
   addItems();
   new MutationObserver(addItems).observe(document.documentElement, { childList: true, subtree: true });
 })();
+
 
