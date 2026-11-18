@@ -21,7 +21,9 @@
       </div>
     </div>
     <script type="module">
-      (async()=>{const response=await fetch('./assets/main-target-reliability-20261110.js.gz.b64?v=target-reliability-20261110');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});
+      const params=new URLSearchParams(location.search);
+      if(params.get('visitor')==='1'){const target=new URL('./visitor.html',location.href);if(params.has('customer'))target.searchParams.set('customer',params.get('customer'));location.replace(target.href);}
+      else{(async()=>{const response=await fetch('./assets/main-target-reliability-20261110.js.gz.b64?v=target-reliability-20261110');if(!response.ok)throw new Error('Chart bundle failed: '+response.status);const encoded=(await response.text()).trim();const zipped=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const code=await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text();await import(URL.createObjectURL(new Blob([code],{type:'text/javascript'})));})().catch(error=>{console.error('Production report module failed to load',error);});}
     </script>
     <link rel="stylesheet" href="./assets/main-JO7NMJ7P.css?v=oee-target-font-20261027" />
     <link rel="stylesheet" href="./assets/main-machine-management-20261102-groupchart.css?v=production-trend-part-machine-20261102" />
@@ -35,5 +37,6 @@
         <script defer src="./monthly-ng-category-bars.js?v=ng-categories-20261110"></script>
         <script defer src="./trend-part-search.js?v=search-part-chart-20261102"></script>
   <link rel="stylesheet" href="./production-output-search.css?v=production-output-search-20261109c" /><script defer src="./production-output-search.js?v=production-output-search-20261109c"></script>
+  <script defer src="./visitor-menu.js?v=visitor-portal-20261118"></script>
 </body>
 </html>
