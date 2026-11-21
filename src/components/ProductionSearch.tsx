@@ -1,6 +1,6 @@
 import {fetchProductionCapacity,type ProductionCapacityData} from '../lib/api';
 import {capacityMatcher} from '../lib/productionReport';
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ProductionLog} from '../types';
 import {downtimeFields} from '../lib/metrics';
 import {productionSearchSummary,recordedStop,searchPartKey,searchProduction,sheetNumber, type SearchFilters} from '../lib/productionSearch';
@@ -8,13 +8,17 @@ import './production-search.css';
 import {useCapacityRefreshTick} from './CapacitySourceStatus';
 const empty:SearchFilters={machine:'',part:'',from:'',to:'',shift:'',query:''};
 const n=(v:number)=>v.toLocaleString('th-TH',{maximumFractionDigits:2});
+const productionDateFromLogs=(logs:ProductionLog[])=>{const latest=logs.map(log=>log.date).filter((date):date is string=>typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)).sort().at(-1);if(latest)return latest;const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const get=(type:string)=>parts.find(part=>part.type===type)?.value||'';return `${get('year')}-${get('month')}-${get('day')}`;};
 export function ProductionSearch({logs,loading,error,onRefresh}:{logs:ProductionLog[];loading:boolean;error:string;onRefresh:()=>void}){
  const autoRefresh=useCapacityRefreshTick();
- const [filter,setFilter]=useState(empty),[group,setGroup]=useState<'date'|'machine'|'part'>('date'),[page,setPage]=useState(0);
+ const initialDate=productionDateFromLogs(logs);
+ const [filter,setFilter]=useState<SearchFilters>({...empty,from:initialDate,to:initialDate}),[group,setGroup]=useState<'date'|'machine'|'part'>('date'),[page,setPage]=useState(0);
+ const didEditFilters=useRef(false);
+ useEffect(()=>{if(!didEditFilters.current&&logs.length){const date=productionDateFromLogs(logs);setFilter(current=>({...current,from:date,to:date}));}},[logs]);
  const [capacity,setCapacity]=useState<ProductionCapacityData|null>(null),[capacityLoading,setCapacityLoading]=useState(true),[capacityError,setCapacityError]=useState(''),[capacityRefresh,setCapacityRefresh]=useState(0);
  useEffect(()=>{let cancelled=false;setCapacityLoading(true);setCapacityError('');fetchProductionCapacity('').then(data=>{if(!cancelled){setCapacity(data);if(!data)setCapacityError('ยังไม่มีข้อมูลกำลังผลิต');}}).catch(()=>{if(!cancelled)setCapacityError('โหลดเป้าหมายไม่สำเร็จ กรุณาลองใหม่');}).finally(()=>{if(!cancelled)setCapacityLoading(false);});return()=>{cancelled=true;};},[capacityRefresh,autoRefresh]);
  const match=useMemo(()=>capacityMatcher(capacity,[...new Map(logs.map(l=>[l.machineId,{id:l.machineId,name:l.machineName,capacityUnits:0,capacityMinutes:0,hasStep:true,rowCount:0}])).values()],85),[capacity,logs]);
- const change=(key:keyof SearchFilters,value:string)=>{setFilter(f=>({...f,[key]:value,...(key==='machine'?{part:''}:{})}));setPage(0);};
+ const change=(key:keyof SearchFilters,value:string)=>{didEditFilters.current=true;setFilter(f=>({...f,[key]:value,...(key==='machine'?{part:''}:{})}));setPage(0);};
  const machines=useMemo(()=>[...new Map(logs.map(l=>[l.machineId,l.machineName])).entries()].sort((a,b)=>a[1].localeCompare(b[1])),[logs]);
  const parts=useMemo(()=>[...new Map(logs.filter(l=>!filter.machine||l.machineId===filter.machine).map(l=>[searchPartKey(l),`${l.partNo || 'ไม่ระบุรหัส'} · ${l.productName} · Step ${l.step || '—'}`])).entries()].sort((a,b)=>a[1].localeCompare(b[1])),[logs,filter.machine]);
  const rows=useMemo(()=>searchProduction(logs,filter),[logs,filter]);
@@ -35,7 +39,7 @@ export function ProductionSearch({logs,loading,error,onRefresh}:{logs:Production
    <label>ถึงวันที่ / To Date<input type="date" value={filter.to} onChange={e=>change('to',e.target.value)}/></label>
    <label>กะ / Shift<select value={filter.shift} onChange={e=>change('shift',e.target.value)}><option value="">ทุกกะ</option>{[...new Set(logs.map(l=>l.shift))].sort().map(s=><option key={s} value={s}>{s||'ไม่ระบุ'}</option>)}</select></label>
    <label>คำค้น / Search<input type="search" placeholder="รหัสงาน ชื่อผู้บันทึก หมายเหตุ" value={filter.query} onChange={e=>change('query',e.target.value)}/></label>
-   <button type="button" onClick={()=>{setFilter(empty);setPage(0);}}>ล้างการค้นหา</button><p>เลือกวันเริ่มและวันสิ้นสุดเป็นวันเดียวกันเพื่อดูรายวัน • กราฟและรายละเอียดเปลี่ยนตามตัวกรอง</p>
+   <button type="button" onClick={()=>{didEditFilters.current=true;const date=productionDateFromLogs(logs);setFilter({...empty,from:date,to:date});setPage(0);}}>ล้างการค้นหา</button><p>เลือกวันเริ่มและวันสิ้นสุดเป็นวันเดียวกันเพื่อดูรายวัน • กราฟและรายละเอียดเปลี่ยนตามตัวกรอง</p>
   </div>
   {filter.from&&filter.to&&filter.from>filter.to&&<p role="alert" className="ps-warning">วันเริ่มต้องไม่เกินวันสิ้นสุด</p>}
   <div className="ps-cards">{[['รายการที่พบ / Matching Records',n(rows.length)],["ผลผลิตรวม / Output (Good + NG + Test)",n(total.output)],["เวลาผลิตตามชีต / Sheet Run Time (min)",n(total.run)],["หยุดรวมตามชีต / Sheet Downtime (min)",n(total.stop)]].map(([label,value])=><div className="ps-panel" key={label}><span>{label}</span><strong>{loading?'…':value}</strong></div>)}</div>
