@@ -2,6 +2,7 @@
   const installMonthlySummaryMenu = () => {
     const nav = document.querySelector('.side-nav nav');
     if (!nav || nav.querySelector('[data-monthly-summary-menu]')) return;
+    if ([...nav.querySelectorAll('button')].some((button) => /สรุปรายงาน.*เดือน|Monthly Summary/i.test(button.textContent || ''))) return;
 
     const dashboardButton = [...nav.querySelectorAll('button')].find((button) =>
       /ภาพรวม\s*\/\s*Dashboard/i.test(button.textContent || '')
