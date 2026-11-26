@@ -1,7 +1,3 @@
-
-  work\monthly-pptx-export.js  49.3kb
-
-Done in 8ms
 // node_modules/.pnpm/fflate@0.8.2/node_modules/fflate/esm/browser.js
 var u8 = Uint8Array;
 var u16 = Uint16Array;
